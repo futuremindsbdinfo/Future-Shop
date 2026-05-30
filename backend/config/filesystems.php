@@ -60,6 +60,21 @@ return [
             'report' => false,
         ],
 
+        // Cloudflare R2 is S3-API compatible. Credentials live in .env only.
+        // Not active yet — IMAGE_DISK defaults to "public" for local dev.
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => env('R2_DEFAULT_REGION', 'auto'),
+            'bucket' => env('R2_BUCKET'),
+            'url' => env('R2_URL'), // public bucket / custom domain URL
+            'endpoint' => env('R2_ENDPOINT'), // https://<account_id>.r2.cloudflarestorage.com
+            'use_path_style_endpoint' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

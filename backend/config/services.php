@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'sslcommerz' => [
+        'store_id' => env('SSLCZ_STORE_ID'),
+        'store_password' => env('SSLCZ_STORE_PASSWORD'),
+        'sandbox' => (bool) env('SSLCZ_SANDBOX', true),
+        // Where the gateway redirects/IPNs back to.
+        'success_url' => env('SSLCZ_SUCCESS_URL', env('APP_URL').'/api/v1/payments/sslcommerz/success'),
+        'fail_url' => env('SSLCZ_FAIL_URL', env('APP_URL').'/api/v1/payments/sslcommerz/fail'),
+        'cancel_url' => env('SSLCZ_CANCEL_URL', env('APP_URL').'/api/v1/payments/sslcommerz/fail'),
+        'ipn_url' => env('SSLCZ_IPN_URL', env('APP_URL').'/api/v1/payments/sslcommerz/success'),
+    ],
+
 ];
