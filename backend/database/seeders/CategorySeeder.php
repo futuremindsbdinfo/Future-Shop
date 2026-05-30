@@ -9,7 +9,6 @@ class CategorySeeder extends Seeder
 {
     /**
      * Seed the 20 top-level categories (English names) with rollout phases.
-     *
      * Deletes all existing categories first. is_active is true only for the
      * "mvp" phase; all later phases are seeded inactive.
      */
