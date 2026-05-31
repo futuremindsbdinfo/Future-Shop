@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
@@ -22,15 +23,15 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
-            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+            'password' => ['required', Password::min(8)->mixedCase()->numbers()],
         ]);
 
         // The User model's 'password' => 'hashed' cast bcrypts using BCRYPT_ROUNDS=12.
         $user = User::create([
             'name' => $data['name'],
-            'email' => $data['email'],
+            'email' => $data['email'] ?? null,
             'phone' => $data['phone'],
             'password' => $data['password'],
             'role' => 'customer',
@@ -77,6 +78,84 @@ class AuthController extends Controller
             'token' => $token,
             'token_type' => 'Bearer',
         ]);
+    }
+
+    /**
+     * Send a 6-digit OTP for phone login.
+     *
+     * Scaffold only: the code is cached for 5 minutes. SMS delivery is a later
+     * integration. In debug mode the code is echoed back to ease local testing.
+     */
+    public function sendOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+        ]);
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        Cache::put($this->otpKey($data['phone']), $otp, now()->addMinutes(5));
+
+        // TODO: dispatch SMS via provider here.
+
+        $response = ['message' => 'OTP পাঠানো হয়েছে।'];
+        if (config('app.debug')) {
+            $response['otp'] = $otp; // dev-only convenience
+        }
+
+        return response()->json($response);
+    }
+
+    /**
+     * Verify the OTP and log the user in (find-or-create by phone).
+     */
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+            'otp' => ['required', 'string'],
+        ]);
+
+        $cached = Cache::get($this->otpKey($data['phone']));
+
+        if ($cached === null || ! hash_equals($cached, $data['otp'])) {
+            throw ValidationException::withMessages([
+                'otp' => ['OTP সঠিক নয় বা মেয়াদ শেষ হয়ে গেছে।'],
+            ]);
+        }
+
+        Cache::forget($this->otpKey($data['phone']));
+
+        $user = User::firstOrCreate(
+            ['phone' => $data['phone']],
+            [
+                'name' => 'Future Shop User',
+                'role' => 'customer',
+                'is_active' => true,
+            ],
+        );
+
+        // Ensure all columns (e.g. null email/password) are hydrated for the response.
+        $user->refresh();
+
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([
+                'phone' => ['এই অ্যাকাউন্টটি নিষ্ক্রিয়।'],
+            ]);
+        }
+
+        $token = $user->createToken('api')->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+            'token_type' => 'Bearer',
+        ]);
+    }
+
+    private function otpKey(string $phone): string
+    {
+        return 'otp_'.$phone;
     }
 
     /**

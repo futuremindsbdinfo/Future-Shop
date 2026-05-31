@@ -20,10 +20,14 @@ class ProductController extends Controller
     /**
      * Public catalog: published products with filters, paginated 15/page.
      *
-     * Filters: ?category=<slug> &vendor=<slug> &min_price= &max_price= &search=
+     * Filters: ?category=<slug> &vendor=<slug> &min_price= &max_price= &search= &is_featured=true
+     * Pagination: ?per_page= (default 15, max 50)
      */
     public function index(Request $request): JsonResponse
     {
+        $perPage = min((int) $request->get('per_page', 15), 50);
+        $perPage = max($perPage, 1);
+
         $products = Product::query()
             ->where('status', 'published')
             ->with(['vendor:id,shop_name,slug', 'category:id,name,slug'])
@@ -35,12 +39,44 @@ class ProductController extends Controller
             ))
             ->when($request->filled('min_price'), fn ($q) => $q->where('price', '>=', $request->float('min_price')))
             ->when($request->filled('max_price'), fn ($q) => $q->where('price', '<=', $request->float('max_price')))
+            ->when($request->boolean('is_featured'), fn ($q) => $q->where('is_featured', true))
             ->when($request->filled('search'), fn ($q) => $q->where('name', 'ilike', '%'.$request->string('search').'%'))
             ->latest()
-            ->paginate(15)
+            ->paginate($perPage)
             ->withQueryString();
 
         return response()->json($products);
+    }
+
+    /**
+     * Admin: list ALL products (any status), with optional filters.
+     * ?category=<slug> &status=<draft|published|out_of_stock> &per_page=
+     */
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $perPage = max(min((int) $request->get('per_page', 15), 50), 1);
+
+        $products = Product::query()
+            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug'])
+            ->when($request->filled('category'), fn ($q) => $q->whereHas(
+                'category', fn ($c) => $c->where('slug', $request->string('category'))
+            ))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return response()->json($products);
+    }
+
+    /**
+     * Admin: show a single product by id (any status), for the edit form.
+     */
+    public function adminShow(Product $product): JsonResponse
+    {
+        return response()->json([
+            'data' => $product->load(['vendor:id,shop_name,slug', 'category:id,name,slug']),
+        ]);
     }
 
     /**

@@ -18,7 +18,7 @@ class AdminUserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin@localbazaar.com'],
             [
-                'name' => 'LocalBazaar Admin',
+                'name' => 'Future Shop Admin',
                 'phone' => '01700000000',
                 'role' => 'admin',
                 'password' => 'Admin@123456',

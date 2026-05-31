@@ -12,6 +12,7 @@ use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
@@ -116,9 +117,9 @@ class OrderController extends Controller
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            // LB-2026-XXXXX (year + zero-padded id, guaranteed unique).
+            // FS-2026-XXXXX (year + zero-padded id, guaranteed unique).
             $order->forceFill([
-                'order_number' => sprintf('LB-%s-%05d', now()->year, $order->id),
+                'order_number' => sprintf('FS-%s-%05d', now()->year, $order->id),
             ])->save();
 
             foreach ($lineData as $line) {
@@ -173,6 +174,21 @@ class OrderController extends Controller
         }
 
         return response()->json(['data' => $order->load('items', 'deliveryZone:id,name')]);
+    }
+
+    /**
+     * Admin: update an order's status (order_status and/or payment_status).
+     */
+    public function updateStatus(Request $request, Order $order): JsonResponse
+    {
+        $data = $request->validate([
+            'order_status' => ['sometimes', Rule::in(['pending', 'processing', 'shipped', 'delivered', 'cancelled'])],
+            'payment_status' => ['sometimes', Rule::in(['pending', 'paid', 'failed', 'refunded'])],
+        ]);
+
+        $order->update($data);
+
+        return response()->json(['data' => $order->fresh(['user:id,name,email', 'items'])]);
     }
 
     /**

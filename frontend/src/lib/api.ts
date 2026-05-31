@@ -2,11 +2,11 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { clearToken, getToken } from '@/lib/auth';
 
 /**
- * Shared Axios instance for the LocalBazaar API.
+ * Shared Axios instance for the Future Shop API.
  *  - baseURL from NEXT_PUBLIC_API_URL
  *  - withCredentials for cookie-aware requests
  *  - attaches the in-memory Bearer token on every request
- *  - on 401: clears the token + routing cookies and redirects to /login
+ *  - on 401: clears the token + routing cookies and opens the auth modal (/?auth=login)
  *  - 10s timeout
  */
 const api = axios.create({
@@ -35,8 +35,8 @@ api.interceptors.response.use(
       document.cookie = 'lb_auth=; Path=/; Max-Age=0; SameSite=Lax';
       document.cookie = 'lb_role=; Path=/; Max-Age=0; SameSite=Lax';
 
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (!window.location.search.includes('auth=login')) {
+        window.location.href = '/?auth=login';
       }
     }
     return Promise.reject(error);

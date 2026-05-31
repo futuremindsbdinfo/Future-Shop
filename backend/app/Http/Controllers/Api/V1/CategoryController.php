@@ -24,6 +24,18 @@ class CategoryController extends Controller
     }
 
     /**
+     * Admin: list ALL categories (regardless of is_active), for admin forms.
+     */
+    public function adminIndex(): JsonResponse
+    {
+        $categories = Category::query()
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json(['data' => $categories]);
+    }
+
+    /**
      * Show a single category by slug.
      */
     public function show(string $slug): JsonResponse

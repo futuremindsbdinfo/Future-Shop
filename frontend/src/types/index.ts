@@ -1,5 +1,5 @@
 /**
- * Shared API/domain types for LocalBazaar.
+ * Shared API/domain types for Future Shop.
  *
  * Note: Laravel's `decimal:2` cast serializes money as STRINGS (e.g. "10000.00"),
  * so monetary fields are typed as `string`. The cart computes with numbers.
@@ -74,6 +74,7 @@ export interface Category {
   slug: string;
   phase: CategoryPhase;
   image: string | null;
+  icon: string | null;
   is_active: boolean;
   sort_order: number;
   created_at?: string;
@@ -187,6 +188,15 @@ export interface CartItem {
   quantity: number;
   image?: string;
   stock?: number;
+}
+
+/** Admin dashboard summary. */
+export interface DashboardStats {
+  total_orders: number;
+  total_revenue: number;
+  active_vendors: number;
+  pending_orders: number;
+  recent_orders: Order[];
 }
 
 /** Wrapper used by single-resource endpoints: { data: T, message?: string }. */

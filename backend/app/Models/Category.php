@@ -20,6 +20,7 @@ class Category extends Model
         'slug',
         'phase',
         'image',
+        'icon',
         'is_active',
         'sort_order',
     ];

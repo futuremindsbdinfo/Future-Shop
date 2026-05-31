@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {/* Brand + tagline */}
         <div className="space-y-3">
-          <span className="text-xl font-bold text-[#1a6bdf]">LocalBazaar</span>
+          <span className="text-xl font-bold text-[#1a6bdf]">Future Shop</span>
           <p className="text-sm text-muted-foreground" lang="bn">
             আপনার পাড়ার বাজার, এখন অনলাইনে
           </p>
@@ -30,7 +30,7 @@ export function Footer() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Sherpur Sadar, Mymensingh Division</span>
+              <span>Sherpur Sadar, Dhaka Division</span>
             </li>
             <li className="flex items-center gap-2">
               <Phone className="h-4 w-4 shrink-0" />
@@ -45,7 +45,7 @@ export function Footer() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Bogura Sadar, Rajshahi Division</span>
+              <span>Bogura, Rajshahi Division</span>
             </li>
             <li className="flex items-center gap-2">
               <Phone className="h-4 w-4 shrink-0" />
@@ -57,7 +57,7 @@ export function Footer() {
 
       <div className="border-t py-4">
         <p className="text-center text-xs text-muted-foreground">
-          © 2026 LocalBazaar. All rights reserved.
+          © 2026 Future Shop. All rights reserved.
         </p>
       </div>
     </footer>

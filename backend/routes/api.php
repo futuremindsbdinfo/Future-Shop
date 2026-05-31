@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\DeliveryZoneController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -26,6 +28,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware('throttle:6,1')->group(function () {
         Route::post('auth/register', [AuthController::class, 'register'])->name('auth.register');
         Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
+        Route::post('auth/send-otp', [AuthController::class, 'sendOtp'])->name('auth.send-otp');
+        Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp'])->name('auth.verify-otp');
     });
 
     /*
@@ -35,6 +39,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('categories/{slug}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/{slug}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
 
     /*
     | Cart — works for guests (X-Cart-Token header) and authenticated users
@@ -79,13 +84,22 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         | user's role and active status. Add controllers as features are built.
         */
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-            // Product management (create / update / soft delete).
+            // Dashboard summary.
+            Route::get('dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+
+            // All categories (incl. inactive) for admin forms.
+            Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
+
+            // Product management (list / create / update / soft delete).
+            Route::get('products', [ProductController::class, 'adminIndex'])->name('products.index');
+            Route::get('products/{product}', [ProductController::class, 'adminShow'])->name('products.show');
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
             Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
             Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
-            // Orders (all orders, with filters).
+            // Orders (list with filters + status update).
             Route::get('orders', [OrderController::class, 'adminIndex'])->name('orders.index');
+            Route::match(['put', 'patch'], 'orders/{order}', [OrderController::class, 'updateStatus'])->name('orders.update');
 
             // Vendor management.
             Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');

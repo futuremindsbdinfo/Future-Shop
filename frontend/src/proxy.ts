@@ -17,9 +17,12 @@ export function proxy(request: NextRequest) {
   const isAuthed = request.cookies.get('lb_auth')?.value === '1';
   const role = request.cookies.get('lb_role')?.value ?? null;
 
+  // Auth is handled by a modal on the homepage (no /login page). Send
+  // unauthenticated users home with flags so the modal opens and can return.
   const loginRedirect = () => {
-    const url = new URL('/login', request.url);
-    url.searchParams.set('redirect', pathname);
+    const url = new URL('/', request.url);
+    url.searchParams.set('auth', 'login');
+    url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   };
 

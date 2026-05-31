@@ -94,8 +94,7 @@ export function ProductCard({ product }: { product: Product }) {
           type="button"
           onClick={handleAddToCart}
           disabled={outOfStock}
-          className="mt-3 w-full bg-[#1a6bdf] hover:bg-[#1559bd]"
-          size="sm"
+          className="mt-3 h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]"
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
           {outOfStock ? "Unavailable" : "Add to Cart"}
