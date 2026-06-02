@@ -37,7 +37,7 @@ import { useCartStore } from "@/store/cartStore";
 import { AuthModal } from "@/components/shared/AuthModal";
 import type { Category } from "@/types";
 
-export function Navbar() {
+export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [query, setQuery] = useState("");
@@ -122,7 +122,7 @@ export function Navbar() {
           </SheetTrigger>
           <SheetContent side="left" className="flex w-72 flex-col">
             <SheetHeader>
-              <SheetTitle className="text-left text-[#1a6bdf]">Future Shop</SheetTitle>
+              <SheetTitle className="text-left text-[#1a6bdf]">{siteName}</SheetTitle>
             </SheetHeader>
             <nav className="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-6">
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Home</Link>
@@ -181,7 +181,7 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="shrink-0 text-xl font-bold text-[#1a6bdf]">
-          Future Shop
+          {siteName}
         </Link>
 
         {/* Category dropdown (desktop) */}

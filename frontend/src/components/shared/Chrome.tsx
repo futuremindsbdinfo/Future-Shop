@@ -3,15 +3,21 @@
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
+import { FALLBACK_SETTINGS } from "@/lib/settings";
+import type { SiteSettings } from "@/types";
 
 /**
  * Renders the storefront chrome (Navbar + Footer) for all pages EXCEPT the
- * admin area, which provides its own sidebar layout. This gives admin pages a
- * clean, full-width shell without the public header/footer.
+ * admin and delivery areas, which provide their own full-width layouts.
  */
-export function Chrome({ children }: { children: React.ReactNode }) {
+export function Chrome({
+  children,
+  settings = FALLBACK_SETTINGS,
+}: {
+  children: React.ReactNode;
+  settings?: SiteSettings;
+}) {
   const pathname = usePathname();
-  // Admin and delivery areas use their own full-width chrome (no storefront nav).
   const isBareLayout =
     (pathname?.startsWith("/admin") ?? false) || (pathname?.startsWith("/delivery") ?? false);
 
@@ -21,9 +27,9 @@ export function Chrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <Navbar />
+      <Navbar siteName={settings.site_name ?? FALLBACK_SETTINGS.site_name ?? "Future Shop"} />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer settings={settings} />
     </>
   );
 }

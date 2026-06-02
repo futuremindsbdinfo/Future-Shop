@@ -5,6 +5,7 @@ import "@/lib/fontawesome";
 import { Chrome } from "@/components/shared/Chrome";
 import { AuthHydrator } from "@/components/shared/AuthHydrator";
 import { Toaster } from "@/components/ui/sonner";
+import { getSiteSettings } from "@/lib/settings";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,11 +23,13 @@ export const metadata: Metadata = {
     "Future Shop — local sellers from Sherpur & Bogura, delivered to your doorstep.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSiteSettings();
+
   return (
     <html
       lang="en"
@@ -34,7 +37,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <AuthHydrator />
-        <Chrome>{children}</Chrome>
+        <Chrome settings={settings}>{children}</Chrome>
         <Toaster richColors position="top-center" />
       </body>
     </html>

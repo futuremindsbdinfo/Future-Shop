@@ -1,0 +1,39 @@
+import type { SiteSettings } from "@/types";
+
+/** Hardcoded fallback used when the settings API is unavailable. */
+export const FALLBACK_SETTINGS: SiteSettings = {
+  site_name: "Future Shop",
+  site_tagline: "আপনার পাড়ার বাজার, এখন অনলাইনে",
+  contact_phone: null,
+  contact_email: null,
+  contact_address: null,
+};
+
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+/**
+ * Server-side fetch of public site settings, cached for 1 hour (ISR).
+ * Falls back to hardcoded defaults if the API fails or is unreachable.
+ */
+export async function getSiteSettings(): Promise<SiteSettings> {
+  try {
+    const res = await fetch(`${BASE}/settings`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return FALLBACK_SETTINGS;
+
+    const json = (await res.json()) as { data?: Partial<SiteSettings> };
+    const d = json.data ?? {};
+
+    return {
+      site_name: d.site_name || FALLBACK_SETTINGS.site_name,
+      site_tagline: d.site_tagline || FALLBACK_SETTINGS.site_tagline,
+      contact_phone: d.contact_phone ?? null,
+      contact_email: d.contact_email ?? null,
+      contact_address: d.contact_address ?? null,
+    };
+  } catch {
+    return FALLBACK_SETTINGS;
+  }
+}

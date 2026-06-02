@@ -44,6 +44,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/{slug}', [ProductController::class, 'show'])->name('products.show');
     Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
+    Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
 
     /*
     | Cart — works for guests (X-Cart-Token header) and authenticated users
@@ -97,6 +98,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
             // Dashboard summary.
             Route::get('dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+
+            // Delivery agents (for order assignment).
+            Route::get('delivery-users', [AdminController::class, 'deliveryUsers'])->name('delivery-users.index');
 
             // All categories (incl. inactive) for admin forms.
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');

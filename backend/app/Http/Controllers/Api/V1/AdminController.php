@@ -4,11 +4,25 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Http\JsonResponse;
 
 class AdminController extends Controller
 {
+    /**
+     * Admin: list all active delivery agents (for order assignment).
+     */
+    public function deliveryUsers(): JsonResponse
+    {
+        return response()->json([
+            'data' => User::where('role', 'delivery')
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'phone']),
+        ]);
+    }
+
     /**
      * Admin dashboard summary stats + recent orders.
      */

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +20,24 @@ import type { Order, OrderStatus, PaginatedResponse } from "@/types";
 
 const TK = "৳";
 
+interface DeliveryUser {
+  id: number;
+  name: string;
+  phone: string | null;
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [deliveryUsers, setDeliveryUsers] = useState<DeliveryUser[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .get<{ data: DeliveryUser[] }>("/admin/delivery-users")
+      .then((r) => setDeliveryUsers(r.data.data))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -51,14 +64,14 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const assignDelivery = async (order: Order) => {
-    const input = window.prompt(`Assign order ${order.order_number} to delivery user ID:`);
-    if (!input) return;
+  const assignDelivery = async (order: Order, deliveryUserId: string) => {
+    const value = deliveryUserId ? Number(deliveryUserId) : null;
     try {
-      await api.patch(`/admin/orders/${order.id}`, { delivery_user_id: Number(input) });
-      toast.success("ডেলিভারি অ্যাসাইন হয়েছে");
+      await api.patch(`/admin/orders/${order.id}`, { delivery_user_id: value });
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, delivery_user_id: value } : o)));
+      toast.success(value ? "ডেলিভারি অ্যাসাইন হয়েছে" : "অ্যাসাইনমেন্ট সরানো হয়েছে");
     } catch {
-      toast.error("অ্যাসাইন ব্যর্থ — delivery role আছে এমন user ID দিন");
+      toast.error("অ্যাসাইন ব্যর্থ হয়েছে");
     }
   };
 
@@ -123,14 +136,19 @@ export default function AdminOrdersPage() {
                       {new Date(order.created_at).toLocaleDateString("en-GB")}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        className="h-11"
-                        onClick={() => assignDelivery(order)}
+                      <select
+                        value={order.delivery_user_id ?? ""}
+                        onChange={(e) => assignDelivery(order, e.target.value)}
+                        className="h-11 rounded-md border border-input bg-transparent px-2 text-sm"
+                        aria-label="Assign delivery agent"
                       >
-                        <Truck className="mr-2 h-4 w-4" />
-                        Assign
-                      </Button>
+                        <option value="">Assign…</option>
+                        {deliveryUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}{u.phone ? ` (${u.phone})` : ""}
+                          </option>
+                        ))}
+                      </select>
                     </TableCell>
                   </TableRow>
                 ))}
