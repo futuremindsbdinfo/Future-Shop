@@ -259,6 +259,10 @@ export function Navbar() {
                   <UserIcon className="mr-2 h-4 w-4" />
                   My Orders
                 </DropdownMenuItem>
+                <DropdownMenuItem render={<Link href="/profile" />}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span lang="bn">প্রোফাইল</span>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>

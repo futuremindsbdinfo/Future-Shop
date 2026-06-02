@@ -11,9 +11,11 @@ import { Footer } from "@/components/shared/Footer";
  */
 export function Chrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith("/admin") ?? false;
+  // Admin and delivery areas use their own full-width chrome (no storefront nav).
+  const isBareLayout =
+    (pathname?.startsWith("/admin") ?? false) || (pathname?.startsWith("/delivery") ?? false);
 
-  if (isAdmin) {
+  if (isBareLayout) {
     return <>{children}</>;
   }
 

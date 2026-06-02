@@ -184,11 +184,12 @@ class OrderController extends Controller
         $data = $request->validate([
             'order_status' => ['sometimes', Rule::in(['pending', 'processing', 'shipped', 'delivered', 'cancelled'])],
             'payment_status' => ['sometimes', Rule::in(['pending', 'paid', 'failed', 'refunded'])],
+            'delivery_user_id' => ['sometimes', 'nullable', Rule::exists('users', 'id')->where('role', 'delivery')],
         ]);
 
         $order->update($data);
 
-        return response()->json(['data' => $order->fresh(['user:id,name,email', 'items'])]);
+        return response()->json(['data' => $order->fresh(['user:id,name,email', 'deliveryUser:id,name', 'items'])]);
     }
 
     /**

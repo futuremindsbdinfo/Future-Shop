@@ -175,4 +175,48 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Logged out.']);
     }
+
+    /**
+     * Update the authenticated user's profile (name, email). Phone is read-only.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email,'.$user->id],
+        ]);
+
+        $user->update([
+            'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+        ]);
+
+        return response()->json(['user' => $user->fresh()]);
+    }
+
+    /**
+     * Change the authenticated user's password (verify current first).
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+        ]);
+
+        // Users created via OTP may have no password yet — allow setting one then.
+        if ($user->password && ! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['বর্তমান পাসওয়ার্ড সঠিক নয়।'],
+            ]);
+        }
+
+        $user->update(['password' => $data['password']]);
+
+        return response()->json(['message' => 'পাসওয়ার্ড পরিবর্তন হয়েছে।']);
+    }
 }

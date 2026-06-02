@@ -51,6 +51,17 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const assignDelivery = async (order: Order) => {
+    const input = window.prompt(`Assign order ${order.order_number} to delivery user ID:`);
+    if (!input) return;
+    try {
+      await api.patch(`/admin/orders/${order.id}`, { delivery_user_id: Number(input) });
+      toast.success("ডেলিভারি অ্যাসাইন হয়েছে");
+    } catch {
+      toast.error("অ্যাসাইন ব্যর্থ — delivery role আছে এমন user ID দিন");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Orders</h1>
@@ -115,7 +126,7 @@ export default function AdminOrdersPage() {
                       <Button
                         variant="outline"
                         className="h-11"
-                        onClick={() => toast.info("ডেলিভারি অ্যাসাইন শীঘ্রই আসছে")}
+                        onClick={() => assignDelivery(order)}
                       >
                         <Truck className="mr-2 h-4 w-4" />
                         Assign

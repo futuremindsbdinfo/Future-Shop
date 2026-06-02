@@ -17,7 +17,9 @@ class DeliveryZone extends Model
         'name',
         'division',
         'district',
+        'areas',
         'delivery_charge',
+        'free_delivery_threshold',
         'estimated_days_min',
         'estimated_days_max',
         'is_active',
@@ -30,6 +32,7 @@ class DeliveryZone extends Model
     {
         return [
             'delivery_charge' => 'decimal:2',
+            'free_delivery_threshold' => 'decimal:2',
             'estimated_days_min' => 'integer',
             'estimated_days_max' => 'integer',
             'is_active' => 'boolean',

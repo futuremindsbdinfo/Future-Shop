@@ -17,6 +17,7 @@ class Order extends Model
     protected $fillable = [
         'order_number',
         'user_id',
+        'delivery_user_id',
         'delivery_zone_id',
         'promo_code_id',
         'subtotal',
@@ -52,6 +53,11 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function deliveryUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'delivery_user_id');
     }
 
     public function deliveryZone(): BelongsTo

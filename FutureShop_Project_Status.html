@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Future Shop — Project Status</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root {
+  --bg:#080b10;--surface:#0e1219;--surface2:#141922;--border:#1e2738;
+  --accent:#00d4aa;--blue:#4f9cf9;--purple:#b06af3;--orange:#ff8c42;
+  --red:#ff5f6d;--yellow:#ffd700;--green:#00d4aa;--text:#c9d1e0;
+  --muted:#5a6a85;--heading:#f0f4ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.75;}
+.container{max-width:960px;margin:0 auto;padding:48px 24px;}
+.header{text-align:center;padding:60px 24px 40px;border-bottom:1px solid var(--border);margin-bottom:48px;}
+.header .tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:16px;}
+.header h1{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--heading);}
+.header h1 span{color:var(--accent);}
+.header .sub{color:var(--muted);margin-top:8px;font-size:15px;}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:48px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;text-align:center;}
+.stat-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--accent);}
+.stat-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px;}
+.section{margin-bottom:48px;}
+.section-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--heading);margin-bottom:20px;display:flex;align-items:center;gap:12px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.progress-wrap{margin-bottom:20px;}
+.progress-label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;}
+.progress-label span:first-child{color:var(--heading);font-weight:600;}
+.progress-label span:last-child{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;}
+.progress-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;background:linear-gradient(to right,var(--accent),var(--blue));}
+.task-group{margin-bottom:24px;}
+.task-group-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;padding:6px 12px;background:rgba(0,212,170,0.06);border-radius:6px;display:inline-block;}
+.task-item{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;border:1px solid var(--border);background:var(--surface);}
+.task-item.done{border-color:rgba(0,212,170,0.2);}
+.task-item.pending{border-color:rgba(255,140,66,0.2);}
+.task-item.critical{border-color:rgba(255,95,109,0.2);}
+.task-item.phase2{border-color:rgba(79,156,249,0.15);}
+.check{font-size:16px;flex-shrink:0;margin-top:1px;}
+.task-text{flex:1;}
+.task-text strong{color:var(--heading);display:block;margin-bottom:2px;}
+.task-text span{color:var(--muted);font-size:12px;}
+.stack-table{width:100%;border-collapse:collapse;font-size:13px;}
+.stack-table th{background:var(--surface2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);}
+.stack-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);}
+.stack-table tr:last-child td{border-bottom:none;}
+.b{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 8px;border-radius:4px;letter-spacing:0.5px;font-weight:500;margin-left:8px;}
+.bg{background:rgba(0,212,170,0.1);color:var(--green);border:1px solid rgba(0,212,170,0.2);}
+.bo{background:rgba(255,140,66,0.1);color:var(--orange);border:1px solid rgba(255,140,66,0.2);}
+.br{background:rgba(255,95,109,0.1);color:var(--red);border:1px solid rgba(255,95,109,0.2);}
+.bb{background:rgba(79,156,249,0.1);color:var(--blue);border:1px solid rgba(79,156,249,0.2);}
+.callout{border-radius:10px;padding:14px 18px;margin:12px 0;display:flex;gap:12px;font-size:13px;}
+.callout.warn{background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.2);color:#fef08a;}
+.callout.info{background:rgba(79,156,249,0.05);border:1px solid rgba(79,156,249,0.2);color:#93c5fd;}
+.callout.tip{background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);color:#6ee7d4;}
+.callout p{margin:0;}
+.next-card{background:var(--surface);border:1px solid rgba(0,212,170,0.25);border-radius:12px;padding:22px;margin-bottom:14px;}
+.next-num{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:6px;}
+.next-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--heading);margin-bottom:6px;}
+.next-desc{font-size:13px;color:var(--muted);}
+.doc-footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);margin-top:48px;}
+.doc-footer p{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag">Project Status · Updated</div>
+  <h1>Future <span>Shop</span></h1>
+  <p class="sub">Multi-Vendor E-Commerce · Sherpur &amp; Bogura, Bangladesh<br>
+  GitHub: github.com/ashrafulalamashik/localbazaar</p>
+</div>
+
+<div class="container">
+
+<div class="stats">
+  <div class="stat-card"><div class="stat-val">Laravel 12</div><div class="stat-label">Backend</div></div>
+  <div class="stat-card"><div class="stat-val">Next.js 16</div><div class="stat-label">Frontend</div></div>
+  <div class="stat-card"><div class="stat-val">PostgreSQL</div><div class="stat-label">Database</div></div>
+  <div class="stat-card"><div class="stat-val">13</div><div class="stat-label">Pages Built</div></div>
+  <div class="stat-card"><div class="stat-val">30+</div><div class="stat-label">API Endpoints</div></div>
+  <div class="stat-card"><div class="stat-val">~75%</div><div class="stat-label">MVP Done</div></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Overall Progress</div>
+  <div class="progress-wrap"><div class="progress-label"><span>Backend API</span><span>100%</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div></div>
+  <div class="progress-wrap"><div class="progress-label"><span>Frontend Pages</span><span>85%</span></div><div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div></div>
+  <div class="progress-wrap"><div class="progress-label"><span>Admin Panel</span><span>80%</span></div><div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div></div>
+  <div class="progress-wrap"><div class="progress-label"><span>Mobile Optimization</span><span>85%</span></div><div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div></div>
+  <div class="progress-wrap"><div class="progress-label"><span>Security Hardening</span><span>60%</span></div><div class="progress-bar"><div class="progress-fill" style="width:60%"></div></div></div>
+  <div class="progress-wrap"><div class="progress-label"><span>Production Deployment</span><span>0%</span></div><div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Tech Stack</div>
+  <table class="stack-table">
+    <thead><tr><th>Layer</th><th>Technology</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>Next.js 16.2.6 + React 19 + TypeScript</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>Styling</td><td>Tailwind 4 + shadcn/ui (Base UI — NOT Radix)</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>Icons</td><td>Font Awesome 7 (free-solid)</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>State</td><td>Zustand (authStore + cartStore)</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>Backend</td><td>Laravel 12 (PHP 8.2)</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>Database</td><td>PostgreSQL 18.4 (local dev)</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>Auth</td><td>Laravel Sanctum Bearer + sessionStorage</td><td><span class="b bg">Live</span></td></tr>
+      <tr><td>Payment</td><td>SSL Commerz</td><td><span class="b bo">Sandbox only</span></td></tr>
+      <tr><td>SMS/OTP</td><td>SSL Wireless</td><td><span class="b bo">Scaffold only</span></td></tr>
+      <tr><td>Storage</td><td>Cloudflare R2</td><td><span class="b bo">Not connected</span></td></tr>
+      <tr><td>CDN/WAF</td><td>Cloudflare</td><td><span class="b br">Not setup</span></td></tr>
+      <tr><td>Search</td><td>Meilisearch</td><td><span class="b bb">Phase 2</span></td></tr>
+      <tr><td>Automation</td><td>n8n self-hosted</td><td><span class="b bb">Phase 2</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">✅ সম্পূর্ণ হয়েছে</div>
+
+  <div class="task-group">
+    <div class="task-group-title">Backend — 100%</div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Laravel 12 Setup + Packages</strong><span>Sanctum, Predis, R2 (S3), Intervention Image v3</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>12 Database Tables Migrated</strong><span>users, vendors, categories, products, orders, order_items, transactions, delivery_zones, promo_codes + alters</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>9 Eloquent Models</strong><span>$fillable, relationships, SoftDeletes, casts — zero $guarded=[]</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Seeders</strong><span>Admin user, 20 categories (FA icons), 3 delivery zones, 6 sample products</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Auth API</strong><span>Phone OTP (cache), Email+Password, Sanctum, RoleMiddleware, rate limiting, lockout</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Product &amp; Category API</strong><span>Public listing+filters, admin CRUD, image upload (MIME+magic byte, UUID, resize)</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Vendor Controller</strong><span>Admin CRUD, earnings summary, commission rate, zone assignment</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Cart System</strong><span>Cache-abstracted (→Redis prod), guest cart, merge on login, stock check</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Order Controller</strong><span>Server-side price verify, stock lock, order number FS-2026-XXXXX, address snapshot</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Payment Controller</strong><span>SSL Commerz (HMAC+amount verify+idempotency), COD confirm</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Admin API</strong><span>Dashboard stats, orders+status update, vendor management, admin categories</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Delivery Zones API</strong><span>Public GET, admin CRUD, charge calculation</span></div></div>
+  </div>
+
+  <div class="task-group">
+    <div class="task-group-title">Frontend — 85%</div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Next.js 16 + All Dependencies</strong><span>TypeScript, Tailwind 4, shadcn/ui (Base UI), Font Awesome 7, Zustand, Axios, Swiper</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Core Files</strong><span>api.ts (secure Axios), auth.ts (sessionStorage), proxy.ts (route protection), types, stores</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Shared Components</strong><span>Navbar (mobile+auth), Footer (Bengali tagline), AuthModal (OTP+Email+Google), Chrome toggle</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Homepage</strong><span>SSG+ISR, HeroBanner (Bengali), CategoryGrid (FA icons), FeaturedProducts</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Category + Product Detail Pages</strong><span>SSR, Swiper gallery, Add to Cart, Bengali labels</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Cart + Checkout + Orders Pages</strong><span>44px touch targets, delivery zone selector, payment method, Bengali status labels</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Admin Panel (6 pages)</strong><span>Dashboard, Products, Orders, Vendors — no public Navbar/Footer inside admin</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Mobile-First Optimization</strong><span>375px-first, 44px touch targets, hamburger menu with auth login</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>Rebranded to Future Shop</strong><span>All text, order prefix FS-2026, admin panel title</span></div></div>
+    <div class="task-item done"><span class="check">✅</span><div class="task-text"><strong>GitHub Pushed</strong><span>github.com/ashrafulalamashik/localbazaar — all commits pushed</span></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">⏳ বাকি আছে</div>
+
+  <div class="task-group">
+    <div class="task-group-title">Frontend — বাকি Pages</div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Admin Zones Page (/admin/zones)</strong><span>Delivery zone add/edit UI — sidebar link আছে, page নেই</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Admin Settings Page (/admin/settings)</strong><span>Site settings, banner management</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Delivery Boy Pages (/delivery)</strong><span>Assigned orders list, status update, COD record — PWA-ready</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Search Page (/search)</strong><span>Search results page with filters</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Profile Page (/profile)</strong><span>Customer profile edit — name, phone, address</span></div></div>
+  </div>
+
+  <div class="task-group">
+    <div class="task-group-title">Backend — বাকি</div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Delivery Controller</strong><span>Delivery boy: assigned orders, status update, COD endpoints</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Real Delivery Assignment</strong><span>Admin assigns delivery boy — currently placeholder toast</span></div></div>
+  </div>
+
+  <div class="task-group">
+    <div class="task-group-title">External Integrations — Credentials দরকার</div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>SSL Commerz Live</strong><span>SSLCZ_STORE_ID + SSLCZ_STORE_PASSWORD → backend .env</span></div></div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>SSL Wireless SMS</strong><span>API key → OTP এখন cache-only, real SMS যাচ্ছে না</span></div></div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>Cloudflare R2</strong><span>R2 bucket + credentials → এখন local disk এ save হচ্ছে</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Google OAuth</strong><span>Client ID + Secret → এখন placeholder toast</span></div></div>
+    <div class="task-item pending"><span class="check">🔶</span><div class="task-text"><strong>Microsoft Clarity + Resend Email</strong><span>Analytics tracking + order confirmation email</span></div></div>
+  </div>
+
+  <div class="task-group">
+    <div class="task-group-title">Production Deployment — সব বাকি</div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>VPS Server Setup</strong><span>Nginx + PHP 8.2 + Node 20 + PostgreSQL + Redis</span></div></div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>Domain + SSL + Cloudflare</strong><span>DNS, Let's Encrypt, WAF, HTTPS enforce</span></div></div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>Backend + Frontend Deploy</strong><span>Laravel config:cache, APP_DEBUG=false, PM2, Nginx reverse proxy</span></div></div>
+    <div class="task-item critical"><span class="check">🔴</span><div class="task-text"><strong>Redis Production + Daily Backup</strong><span>CART_STORE=redis, PostgreSQL daily cron backup</span></div></div>
+  </div>
+
+  <div class="task-group">
+    <div class="task-group-title">Phase 2 — পরে</div>
+    <div class="task-item phase2"><span class="check">🔵</span><div class="task-text"><strong>Meilisearch Search Engine</strong><span>Product search — Phase 2</span></div></div>
+    <div class="task-item phase2"><span class="check">🔵</span><div class="task-text"><strong>n8n Automation</strong><span>Order SMS, vendor notifications — Phase 2</span></div></div>
+    <div class="task-item phase2"><span class="check">🔵</span><div class="task-text"><strong>PWA + Product Reviews + Promo Codes + Flash Deals</strong><span>Phase 2</span></div></div>
+    <div class="task-item phase2"><span class="check">🔵</span><div class="task-text"><strong>Vendor Self-Registration + Analytics Dashboard</strong><span>Phase 3</span></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">⚠️ Critical Notes</div>
+  <div class="callout warn"><p>🔑 <strong>shadcn/ui = Base UI, NOT Radix.</strong> render prop এর সাথে nativeButton={false} সবসময় লাগবে। asChild কাজ করে না।</p></div>
+  <div class="callout warn"><p>🔑 <strong>Token sessionStorage এ আছে।</strong> Browser বন্ধ হলে logout হবে — এটা intended।</p></div>
+  <div class="callout info"><p>📌 Order prefix: <strong>FS-2026-XXXXX</strong> | Admin: admin@localbazaar.com / Admin@123456</p></div>
+  <div class="callout info"><p>📌 Local: Frontend → localhost:3000 | Backend → localhost:8000 | DB: localbazaar (postgres/Ashik)</p></div>
+  <div class="callout tip"><p>✅ Mobile-first rule permanent: 375px first, 44px touch targets — all future code automatically.</p></div>
+</div>
+
+<div class="section">
+  <div class="section-title">🚀 Next Steps — Priority Order</div>
+  <div class="next-card">
+    <div class="next-num">PRIORITY 1 — এখনই</div>
+    <div class="next-title">বাকি Frontend Pages বানানো + Git Commit</div>
+    <div class="next-desc">Admin Zones, Admin Settings, Delivery Boy pages, Search page, Profile page। তারপর final git commit + push।</div>
+  </div>
+  <div class="next-card">
+    <div class="next-num">PRIORITY 2 — এরপর</div>
+    <div class="next-title">External Credentials সংগ্রহ করুন</div>
+    <div class="next-desc">SSL Commerz live account, SSL Wireless API key, Cloudflare R2 bucket, Google OAuth, Resend।</div>
+  </div>
+  <div class="next-card">
+    <div class="next-num">PRIORITY 3 — Launch এর আগে</div>
+    <div class="next-title">VPS Deployment</div>
+    <div class="next-desc">VPS তে Nginx + PHP + Node + PostgreSQL + Redis setup। Backend + Frontend deploy। Cloudflare। APP_DEBUG=false। Backup।</div>
+  </div>
+  <div class="next-card">
+    <div class="next-num">PRIORITY 4 — Launch এর পরে</div>
+    <div class="next-title">Phase 2 Features</div>
+    <div class="next-desc">Meilisearch, n8n, PWA, reviews, promo codes, flash deals। Real vendor onboarding।</div>
+  </div>
+</div>
+
+</div>
+<div class="doc-footer">
+  <p>FUTURE SHOP · PROJECT STATUS · UPDATED</p>
+  <p style="margin-top:6px;">Next.js 16 + Laravel 12 + PostgreSQL 18 · github.com/ashrafulalamashik/localbazaar</p>
+</div>
+</body>
+</html>

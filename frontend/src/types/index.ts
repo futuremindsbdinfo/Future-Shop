@@ -31,12 +31,48 @@ export interface DeliveryZone {
   name: string;
   division: string | null;
   district: string | null;
+  areas: string | null;
   delivery_charge: string;
+  free_delivery_threshold: string | null;
   estimated_days_min: number;
   estimated_days_max: number;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface Banner {
+  id: number;
+  title: string;
+  image: string;
+  image_path: string | null;
+  link_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Address {
+  id: number;
+  user_id: number;
+  label: string | null;
+  recipient_name: string;
+  phone: string;
+  address: string;
+  division: string | null;
+  district: string | null;
+  is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SiteSettings {
+  site_name: string | null;
+  site_tagline: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  contact_address: string | null;
 }
 
 export interface Vendor {
@@ -139,6 +175,7 @@ export interface Order {
   id: number;
   order_number: string;
   user_id: number;
+  delivery_user_id: number | null;
   delivery_zone_id: number | null;
   promo_code_id: number | null;
   subtotal: string;

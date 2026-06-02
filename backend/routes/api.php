@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BannerController;
 use App\Http\Controllers\Api\V1\CartController;
+use App\Http\Controllers\Api\V1\DeliveryController;
+use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\DeliveryZoneController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -66,6 +70,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::put('auth/profile', [AuthController::class, 'updateProfile'])->name('auth.profile');
+        Route::put('auth/password', [AuthController::class, 'changePassword'])->name('auth.password');
+
+        // Saved addresses.
+        Route::get('addresses', [AddressController::class, 'index'])->name('addresses.index');
+        Route::post('addresses', [AddressController::class, 'store'])->name('addresses.store');
+        Route::delete('addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
 
         // Merge a guest cart into the user's cart after login.
         Route::post('cart/merge', [CartController::class, 'merge'])->name('cart.merge');
@@ -106,6 +117,20 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');
             Route::get('vendors/{vendor}', [VendorController::class, 'show'])->name('vendors.show');
             Route::match(['put', 'patch'], 'vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update');
+
+            // Delivery zones.
+            Route::get('delivery-zones', [DeliveryZoneController::class, 'adminIndex'])->name('delivery-zones.index');
+            Route::post('delivery-zones', [DeliveryZoneController::class, 'store'])->name('delivery-zones.store');
+            Route::match(['put', 'patch'], 'delivery-zones/{delivery_zone}', [DeliveryZoneController::class, 'update'])->name('delivery-zones.update');
+
+            // Banners.
+            Route::get('banners', [BannerController::class, 'index'])->name('banners.index');
+            Route::post('banners', [BannerController::class, 'store'])->name('banners.store');
+            Route::delete('banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
+
+            // Site settings.
+            Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+            Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
         });
 
         Route::middleware('role:vendor')->prefix('vendor')->name('vendor.')->group(function () {
@@ -113,7 +138,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
 
         Route::middleware('role:delivery')->prefix('delivery')->name('delivery.')->group(function () {
-            // e.g. delivery agent order endpoints
+            Route::get('orders', [DeliveryController::class, 'myOrders'])->name('orders.index');
+            Route::get('orders/{order}', [DeliveryController::class, 'show'])->name('orders.show');
+            Route::match(['put', 'patch'], 'orders/{order}', [DeliveryController::class, 'updateStatus'])->name('orders.update');
         });
 
         Route::middleware('role:customer')->prefix('account')->name('account.')->group(function () {

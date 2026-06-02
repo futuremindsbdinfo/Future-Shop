@@ -78,6 +78,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Orders assigned to this user for delivery.
+     */
+    public function deliveryOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'delivery_user_id');
+    }
+
+    /**
+     * Saved delivery addresses.
+     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Address::class);
+    }
+
+    /**
      * Convenience role checks.
      */
     public function isVendor(): bool
