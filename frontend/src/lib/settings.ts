@@ -19,7 +19,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
   try {
     const res = await fetch(`${BASE}/settings`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 3600 },
+      next: { revalidate: 3600, tags: ["settings"] },
     });
     if (!res.ok) return FALLBACK_SETTINGS;
 

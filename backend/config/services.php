@@ -46,4 +46,9 @@ return [
         'ipn_url' => env('SSLCZ_IPN_URL', env('APP_URL').'/api/v1/payments/sslcommerz/success'),
     ],
 
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'http://localhost:3000'),
+        'revalidate_secret' => env('REVALIDATE_SECRET'),
+    ],
+
 ];

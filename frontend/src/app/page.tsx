@@ -1,8 +1,9 @@
 import { HeroBanner } from "@/components/home/HeroBanner";
+import { BannerSlider } from "@/components/home/BannerSlider";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { FeaturedProducts } from "@/components/home/FeaturedProducts";
 import { apiFetchSafe } from "@/lib/server-api";
-import type { Category, PaginatedResponse, Product } from "@/types";
+import type { Banner, Category, PaginatedResponse, Product } from "@/types";
 
 // SSG with ISR — regenerate at most once per 60 seconds.
 export const revalidate = 60;
@@ -24,10 +25,13 @@ const EMPTY_PAGE: PaginatedResponse<Product> = {
 
 export default async function HomePage() {
   // Resilient: if the backend is unreachable (e.g. at build time), fall back to empty.
-  const [categoriesRes, productsRes] = await Promise.all([
+  const [categoriesRes, productsRes, bannersRes] = await Promise.all([
     apiFetchSafe<{ data: Category[] }>("/categories", { data: [] }, { next: { revalidate: 60 } }),
     apiFetchSafe<PaginatedResponse<Product>>("/products?per_page=8", EMPTY_PAGE, {
       next: { revalidate: 60 },
+    }),
+    apiFetchSafe<{ data: Banner[] }>("/banners", { data: [] }, {
+      next: { revalidate: 3600, tags: ["banners"] },
     }),
   ]);
 
@@ -37,6 +41,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <BannerSlider banners={bannersRes.data} />
       <HeroBanner />
       <CategoryGrid categories={categories} />
       <FeaturedProducts products={featured} />

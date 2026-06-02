@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use App\Services\ImageUploadService;
+use App\Services\RevalidateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class BannerController extends Controller
 {
-    public function __construct(private readonly ImageUploadService $images)
-    {
+    public function __construct(
+        private readonly ImageUploadService $images,
+        private readonly RevalidateService $revalidate,
+    ) {
     }
 
     /** Admin: list all banners. */
@@ -19,6 +22,17 @@ class BannerController extends Controller
     {
         return response()->json([
             'data' => Banner::orderBy('sort_order')->orderByDesc('id')->get(),
+        ]);
+    }
+
+    /** Public: list active banners for the storefront. */
+    public function publicIndex(): JsonResponse
+    {
+        return response()->json([
+            'data' => Banner::where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get(['id', 'title', 'image', 'link_url']),
         ]);
     }
 
@@ -44,6 +58,8 @@ class BannerController extends Controller
             'sort_order' => $data['sort_order'] ?? 0,
         ]);
 
+        $this->revalidate->tags(['banners']);
+
         return response()->json(['data' => $banner], 201);
     }
 
@@ -51,6 +67,8 @@ class BannerController extends Controller
     public function destroy(Banner $banner): JsonResponse
     {
         $banner->delete();
+
+        $this->revalidate->tags(['banners']);
 
         return response()->json(['message' => 'Banner deleted.']);
     }

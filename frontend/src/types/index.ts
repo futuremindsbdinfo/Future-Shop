@@ -197,6 +197,7 @@ export interface Order {
   items?: OrderItem[];
   deliveryZone?: DeliveryZone;
   user?: Pick<User, 'id' | 'name' | 'email'>;
+  deliveryUser?: Pick<User, 'id' | 'name'> | null;
 }
 
 export type TransactionType = 'payment' | 'refund' | 'payout';

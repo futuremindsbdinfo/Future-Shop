@@ -136,19 +136,25 @@ export default function AdminOrdersPage() {
                       {new Date(order.created_at).toLocaleDateString("en-GB")}
                     </TableCell>
                     <TableCell className="text-right">
-                      <select
-                        value={order.delivery_user_id ?? ""}
-                        onChange={(e) => assignDelivery(order, e.target.value)}
-                        className="h-11 rounded-md border border-input bg-transparent px-2 text-sm"
-                        aria-label="Assign delivery agent"
-                      >
-                        <option value="">Assign…</option>
-                        {deliveryUsers.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name}{u.phone ? ` (${u.phone})` : ""}
-                          </option>
-                        ))}
-                      </select>
+                      {order.order_status === "delivered" || order.order_status === "cancelled" ? (
+                        <span className="text-sm text-muted-foreground">
+                          {order.deliveryUser?.name ?? "—"}
+                        </span>
+                      ) : (
+                        <select
+                          value={order.delivery_user_id ?? ""}
+                          onChange={(e) => assignDelivery(order, e.target.value)}
+                          className="h-11 rounded-md border border-input bg-transparent px-2 text-sm"
+                          aria-label="Assign delivery agent"
+                        >
+                          <option value="">Assign…</option>
+                          {deliveryUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name}{u.phone ? ` (${u.phone})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

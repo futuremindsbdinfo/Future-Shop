@@ -45,6 +45,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('products/{slug}', [ProductController::class, 'show'])->name('products.show');
     Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::get('banners', [BannerController::class, 'publicIndex'])->name('banners.index');
 
     /*
     | Cart — works for guests (X-Cart-Token header) and authenticated users

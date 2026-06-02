@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\RevalidateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
+    public function __construct(private readonly RevalidateService $revalidate)
+    {
+    }
+
     /**
      * Allowed setting keys (site config).
      *
@@ -49,6 +54,9 @@ class SettingController extends Controller
         foreach ($data as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
+
+        // Clear the frontend's cached settings immediately.
+        $this->revalidate->tags(['settings']);
 
         return response()->json(['message' => 'Settings saved.']);
     }
