@@ -11,7 +11,11 @@ import { clearToken, getToken } from '@/lib/auth';
  */
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1',
-  withCredentials: true,
+  // Auth is Bearer-token (Authorization header), not cookies — so requests must
+  // NOT be credentialed. With credentials the backend would need
+  // Access-Control-Allow-Credentials:true, which it (correctly) doesn't send,
+  // causing every client-side call to fail CORS.
+  withCredentials: false,
   timeout: 10_000,
   headers: {
     Accept: 'application/json',

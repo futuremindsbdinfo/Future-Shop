@@ -71,6 +71,10 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
+  // login (email + password) state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
   // register state
   const [name, setName] = useState("");
   const [regPhone, setRegPhone] = useState("");
@@ -112,6 +116,25 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
     setLoading(true);
     try {
       const res = await api.post<AuthSuccess>("/auth/verify-otp", { phone, otp });
+      finishAuth(res.data);
+    } catch (error) {
+      const { message, fields } = extractErrors(error);
+      setErrors(fields);
+      if (Object.keys(fields).length === 0) toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const emailLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setErrors({});
+    setLoading(true);
+    try {
+      const res = await api.post<AuthSuccess>("/auth/login", {
+        email: loginEmail,
+        password: loginPassword,
+      });
       finishAuth(res.data);
     } catch (error) {
       const { message, fields } = extractErrors(error);
@@ -202,6 +225,45 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
                 </Button>
               </>
             )}
+
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground" lang="bn">অথবা</span>
+              <Separator className="flex-1" />
+            </div>
+
+            {/* Email + password */}
+            <form onSubmit={emailLogin} className="space-y-3">
+              <p className="text-sm font-medium" lang="bn">ইমেইল দিয়ে লগইন</p>
+              <div className="space-y-1">
+                <Label htmlFor="login-email" lang="bn">ইমেইল</Label>
+                <Input
+                  id="login-email"
+                  className="h-11"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="login-password" lang="bn">পাসওয়ার্ড</Label>
+                <Input
+                  id="login-password"
+                  className="h-11"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+                {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
+              </div>
+              <Button type="submit" disabled={loading} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <span lang="bn">লগইন করুন</span>
+              </Button>
+            </form>
 
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
