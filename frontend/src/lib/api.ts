@@ -30,10 +30,36 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+/**
+ * Decide whether a 401 should force a logout.
+ *
+ * We only logout on TRUE Sanctum auth failures, not application-level 401s
+ * (e.g. order/business errors). Two layered checks:
+ *   1. Skip for /orders and /payments paths — these can return 401 for
+ *      reasons that should surface as error messages, not kick the user out.
+ *   2. Only logout when the response carries `WWW-Authenticate: Bearer`
+ *      (the header Sanctum sets on genuine token rejection). The backend
+ *      exposes this header via CORS (config/cors.php).
+ */
+function shouldLogoutOn401(error: AxiosError): boolean {
+  const url = error.config?.url ?? '';
+  if (url.includes('/orders') || url.includes('/payments')) {
+    return false;
+  }
+
+  const wwwAuth =
+    error.response?.headers?.['www-authenticate'] ??
+    (error.response?.headers as Record<string, string> | undefined)?.['WWW-Authenticate'];
+
+  // If the header is present, it's a real auth failure → logout.
+  // If absent, treat as application 401 and let the caller handle it.
+  return typeof wwwAuth === 'string' && wwwAuth.toLowerCase().includes('bearer');
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
+    if (error.response?.status === 401 && typeof window !== 'undefined' && shouldLogoutOn401(error)) {
       clearToken();
       // Drop the middleware routing cookies as well.
       document.cookie = 'lb_auth=; Path=/; Max-Age=0; SameSite=Lax';

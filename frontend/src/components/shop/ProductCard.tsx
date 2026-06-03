@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, ShoppingCart } from "lucide-react";
+import { ShoppingBag, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cartStore";
@@ -25,7 +25,8 @@ export function ProductCard({ product }: { product: Product }) {
     hasSale && salePrice !== null ? Math.round(((price - salePrice) / price) * 100) : 0;
 
   const outOfStock = product.status === "out_of_stock" || product.stock_quantity <= 0;
-  const imageUrl = product.images?.[0]?.url ?? null;
+  // images may be null, undefined, or empty array — handle all gracefully.
+  const imageUrl = product.images && product.images.length > 0 ? product.images[0].url : null;
 
   const handleAddToCart = () => {
     if (outOfStock) return;
@@ -58,8 +59,9 @@ export function ProductCard({ product }: { product: Product }) {
             className="object-cover transition-transform duration-200 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            <ImageOff className="h-10 w-10" />
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
+            <ShoppingBag className="h-10 w-10" />
+            <span className="text-xs">No image</span>
           </div>
         )}
 

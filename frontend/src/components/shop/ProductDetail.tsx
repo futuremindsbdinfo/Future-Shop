@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
-import { ImageOff, Minus, Plus, ShoppingCart } from "lucide-react";
+import { FreeMode, Navigation, Pagination, Thumbs } from "swiper/modules";
+import type { Swiper as SwiperClass } from "swiper/types";
+import { Minus, Plus, ShoppingBag, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,8 @@ import type { Product } from "@/types";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import "swiper/css/thumbs";
+import "swiper/css/free-mode";
 
 const TK = "৳";
 const formatTk = (value: number) => `${TK}${value.toLocaleString("en-US")}`;
@@ -20,6 +23,7 @@ const formatTk = (value: number) => `${TK}${value.toLocaleString("en-US")}`;
 export function ProductDetail({ product }: { product: Product }) {
   const addItem = useCartStore((state) => state.addItem);
   const [quantity, setQuantity] = useState(1);
+  const [thumbsSwiper, setThumbsSwiper] = useState<SwiperClass | null>(null);
 
   const price = Number(product.price);
   const salePrice = product.sale_price !== null ? Number(product.sale_price) : null;
@@ -29,7 +33,10 @@ export function ProductDetail({ product }: { product: Product }) {
     hasSale && salePrice !== null ? Math.round(((price - salePrice) / price) * 100) : 0;
 
   const outOfStock = product.status === "out_of_stock" || product.stock_quantity <= 0;
-  const images = product.images ?? [];
+  // Treat null / undefined / empty as "no images"
+  const images = (product.images ?? []).filter((img) => img && img.url);
+  const hasImages = images.length > 0;
+  const isGallery = images.length > 1;
 
   const changeQty = (delta: number) => {
     setQuantity((current) => {
@@ -55,35 +62,85 @@ export function ProductDetail({ product }: { product: Product }) {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
       {/* Gallery */}
-      <div className="relative overflow-hidden rounded-lg border bg-muted">
-        {images.length > 0 ? (
+      <div className="flex flex-col gap-3">
+        <div className="relative overflow-hidden rounded-lg border bg-muted">
+          {!hasImages ? (
+            // No image placeholder
+            <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 text-muted-foreground">
+              <ShoppingBag className="h-12 w-12" />
+              <span className="text-sm">No image</span>
+            </div>
+          ) : !isGallery ? (
+            // Single image
+            <div className="relative aspect-square w-full">
+              <Image
+                src={images[0].url}
+                alt={product.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+          ) : (
+            // Multiple images: main swiper linked to thumbnails below
+            <Swiper
+              modules={[Navigation, Pagination, Thumbs]}
+              navigation
+              pagination={{ clickable: true }}
+              thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+              spaceBetween={10}
+              className="aspect-square w-full"
+            >
+              {images.map((image, index) => (
+                <SwiperSlide key={image.path}>
+                  <div className="relative aspect-square w-full">
+                    <Image
+                      src={image.url}
+                      alt={`${product.name} ${index + 1}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover"
+                      priority={index === 0}
+                    />
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          )}
+        </div>
+
+        {/* Thumbnails — only when there's more than one image */}
+        {isGallery && (
           <Swiper
-            modules={[Navigation, Pagination]}
-            navigation
-            pagination={{ clickable: true }}
-            className="aspect-square w-full"
+            modules={[FreeMode, Thumbs]}
+            onSwiper={setThumbsSwiper}
+            spaceBetween={8}
+            slidesPerView={4}
+            freeMode
+            watchSlidesProgress
+            breakpoints={{
+              640: { slidesPerView: 5 },
+              768: { slidesPerView: 6 },
+            }}
+            className="w-full"
           >
             {images.map((image, index) => (
-              <SwiperSlide key={image.path}>
-                <div className="relative aspect-square w-full">
+              <SwiperSlide key={image.path} className="cursor-pointer">
+                <div className="relative aspect-square overflow-hidden rounded-md border-2 border-transparent ring-offset-2 [.swiper-slide-thumb-active_&]:border-[#1a6bdf]">
                   <Image
                     src={image.url}
-                    alt={`${product.name} ${index + 1}`}
+                    alt={`${product.name} thumbnail ${index + 1}`}
                     fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
+                    sizes="80px"
                     className="object-cover"
-                    priority={index === 0}
                   />
                 </div>
               </SwiperSlide>
             ))}
           </Swiper>
-        ) : (
-          <div className="flex aspect-square w-full items-center justify-center text-muted-foreground">
-            <ImageOff className="h-12 w-12" />
-          </div>
         )}
       </div>
 
@@ -95,12 +152,12 @@ export function ProductDetail({ product }: { product: Product }) {
           </p>
         )}
 
-        <h1 className="mt-1 text-2xl font-bold">{product.name}</h1>
+        <h1 className="mt-1 text-xl font-bold sm:text-2xl">{product.name}</h1>
 
-        <div className="mt-4 flex items-center gap-3">
-          <span className="text-3xl font-bold text-[#1a6bdf]">{formatTk(effectivePrice)}</span>
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
+          <span className="text-2xl font-bold text-[#1a6bdf] sm:text-3xl">{formatTk(effectivePrice)}</span>
           {hasSale && (
-            <span className="text-lg text-muted-foreground line-through">{formatTk(price)}</span>
+            <span className="text-base text-muted-foreground line-through sm:text-lg">{formatTk(price)}</span>
           )}
           {discountPct > 0 && (
             <Badge className="bg-red-600 text-white hover:bg-red-600">-{discountPct}%</Badge>
@@ -130,11 +187,11 @@ export function ProductDetail({ product }: { product: Product }) {
           <div className="mt-6 flex items-center gap-3">
             <span className="text-sm font-medium" lang="bn">পরিমাণ:</span>
             <div className="flex items-center rounded-md border">
-              <Button variant="ghost" size="icon" onClick={() => changeQty(-1)} aria-label="Decrease">
+              <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => changeQty(-1)} aria-label="Decrease">
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-10 text-center text-sm">{quantity}</span>
-              <Button variant="ghost" size="icon" onClick={() => changeQty(1)} aria-label="Increase">
+              <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => changeQty(1)} aria-label="Increase">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -145,7 +202,7 @@ export function ProductDetail({ product }: { product: Product }) {
           onClick={handleAddToCart}
           disabled={outOfStock}
           size="lg"
-          className="mt-6 bg-[#1a6bdf] hover:bg-[#1559bd]"
+          className="mt-6 h-12 bg-[#1a6bdf] hover:bg-[#1559bd]"
         >
           <ShoppingCart className="mr-2 h-5 w-5" />
           <span lang="bn">{outOfStock ? "স্টকে নেই" : "কার্টে যোগ করুন"}</span>

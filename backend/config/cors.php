@@ -29,7 +29,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // Expose WWW-Authenticate so the frontend can distinguish true Sanctum
+    // auth failures (logout) from application-level 401s (just show error).
+    'exposed_headers' => ['WWW-Authenticate'],
 
     'max_age' => 0,
 
