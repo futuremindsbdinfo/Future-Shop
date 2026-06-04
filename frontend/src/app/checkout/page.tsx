@@ -45,12 +45,20 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [loading, setLoading] = useState(false);
 
+  // Wait one tick for AuthHydrator to restore from sessionStorage before
+  // deciding the user is unauthenticated (avoids a redirect race on refresh).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   // Protect: in-memory token means a hard refresh logs out → back to login.
   useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated) {
       router.replace("/?auth=login&next=/checkout");
     }
-  }, [isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, router]);
 
   useEffect(() => {
     api
@@ -62,6 +70,7 @@ export default function CheckoutPage() {
       .catch(() => toast.error("ডেলিভারি জোন লোড করা যায়নি"));
   }, []);
 
+  if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated) {
     return <LoadingSpinner fullHeight />;
   }

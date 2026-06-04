@@ -251,12 +251,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [notifications, setNotifications] = useState<Order[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Give AuthHydrator one tick to restore from sessionStorage before deciding
-  // the user is logged out (avoids a redirect race on hard refresh).
+  // Wait one tick for AuthHydrator to restore from sessionStorage before
+  // deciding the user is logged out (avoids a redirect race on hard refresh).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setHydrated(true), 0);
-    return () => clearTimeout(t);
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -287,6 +286,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/");
   };
 
+  if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated || user?.role !== "admin") {
     return <LoadingSpinner fullHeight />;
   }

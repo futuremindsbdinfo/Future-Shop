@@ -31,7 +31,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  // Wait one tick for AuthHydrator to restore from sessionStorage.
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated) {
       router.replace(`/?auth=login&next=/orders/${id}`);
       return;
@@ -41,8 +48,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       .then((res) => setOrder(res.data.data))
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, [id, isAuthenticated, router]);
+  }, [hydrated, id, isAuthenticated, router]);
 
+  if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated || loading) return <LoadingSpinner fullHeight />;
 
   if (notFound || !order) {

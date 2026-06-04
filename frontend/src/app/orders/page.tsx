@@ -40,7 +40,14 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Wait one tick for AuthHydrator to restore from sessionStorage.
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated) {
       router.replace("/?auth=login&next=/orders");
       return;
@@ -52,8 +59,9 @@ export default function OrdersPage() {
         /* 401 is handled by the api interceptor (redirects to login) */
       })
       .finally(() => setLoading(false));
-  }, [isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, router]);
 
+  if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated || loading) {
     return <LoadingSpinner fullHeight />;
   }

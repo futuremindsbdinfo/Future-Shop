@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,18 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
 
+  // Wait one tick for AuthHydrator to restore from sessionStorage.
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated || user?.role !== "delivery") {
       router.replace("/?auth=login&next=/delivery");
     }
-  }, [isAuthenticated, user, router]);
+  }, [hydrated, isAuthenticated, user, router]);
 
   const handleLogout = async () => {
     try {
@@ -30,6 +37,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     router.push("/");
   };
 
+  if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated || user?.role !== "delivery") {
     return <LoadingSpinner fullHeight />;
   }

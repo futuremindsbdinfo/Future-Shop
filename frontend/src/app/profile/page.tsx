@@ -39,7 +39,14 @@ export default function ProfilePage() {
   const [pwd, setPwd] = useState({ current_password: "", password: "", password_confirmation: "" });
   const [savingPwd, setSavingPwd] = useState(false);
 
+  // Wait one tick for AuthHydrator to restore from sessionStorage.
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated) {
       router.replace("/?auth=login&next=/profile");
       return;
@@ -49,8 +56,9 @@ export default function ProfilePage() {
       setEmail(user.email ?? "");
     }
     api.get<{ data: Address[] }>("/addresses").then((r) => setAddresses(r.data.data)).catch(() => {});
-  }, [isAuthenticated, user, router]);
+  }, [hydrated, isAuthenticated, user, router]);
 
+  if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated || !user) return <LoadingSpinner fullHeight />;
 
   const saveProfile = async (e: React.FormEvent) => {
