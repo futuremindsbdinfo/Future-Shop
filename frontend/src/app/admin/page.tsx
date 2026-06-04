@@ -38,20 +38,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
-import { ORDER_STATUS_BN, ORDER_STATUS_CLASS } from "@/lib/order-status";
 import type { DashboardStats, Order, PaginatedResponse, Product, Vendor } from "@/types";
 
 const TK = "৳";
 const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 
 /* ------------------------------ Mock data ------------------------------ */
-// Monthly sales for the line chart (user-supplied series for now).
+// Monthly sales for the line chart (mock data; replace with real API later).
 const MONTHLY_SALES = [
   120000, 180000, 150000, 220000, 190000, 280000,
   240000, 310000, 270000, 350000, 290000, 420000,
 ];
-const BN_MONTHS = ["জানু", "ফেব", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্ট", "অক্টো", "নভে", "ডিসে"];
-const SALES_DATA = MONTHLY_SALES.map((v, i) => ({ month: BN_MONTHS[i], sales: v }));
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SALES_DATA = MONTHLY_SALES.map((v, i) => ({ month: MONTHS[i], sales: v }));
 
 // Tiny sparkline arrays for the stat cards.
 const sparkline = (vals: number[]) => vals.map((v, i) => ({ i, v }));
@@ -60,32 +59,49 @@ const SPARK_ORDERS = sparkline([5, 9, 7, 11, 9, 13, 12, 16]);
 const SPARK_VENDORS = sparkline([2, 3, 3, 4, 5, 5, 6, 7]);
 const SPARK_PENDING = sparkline([4, 5, 3, 6, 4, 5, 3, 2]);
 
-/* ----------------------- Order status configuration --------------------- */
-type StatusKey = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+/* --------------------- Order status (all English) ---------------------- */
+type StatusKey = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 const STATUS_COLORS: Record<StatusKey, string> = {
-  pending: "#9ca3af",     // gray
-  processing: "#f97316",  // orange
-  shipped: "#1a6bdf",     // blue (the spec's "confirmed")
-  delivered: "#16a34a",   // green
-  cancelled: "#dc2626",   // red
+  pending: "#9ca3af",      // gray
+  confirmed: "#1a6bdf",    // blue
+  processing: "#f97316",   // orange
+  shipped: "#1a6bdf",      // blue (same family as confirmed)
+  delivered: "#16a34a",    // green
+  cancelled: "#dc2626",    // red
 };
-const STATUS_ORDER: StatusKey[] = ["pending", "processing", "shipped", "delivered", "cancelled"];
+const STATUS_BADGE_CLASS: Record<StatusKey, string> = {
+  pending: "border-gray-300 text-gray-700",
+  confirmed: "border-blue-300 text-blue-700",
+  processing: "border-orange-300 text-orange-700",
+  shipped: "border-blue-300 text-blue-700",
+  delivered: "border-green-300 text-green-700",
+  cancelled: "border-red-300 text-red-700",
+};
+const STATUS_LABEL: Record<StatusKey, string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  processing: "Processing",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+const STATUS_ORDER: StatusKey[] = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 
 /* ----------------------------- Quick actions ---------------------------- */
 const QUICK_ACTIONS = [
-  { label: "পণ্য যোগ করুন", href: "/admin/products/new", icon: faPlus, color: "#1a6bdf" },
-  { label: "অর্ডার দেখুন", href: "/admin/orders", icon: faClipboardList, color: "#f97316" },
-  { label: "বিক্রেতা যোগ করুন", href: "/admin/vendors", icon: faStore, color: "#16a34a" },
-  { label: "জোন সেটিং", href: "/admin/zones", icon: faLocationDot, color: "#7c3aed" },
+  { label: "Add Product", href: "/admin/products/new", icon: faPlus, color: "#1a6bdf" },
+  { label: "View Orders", href: "/admin/orders", icon: faClipboardList, color: "#f97316" },
+  { label: "Add Vendor", href: "/admin/vendors", icon: faStore, color: "#16a34a" },
+  { label: "Zone Settings", href: "/admin/zones", icon: faLocationDot, color: "#7c3aed" },
 ] as const;
 
 /* ----------------------------- System status ---------------------------- */
 const SYSTEM_STATUS = [
-  { label: "Database", value: "সচল", icon: faDatabase, color: "bg-green-500" },
-  { label: "Payment Gateway", value: "পরীক্ষামূলক", icon: faCreditCard, color: "bg-yellow-500" },
-  { label: "SMS Service", value: "সংযুক্ত নয়", icon: faMessage, color: "bg-red-500" },
-  { label: "Storage", value: "স্থানীয়", icon: faServer, color: "bg-blue-500" },
-  { label: "Cache", value: "সচল", icon: faGauge, color: "bg-green-500" },
+  { label: "Database", value: "Active", icon: faDatabase, color: "bg-green-500" },
+  { label: "Payment Gateway", value: "Sandbox", icon: faCreditCard, color: "bg-yellow-500" },
+  { label: "SMS Service", value: "Not Connected", icon: faMessage, color: "bg-red-500" },
+  { label: "Storage", value: "Local", icon: faServer, color: "bg-blue-500" },
+  { label: "Cache", value: "Active", icon: faGauge, color: "bg-green-500" },
 ];
 
 /* --------------------------- Helper components -------------------------- */
@@ -114,9 +130,9 @@ function StatCard({
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12px] font-medium text-[#6b7280]" lang="bn">{label}</p>
+            <p className="text-[12px] font-medium text-[#6b7280]">{label}</p>
             <p className="mt-1 truncate text-[22px] font-bold text-[#111827]">{value}</p>
-            <div className="mt-1 text-[11px] text-[#6b7280]" lang="bn">{sub}</div>
+            <div className="mt-1 text-[11px] text-[#6b7280]">{sub}</div>
           </div>
           <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconBg}`}>
             <FontAwesomeIcon icon={icon} className={`h-4 w-4 ${iconColor}`} />
@@ -176,7 +192,7 @@ export default function AdminDashboardPage() {
   const [recentVendors, setRecentVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState("12"); // last month
+  const [selectedMonth, setSelectedMonth] = useState("12"); // last 12 months
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -191,7 +207,7 @@ export default function AdminDashboardPage() {
       setTopProducts(p.data.data);
       setRecentVendors(v.data.data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "ডেটা লোড করা যায়নি");
+      setError(e instanceof Error ? e.message : "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -208,7 +224,7 @@ export default function AdminDashboardPage() {
       <Card className="rounded-xl">
         <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
           <p className="text-sm text-red-600">{error}</p>
-          <Button onClick={load} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">আবার চেষ্টা করুন</Button>
+          <Button onClick={load} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">Retry</Button>
         </CardContent>
       </Card>
     );
@@ -216,9 +232,10 @@ export default function AdminDashboardPage() {
 
   if (!stats) return null;
 
-  // Derive status counts from recent_orders (best signal available client-side).
+  // Derive status counts from recent_orders.
   const statusCounts: Record<StatusKey, number> = {
     pending: 0,
+    confirmed: 0,
     processing: 0,
     shipped: 0,
     delivered: 0,
@@ -228,16 +245,15 @@ export default function AdminDashboardPage() {
     const key = order.order_status as StatusKey;
     if (key in statusCounts) statusCounts[key]++;
   }
-  // If everything is zero (no orders yet), seed a tiny visible pie.
   const totalStatusCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
   const pieData =
     totalStatusCount > 0
       ? STATUS_ORDER.filter((k) => statusCounts[k] > 0).map((k) => ({
-          name: ORDER_STATUS_BN[k] ?? k,
+          name: STATUS_LABEL[k],
           value: statusCounts[k],
           key: k,
         }))
-      : [{ name: ORDER_STATUS_BN.pending, value: 1, key: "pending" as StatusKey }];
+      : [{ name: STATUS_LABEL.pending, value: 1, key: "pending" as StatusKey }];
 
   const recentFive = stats.recent_orders.slice(0, 5);
 
@@ -246,9 +262,9 @@ export default function AdminDashboardPage() {
       {/* SECTION 1 — Stat cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="মোট বিক্রয়"
+          label="Total Sales"
           value={fmtTk(stats.total_revenue)}
-          sub={<><span lang="bn">এই মাসে</span><ChangeBadge pct={12} /></>}
+          sub={<>This Month<ChangeBadge pct={12} /></>}
           icon={faCartShopping}
           iconBg="bg-blue-100"
           iconColor="text-[#1a6bdf]"
@@ -256,9 +272,9 @@ export default function AdminDashboardPage() {
           sparkColor="#1a6bdf"
         />
         <StatCard
-          label="মোট অর্ডার"
+          label="Total Orders"
           value={stats.total_orders.toLocaleString("en-US")}
-          sub={<span lang="bn">{stats.pending_orders} টি অপেক্ষমান</span>}
+          sub={<>{stats.pending_orders} pending</>}
           icon={faClipboardList}
           iconBg="bg-orange-100"
           iconColor="text-orange-600"
@@ -268,7 +284,7 @@ export default function AdminDashboardPage() {
         <StatCard
           label="Active Vendors"
           value={stats.active_vendors.toLocaleString("en-US")}
-          sub={<span lang="bn">সক্রিয় বিক্রেতা</span>}
+          sub="Active sellers"
           icon={faStore}
           iconBg="bg-green-100"
           iconColor="text-green-700"
@@ -278,7 +294,7 @@ export default function AdminDashboardPage() {
         <StatCard
           label="Pending Orders"
           value={stats.pending_orders.toLocaleString("en-US")}
-          sub={<span lang="bn">অপেক্ষমান ডেলিভারি</span>}
+          sub="Pending Delivery"
           icon={faClock}
           iconBg="bg-red-100"
           iconColor="text-red-600"
@@ -293,16 +309,16 @@ export default function AdminDashboardPage() {
         <Card className="rounded-xl shadow-sm lg:col-span-3">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold" lang="bn">বিক্রয় ওভারভিউ</h2>
+              <h2 className="text-base font-semibold">Sales Overview</h2>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-                aria-label="Select month"
+                aria-label="Select month range"
               >
-                <option value="12">শেষ ১২ মাস</option>
-                <option value="6">শেষ ৬ মাস</option>
-                <option value="3">শেষ ৩ মাস</option>
+                <option value="12">Last 12 months</option>
+                <option value="6">Last 6 months</option>
+                <option value="3">Last 3 months</option>
               </select>
             </div>
             <div className="h-72 w-full">
@@ -338,7 +354,7 @@ export default function AdminDashboardPage() {
         {/* Order status donut */}
         <Card className="rounded-xl shadow-sm lg:col-span-2">
           <CardContent className="p-6">
-            <h2 className="mb-4 text-base font-semibold" lang="bn">অর্ডার স্ট্যাটাস</h2>
+            <h2 className="mb-4 text-base font-semibold">Order Status</h2>
             <div className="relative h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -360,17 +376,16 @@ export default function AdminDashboardPage() {
                   <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Center label */}
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                 <p className="text-2xl font-bold">{stats.total_orders}</p>
-                <p className="text-[11px] text-[#6b7280]" lang="bn">মোট অর্ডার</p>
+                <p className="text-[11px] text-[#6b7280]">Total Orders</p>
               </div>
             </div>
             <ul className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
               {STATUS_ORDER.map((k) => (
                 <li key={k} className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: STATUS_COLORS[k] }} />
-                  <span className="truncate" lang="bn">{ORDER_STATUS_BN[k] ?? k}</span>
+                  <span className="truncate">{STATUS_LABEL[k]}</span>
                   <span className="ml-auto text-[#6b7280]">{statusCounts[k]}</span>
                 </li>
               ))}
@@ -385,13 +400,13 @@ export default function AdminDashboardPage() {
         <Card className="rounded-xl shadow-sm">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold" lang="bn">সাম্প্রতিক অর্ডার</h2>
-              <Link href="/admin/orders" className="text-xs font-medium text-[#1a6bdf] hover:underline" lang="bn">
-                সব দেখুন
+              <h2 className="text-base font-semibold">Recent Orders</h2>
+              <Link href="/admin/orders" className="text-xs font-medium text-[#1a6bdf] hover:underline">
+                View All
               </Link>
             </div>
             {recentFive.length === 0 ? (
-              <p className="text-sm text-muted-foreground" lang="bn">কোনো অর্ডার নেই</p>
+              <p className="text-sm text-muted-foreground">No orders yet</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -404,22 +419,25 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentFive.map((order: Order) => (
-                      <tr
-                        key={order.id}
-                        className="cursor-pointer border-t border-[#f3f4f6] hover:bg-[#f9fafb]"
-                        onClick={() => (window.location.href = "/admin/orders")}
-                      >
-                        <td className="py-2 font-mono text-xs">{order.order_number}</td>
-                        <td className="py-2">{order.user?.name ?? "—"}</td>
-                        <td className="py-2 font-medium">{fmtTk(order.total)}</td>
-                        <td className="py-2">
-                          <Badge variant="outline" className={ORDER_STATUS_CLASS[order.order_status] ?? ""} lang="bn">
-                            {ORDER_STATUS_BN[order.order_status] ?? order.order_status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {recentFive.map((order: Order) => {
+                      const sk = order.order_status as StatusKey;
+                      return (
+                        <tr
+                          key={order.id}
+                          className="cursor-pointer border-t border-[#f3f4f6] hover:bg-[#f9fafb]"
+                          onClick={() => (window.location.href = "/admin/orders")}
+                        >
+                          <td className="py-2 font-mono text-xs">{order.order_number}</td>
+                          <td className="py-2">{order.user?.name ?? "—"}</td>
+                          <td className="py-2 font-medium">{fmtTk(order.total)}</td>
+                          <td className="py-2">
+                            <Badge variant="outline" className={STATUS_BADGE_CLASS[sk] ?? ""}>
+                              {STATUS_LABEL[sk] ?? order.order_status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -431,13 +449,13 @@ export default function AdminDashboardPage() {
         <Card className="rounded-xl shadow-sm">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold" lang="bn">সেরা পণ্য</h2>
-              <Link href="/admin/products" className="text-xs font-medium text-[#1a6bdf] hover:underline" lang="bn">
-                সব দেখুন
+              <h2 className="text-base font-semibold">Top Products</h2>
+              <Link href="/admin/products" className="text-xs font-medium text-[#1a6bdf] hover:underline">
+                View All
               </Link>
             </div>
             {topProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground" lang="bn">কোনো পণ্য নেই</p>
+              <p className="text-sm text-muted-foreground">No products yet</p>
             ) : (
               <div className="overflow-x-auto">
                 <ul className="divide-y divide-[#f3f4f6]">
@@ -464,9 +482,8 @@ export default function AdminDashboardPage() {
                           <Badge
                             variant="outline"
                             className={inStock ? "border-green-300 text-green-700" : "border-red-300 text-red-600"}
-                            lang="bn"
                           >
-                            {inStock ? "আছে" : "নেই"}
+                            {inStock ? "In Stock" : "Out of Stock"}
                           </Badge>
                         </div>
                       </li>
@@ -484,7 +501,7 @@ export default function AdminDashboardPage() {
         {/* Quick actions */}
         <Card className="rounded-xl shadow-sm">
           <CardContent className="p-6">
-            <h2 className="mb-4 text-base font-semibold" lang="bn">দ্রুত কাজ</h2>
+            <h2 className="mb-4 text-base font-semibold">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               {QUICK_ACTIONS.map((action) => (
                 <Link
@@ -498,7 +515,7 @@ export default function AdminDashboardPage() {
                   >
                     <FontAwesomeIcon icon={action.icon} className="h-4 w-4" />
                   </span>
-                  <span className="text-[12px] font-medium" lang="bn">{action.label}</span>
+                  <span className="text-[12px] font-medium">{action.label}</span>
                 </Link>
               ))}
             </div>
@@ -508,9 +525,9 @@ export default function AdminDashboardPage() {
         {/* Recent vendors */}
         <Card className="rounded-xl shadow-sm">
           <CardContent className="p-6">
-            <h2 className="mb-4 text-base font-semibold" lang="bn">সাম্প্রতিক বিক্রেতা</h2>
+            <h2 className="mb-4 text-base font-semibold">Recent Vendors</h2>
             {recentVendors.length === 0 ? (
-              <p className="text-sm text-muted-foreground" lang="bn">কোনো বিক্রেতা নেই</p>
+              <p className="text-sm text-muted-foreground">No vendors yet</p>
             ) : (
               <ul className="space-y-3">
                 {recentVendors.map((vendor) => (
@@ -520,7 +537,7 @@ export default function AdminDashboardPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{vendor.shop_name}</p>
-                      <p className="truncate text-[11px] text-[#9ca3af]">কমিশন {Number(vendor.commission_rate)}%</p>
+                      <p className="truncate text-[11px] text-[#9ca3af]">Commission {Number(vendor.commission_rate)}%</p>
                     </div>
                     <Badge
                       variant="outline"
@@ -544,7 +561,7 @@ export default function AdminDashboardPage() {
         {/* System status */}
         <Card className="rounded-xl shadow-sm">
           <CardContent className="p-6">
-            <h2 className="mb-4 text-base font-semibold" lang="bn">সিস্টেম স্ট্যাটাস</h2>
+            <h2 className="mb-4 text-base font-semibold">System Status</h2>
             <ul className="space-y-3">
               {SYSTEM_STATUS.map((item) => (
                 <li key={item.label} className="flex items-center gap-3">
@@ -554,7 +571,7 @@ export default function AdminDashboardPage() {
                   <span className="flex-1 text-sm">{item.label}</span>
                   <span className="flex items-center gap-1.5 text-[12px]">
                     <span className={`h-2 w-2 rounded-full ${item.color}`} />
-                    <span lang="bn">{item.value}</span>
+                    <span>{item.value}</span>
                   </span>
                 </li>
               ))}
@@ -562,7 +579,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }
