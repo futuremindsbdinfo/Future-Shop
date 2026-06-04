@@ -111,15 +111,16 @@ function LeftRail({
           <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
         </Link>
 
+        {/* High-contrast toggle button — white circle, blue chevron */}
         <button
           type="button"
           onClick={onToggle}
           aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
           aria-expanded={expanded}
           title={expanded ? "Collapse" : "Expand"}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/15 hover:text-white"
+          className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#1a6bdf] bg-white text-[#1a6bdf] shadow-sm transition-transform hover:scale-105"
         >
-          <FontAwesomeIcon icon={expanded ? faChevronLeft : faChevronRight} className="h-4 w-4" />
+          <FontAwesomeIcon icon={expanded ? faChevronLeft : faChevronRight} className="h-3.5 w-3.5" />
         </button>
       </div>
     </aside>
@@ -133,17 +134,30 @@ function RightPanel({
   onLogout,
   notifications,
   onItemClick,
+  onCollapse,
 }: {
   pathname: string;
   user: { name: string; email: string | null } | null;
   onLogout: () => void;
   notifications: Order[];
   onItemClick?: () => void;
+  onCollapse?: () => void;
 }) {
   return (
-    <div className="flex h-full w-full flex-col border-r border-[#e5e7eb] bg-white">
-      {/* User */}
-      <div className="border-b border-[#e5e7eb] px-4 pb-4 pt-4">
+    <div className="flex h-full w-[220px] flex-col border-r border-[#e5e7eb] bg-white">
+      {/* User + optional collapse button (desktop only — sheet has its own close) */}
+      <div className="relative border-b border-[#e5e7eb] px-4 pb-4 pt-4">
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label="Collapse sidebar"
+            title="Collapse"
+            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-[#9ca3af] transition-colors hover:bg-[#f3f4f6] hover:text-[#374151]"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
+          </button>
+        )}
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a6bdf] text-sm font-semibold text-white">
             {user?.name?.charAt(0).toUpperCase() ?? "A"}
@@ -333,15 +347,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <LeftRail
         pathname={pathname}
         expanded={expanded}
-        onToggle={() => setExpanded((v) => !v)}
+        onToggle={() => {
+          // Debug: confirm the click is registering at the layout level.
+          console.log("sidebar toggled:", !expanded);
+          setExpanded((v) => !v);
+        }}
       />
 
-      {/* Right panel — width animates between 0 and 220px when toggled. */}
+      {/* Right panel — width animates between 0 and 220px (inline style for
+          reliability over Tailwind dynamic class purging). */}
       <aside
-        className={cn(
-          "sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:block",
-          expanded ? "w-[220px]" : "w-0",
-        )}
+        className="sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:block"
+        style={{ width: expanded ? "220px" : "0px" }}
         aria-hidden={!expanded}
       >
         <RightPanel
@@ -349,6 +366,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           user={userInfo}
           onLogout={handleLogout}
           notifications={notifications}
+          onCollapse={() => {
+            console.log("sidebar toggled:", false);
+            setExpanded(false);
+          }}
         />
       </aside>
 
@@ -366,7 +387,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           <FontAwesomeIcon icon={faBars} className="h-4 w-4 text-white" />
         </SheetTrigger>
-        <SheetContent side="left" className="w-[260px] p-0">
+        <SheetContent side="left" className="w-[220px] p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>Admin menu</SheetTitle>
           </SheetHeader>
