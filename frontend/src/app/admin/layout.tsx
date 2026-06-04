@@ -9,6 +9,8 @@ import {
   faBagShopping,
   faBars,
   faBell,
+  faChevronLeft,
+  faChevronRight,
   faCircleQuestion,
   faClipboardList,
   faGear,
@@ -51,7 +53,15 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 /* ----------------------- LEFT ICON RAIL (64px) ----------------------- */
-function LeftRail({ pathname }: { pathname: string }) {
+function LeftRail({
+  pathname,
+  expanded,
+  onToggle,
+}: {
+  pathname: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
     <aside
       className="hidden h-screen w-16 shrink-0 flex-col items-center bg-[#1a6bdf] py-4 md:sticky md:top-0 md:flex"
@@ -85,7 +95,7 @@ function LeftRail({ pathname }: { pathname: string }) {
         })}
       </nav>
 
-      {/* Bottom: settings + logout shortcuts */}
+      {/* Bottom: settings + collapse/expand toggle */}
       <div className="mt-2 flex flex-col items-center gap-2">
         <Link
           href="/admin/settings"
@@ -100,6 +110,17 @@ function LeftRail({ pathname }: { pathname: string }) {
         >
           <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
         </Link>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          aria-expanded={expanded}
+          title={expanded ? "Collapse" : "Expand"}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/15 hover:text-white"
+        >
+          <FontAwesomeIcon icon={expanded ? faChevronLeft : faChevronRight} className="h-4 w-4" />
+        </button>
       </div>
     </aside>
   );
@@ -251,12 +272,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [notifications, setNotifications] = useState<Order[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Sidebar collapsed/expanded — persisted in localStorage, default collapsed.
+  const [expanded, setExpanded] = useState(false);
   // Wait one tick for AuthHydrator to restore from sessionStorage before
   // deciding the user is logged out (avoids a redirect race on hard refresh).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    // Restore the sidebar preference at the same time.
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("admin-sidebar-expanded");
+      if (saved === "true") setExpanded(true);
+    }
     setHydrated(true);
   }, []);
+
+  // Persist any later changes to the sidebar state.
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    window.localStorage.setItem("admin-sidebar-expanded", String(expanded));
+  }, [expanded, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -295,10 +329,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-[#f9fafb]">
-      {/* Desktop: icon rail + expanded panel */}
-      <LeftRail pathname={pathname} />
+      {/* Desktop: icon rail + collapsible expanded panel */}
+      <LeftRail
+        pathname={pathname}
+        expanded={expanded}
+        onToggle={() => setExpanded((v) => !v)}
+      />
 
-      <aside className="sticky top-0 hidden h-screen w-[220px] shrink-0 md:block">
+      {/* Right panel — width animates between 0 and 220px when toggled. */}
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:block",
+          expanded ? "w-[220px]" : "w-0",
+        )}
+        aria-hidden={!expanded}
+      >
         <RightPanel
           pathname={pathname}
           user={userInfo}
