@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LocalBazaar — Master Technical Document</title>
+<title>Future Shop — Master Technical Document</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -658,7 +658,7 @@ pre .prop { color: #ff8c42; }
 <!-- ══════════ SIDEBAR ══════════ -->
 <nav class="sidebar">
   <div class="sidebar-logo">
-    <div class="brand">Local<span>Bazaar</span></div>
+    <div class="brand">Future<span>Shop</span></div>
     <div class="doc-type">Master Technical Document</div>
   </div>
   <div class="nav-group">
@@ -693,7 +693,7 @@ pre .prop { color: #ff8c42; }
 <!-- ══ COVER ══ -->
 <div class="cover" id="cover">
   <div class="cover-tag">Master Technical Document · v1.0</div>
-  <h1>Local<em>Bazaar</em><br>Architecture</h1>
+  <h1>Future<em>Shop</em><br>Architecture</h1>
   <p class="cover-desc">
     Complete technical blueprint for building a secure, scalable multi-vendor e-commerce marketplace
     for Sherpur & Bogura, Bangladesh. Stack: Next.js 15 + Laravel 11 + PostgreSQL.
@@ -761,24 +761,24 @@ pre .prop { color: #ff8c42; }
 └────────────────────┬─────────────────────────┬──────────────────┘
                      │                         │
           ┌──────────▼──────────┐   ┌─────────▼──────────┐
-          │   Next.js 15 App    │   │   Laravel 11 API    │
-          │  (Port 3000)        │   │  (Port 8000)        │
-          │                     │   │                     │
-          │  /app               │   │  /api/v1/...        │
-          │    (customer pages) │   │                     │
-          │  /admin             │   │  Sanctum Auth       │
-          │    (admin panel)    │   │  RBAC Middleware     │
-          │  /vendor            │   │  Rate Limiter       │
-          │    (vendor portal)  │◄──►  Input Validation   │
+          │   Next.js 15 App    │   │   Laravel 11 API   │
+          │  (Port 3000)        │   │  (Port 8000)       │
+          │                     │   │                    │
+          │  /app               │   │  /api/v1/...       │
+          │    (customer pages) │   │                    │
+          │  /admin             │   │  Sanctum Auth      │
+          │    (admin panel)    │   │  RBAC Middleware   │
+          │  /vendor            │   │  Rate Limiter      │
+          │    (vendor portal)  │◄──►  Input Validation  │
           └──────────┬──────────┘   └─────────┬──────────┘
                      │                         │
           ┌──────────▼─────────────────────────▼──────────┐
-          │              Nginx Reverse Proxy               │
-          │         (SSL Termination + Load Balance)       │
-          └────────────────────────────────────────────────┘
+          │              Nginx Reverse Proxy              │
+          │         (SSL Termination + Load Balance)      │
+          └───────────────────────────────────────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
-          │                  DATA LAYER                  │
+          │                  DATA LAYER                 │
           │                                             │
           │  PostgreSQL 16    Redis 7      R2 Storage   │
           │  (Main DB)        (Cache/OTP)  (Images)     │
@@ -787,8 +787,8 @@ pre .prop { color: #ff8c42; }
           ┌──────────────────────▼──────────────────────┐
           │              EXTERNAL SERVICES              │
           │                                             │
-          │  SSL Commerz   SSL Wireless   n8n (P2)     │
-          │  (Payment)     (SMS/OTP)      (Automation) │
+          │  SSL Commerz   SSL Wireless   n8n (P2)      │
+          │  (Payment)     (SMS/OTP)      (Automation)  │
           └─────────────────────────────────────────────┘
     </pre>
   </div>
@@ -867,7 +867,7 @@ Customer Browser
 
   <h3>Next.js Frontend</h3>
   <div class="tree">
-<span class="dir">localbazaar-frontend/</span>
+<span class="dir">Future Shop-frontend/</span>
 ├── <span class="dir">app/</span>                          <span class="comment"># App Router (Next.js 15)</span>
 │   ├── <span class="dir">(shop)/</span>                   <span class="comment"># Customer-facing routes (public)</span>
 │   │   ├── <span class="file">page.tsx</span>              <span class="comment"># Homepage</span>
@@ -920,7 +920,7 @@ Customer Browser
 
   <h3>Laravel Backend API</h3>
   <div class="tree">
-<span class="dir">localbazaar-api/</span>
+<span class="dir">FutureShop-api/</span>
 ├── <span class="dir">app/</span>
 │   ├── <span class="dir">Http/</span>
 │   │   ├── <span class="dir">Controllers/Api/V1/</span>
@@ -1229,7 +1229,7 @@ Customer Browser
       <div class="code-lang">CSS Variables</div>
     </div>
     <pre>
-<span class="cm">/* globals.css — LocalBazaar Design Tokens */</span>
+<span class="cm">/* globals.css — Future Shop Design Tokens */</span>
 <span class="type">:root</span> {
   <span class="cm">/* Brand Colors */</span>
   <span class="prop">--brand-primary</span>:    <span class="str">220 90% 56%</span>;    <span class="cm">/* Deep Blue #1a6bdf */</span>
@@ -1480,7 +1480,7 @@ api.interceptors.response.<span class="fn">use</span>(
     Redis::<span class="fn">setex</span>(<span class="str">"otp:verify:{$phone}"</span>, self::<span class="prop">OTP_TTL</span>, $hashedOtp);
 
     <span class="cm">// Send via SSL Wireless</span>
-    app(<span class="type">SmsService</span>::class)-><span class="fn">send</span>($phone, <span class="str">"LocalBazaar OTP: {$otp} (expires 5 min)"</span>);
+    app(<span class="type">SmsService</span>::class)-><span class="fn">send</span>($phone, <span class="str">"Future Shop OTP: {$otp} (expires 5 min)"</span>);
   }
 
   <span class="kw">public function</span> <span class="fn">verify</span>(<span class="type">string</span> $phone, <span class="type">string</span> $otp): <span class="type">bool</span> {
@@ -1613,17 +1613,17 @@ api.interceptors.response.<span class="fn">use</span>(
     </div>
     <pre>
 <span class="cm"># App</span>
-<span class="prop">APP_NAME</span>=LocalBazaar
+<span class="prop">APP_NAME</span>=Future Shop
 <span class="prop">APP_ENV</span>=production
 <span class="prop">APP_DEBUG</span>=<span class="str">false</span>        <span class="cm"># MUST be false in production</span>
-<span class="prop">APP_URL</span>=<span class="str">https://api.localbazaar.com.bd</span>
+<span class="prop">APP_URL</span>=<span class="str">https://api.FutureShop.com.bd</span>
 <span class="prop">APP_KEY</span>=<span class="str">base64:GENERATE_WITH_php_artisan_key:generate</span>
 
 <span class="cm"># Database</span>
 <span class="prop">DB_CONNECTION</span>=pgsql
 <span class="prop">DB_HOST</span>=<span class="str">127.0.0.1</span>
 <span class="prop">DB_PORT</span>=<span class="str">5432</span>
-<span class="prop">DB_DATABASE</span>=<span class="str">localbazaar</span>
+<span class="prop">DB_DATABASE</span>=<span class="str">Future Shop</span>
 <span class="prop">DB_USERNAME</span>=<span class="str">lb_user</span>       <span class="cm"># Dedicated DB user, not postgres</span>
 <span class="prop">DB_PASSWORD</span>=<span class="str">STRONG_RANDOM_PASSWORD_HERE</span>
 
@@ -1639,12 +1639,12 @@ api.interceptors.response.<span class="fn">use</span>(
 
 <span class="cm"># SSL Wireless (SMS)</span>
 <span class="prop">SSL_WIRELESS_API_KEY</span>=<span class="str">your_api_key</span>
-<span class="prop">SSL_WIRELESS_SENDER_ID</span>=<span class="str">LocalBazaar</span>
+<span class="prop">SSL_WIRELESS_SENDER_ID</span>=<span class="str">Future Shop</span>
 
 <span class="cm"># Cloudflare R2 (File Storage)</span>
 <span class="prop">R2_ACCESS_KEY</span>=<span class="str">your_access_key</span>
 <span class="prop">R2_SECRET_KEY</span>=<span class="str">your_secret_key</span>
-<span class="prop">R2_BUCKET</span>=<span class="str">localbazaar-uploads</span>
+<span class="prop">R2_BUCKET</span>=<span class="str">Future-Shop-uploads</span>
 <span class="prop">R2_ENDPOINT</span>=<span class="str">https://ACCOUNT_ID.r2.cloudflarestorage.com</span>
 
 <span class="cm"># Email</span>
@@ -1652,7 +1652,7 @@ api.interceptors.response.<span class="fn">use</span>(
 <span class="prop">RESEND_API_KEY</span>=<span class="str">re_your_key</span>
 
 <span class="cm"># CORS — only allow your frontend domain</span>
-<span class="prop">FRONTEND_URL</span>=<span class="str">https://localbazaar.com.bd</span>
+<span class="prop">FRONTEND_URL</span>=<span class="str">https://FutureShop.com.bd</span>
     </pre>
   </div>
 
@@ -1664,7 +1664,7 @@ api.interceptors.response.<span class="fn">use</span>(
     </div>
     <pre>
 <span class="cm"># API</span>
-<span class="prop">NEXT_PUBLIC_API_URL</span>=<span class="str">https://api.localbazaar.com.bd/api/v1</span>
+<span class="prop">NEXT_PUBLIC_API_URL</span>=<span class="str">https://api.FutureShop.com.bd/api/v1</span>
 
 <span class="cm"># Google OAuth</span>
 <span class="prop">GOOGLE_CLIENT_ID</span>=<span class="str">your_client_id</span>
@@ -1674,8 +1674,8 @@ api.interceptors.response.<span class="fn">use</span>(
 <span class="prop">NEXT_PUBLIC_CLARITY_ID</span>=<span class="str">your_clarity_id</span>
 
 <span class="cm"># Site Config</span>
-<span class="prop">NEXT_PUBLIC_SITE_URL</span>=<span class="str">https://localbazaar.com.bd</span>
-<span class="prop">NEXT_PUBLIC_SITE_NAME</span>=<span class="str">LocalBazaar</span>
+<span class="prop">NEXT_PUBLIC_SITE_URL</span>=<span class="str">https://FutureShop.com.bd</span>
+<span class="prop">NEXT_PUBLIC_SITE_NAME</span>=<span class="str">Future Shop</span>
     </pre>
   </div>
 </section>
@@ -1884,14 +1884,14 @@ api.interceptors.response.<span class="fn">use</span>(
 
 <!-- ══ FOOTER ══ -->
 <div class="footer">
-  <div class="footer-brand">Local<span>Bazaar</span></div>
+  <div class="footer-brand">Future<span>Shop</span></div>
   <div class="footer-meta">
     <div>MASTER TECHNICAL DOCUMENT · v1.0</div>
     <div>STACK: NEXT.JS 15 + LARAVEL 11 + POSTGRESQL</div>
-    <div>SHERPUR & BOGURA, BANGLADESH · CONFIDENTIAL</div>
+    <div>SHERPUR, BOGURA, BANGLADESH · CONFIDENTIAL</div>
   </div>
 </div>
 
-</div><!-- end .main -->
+</div> <!-- end .main -->
 </body>
 </html>
