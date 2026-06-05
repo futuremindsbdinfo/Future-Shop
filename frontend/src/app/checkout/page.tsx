@@ -168,7 +168,7 @@ export default function CheckoutPage() {
               {PAYMENT_OPTIONS.map((option) => (
                 <label
                   key={option.value}
-                  className="flex cursor-pointer items-center gap-3 rounded-md border p-3 has-checked:border-[#1a6bdf]"
+                  className="flex cursor-pointer items-center gap-3 rounded-md border p-3 has-checked:border-[#f47920]"
                 >
                   <input
                     type="radio"
@@ -206,7 +206,7 @@ export default function CheckoutPage() {
               <Button
                 type="submit"
                 disabled={loading || items.length === 0}
-                className="mt-2 h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]"
+                className="mt-2 h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
               >
                 <span lang="bn">অর্ডার দিন</span>
               </Button>

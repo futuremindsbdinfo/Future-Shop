@@ -13,7 +13,7 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {/* Brand + tagline */}
         <div className="space-y-3">
-          <span className="text-xl font-bold text-[#1a6bdf]">{siteName}</span>
+          <span className="text-xl font-bold text-[#f47920]">{siteName}</span>
           {tagline && (
             <p className="text-sm text-muted-foreground" lang="bn">
               {tagline}
@@ -25,10 +25,10 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
         <div className="space-y-3">
           <h4 className="text-sm font-semibold">Quick Links</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><Link href="/" className="hover:text-[#1a6bdf]">Home</Link></li>
-            <li><Link href="/categories" className="hover:text-[#1a6bdf]">Categories</Link></li>
-            <li><Link href="/about" className="hover:text-[#1a6bdf]">About</Link></li>
-            <li><Link href="/contact" className="hover:text-[#1a6bdf]">Contact</Link></li>
+            <li><Link href="/" className="hover:text-[#f47920]">Home</Link></li>
+            <li><Link href="/categories" className="hover:text-[#f47920]">Categories</Link></li>
+            <li><Link href="/about" className="hover:text-[#f47920]">About</Link></li>
+            <li><Link href="/contact" className="hover:text-[#f47920]">Contact</Link></li>
           </ul>
         </div>
 
@@ -40,13 +40,13 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
               {settings.contact_phone && (
                 <li className="flex items-center gap-2">
                   <Phone className="h-4 w-4 shrink-0" />
-                  <a href={`tel:${settings.contact_phone}`} className="hover:text-[#1a6bdf]">{settings.contact_phone}</a>
+                  <a href={`tel:${settings.contact_phone}`} className="hover:text-[#f47920]">{settings.contact_phone}</a>
                 </li>
               )}
               {settings.contact_email && (
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4 shrink-0" />
-                  <a href={`mailto:${settings.contact_email}`} className="hover:text-[#1a6bdf]">{settings.contact_email}</a>
+                  <a href={`mailto:${settings.contact_email}`} className="hover:text-[#f47920]">{settings.contact_email}</a>
                 </li>
               )}
               {settings.contact_address && (

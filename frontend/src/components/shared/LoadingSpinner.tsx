@@ -25,7 +25,7 @@ export function LoadingSpinner({ size = "md", className, fullHeight = false }: L
       role="status"
       aria-label="Loading"
     >
-      <Loader2 className={cn("animate-spin text-[#1a6bdf]", SIZE_MAP[size])} />
+      <Loader2 className={cn("animate-spin text-[#f47920]", SIZE_MAP[size])} />
     </div>
   );
 }

@@ -57,17 +57,17 @@ export function CategoryCard({ category }: { category: Category }) {
   return (
     <Link
       href={`/category/${category.slug}`}
-      className="group flex flex-col items-center gap-2 rounded-lg border bg-card p-4 text-center transition-all hover:border-[#1a6bdf] hover:shadow-md"
+      className="group flex flex-col items-center gap-2 rounded-lg border bg-card p-4 text-center transition-all hover:border-[#f47920] hover:shadow-md"
     >
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
         <FontAwesomeIcon
           icon={icon}
           size="2x"
-          style={{ color: "#1a6bdf" }}
+          style={{ color: "#f47920" }}
           className="transition-transform group-hover:scale-110"
         />
       </div>
-      <span className="line-clamp-2 text-sm font-medium group-hover:text-[#1a6bdf]">
+      <span className="line-clamp-2 text-sm font-medium group-hover:text-[#f47920]">
         {category.name}
       </span>
     </Link>

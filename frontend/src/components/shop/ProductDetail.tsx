@@ -129,7 +129,7 @@ export function ProductDetail({ product }: { product: Product }) {
           >
             {images.map((image, index) => (
               <SwiperSlide key={image.path} className="cursor-pointer">
-                <div className="relative aspect-square overflow-hidden rounded-md border-2 border-transparent ring-offset-2 [.swiper-slide-thumb-active_&]:border-[#1a6bdf]">
+                <div className="relative aspect-square overflow-hidden rounded-md border-2 border-transparent ring-offset-2 [.swiper-slide-thumb-active_&]:border-[#f47920]">
                   <Image
                     src={image.url}
                     alt={`${product.name} thumbnail ${index + 1}`}
@@ -155,7 +155,7 @@ export function ProductDetail({ product }: { product: Product }) {
         <h1 className="mt-1 text-xl font-bold sm:text-2xl">{product.name}</h1>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
-          <span className="text-2xl font-bold text-[#1a6bdf] sm:text-3xl">{formatTk(effectivePrice)}</span>
+          <span className="text-2xl font-bold text-[#f47920] sm:text-3xl">{formatTk(effectivePrice)}</span>
           {hasSale && (
             <span className="text-base text-muted-foreground line-through sm:text-lg">{formatTk(price)}</span>
           )}
@@ -202,7 +202,7 @@ export function ProductDetail({ product }: { product: Product }) {
           onClick={handleAddToCart}
           disabled={outOfStock}
           size="lg"
-          className="mt-6 h-12 bg-[#1a6bdf] hover:bg-[#1559bd]"
+          className="mt-6 h-12 bg-[#f47920] hover:bg-[#e56910]"
         >
           <ShoppingCart className="mr-2 h-5 w-5" />
           <span lang="bn">{outOfStock ? "স্টকে নেই" : "কার্টে যোগ করুন"}</span>

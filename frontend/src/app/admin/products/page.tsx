@@ -146,7 +146,7 @@ export default function AdminProductsPage() {
           >
             <Upload className="mr-2 h-4 w-4" /> Import CSV
           </Button>
-          <Button nativeButton={false} render={<Link href="/admin/products/new" />} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">
+          <Button nativeButton={false} render={<Link href="/admin/products/new" />} className="h-11 bg-[#f47920] hover:bg-[#e56910]">
             <Plus className="mr-2 h-4 w-4" /> Add Product
           </Button>
         </div>
@@ -342,7 +342,7 @@ export default function AdminProductsPage() {
             <Button
               onClick={handleImport}
               disabled={importing || !importFile}
-              className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]"
+              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
             >
               <Upload className="mr-2 h-4 w-4" />
               {importing ? "Uploading…" : "Upload"}

@@ -63,7 +63,7 @@ export default function DeliveryOrderDetailPage({ params }: { params: Promise<{ 
       <Card>
         <CardContent className="space-y-3 p-4 text-sm">
           <p className="font-medium">{order.shipping_name}</p>
-          <a href={`tel:${order.shipping_phone}`} className="flex items-center gap-2 text-[#1a6bdf]">
+          <a href={`tel:${order.shipping_phone}`} className="flex items-center gap-2 text-[#f47920]">
             <Phone className="h-4 w-4" /> {order.shipping_phone}
           </a>
           <p className="text-muted-foreground">{order.shipping_address}</p>
@@ -71,7 +71,7 @@ export default function DeliveryOrderDetailPage({ params }: { params: Promise<{ 
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-[#1a6bdf]"
+            className="inline-flex items-center gap-2 text-[#f47920]"
           >
             <MapPin className="h-4 w-4" /> <span lang="bn">গুগল ম্যাপে দেখুন</span>
           </a>
@@ -108,7 +108,7 @@ export default function DeliveryOrderDetailPage({ params }: { params: Promise<{ 
         <Button variant="outline" className="h-11" onClick={() => updateStatus("processing")}>
           <span lang="bn">পিকআপ করেছি</span>
         </Button>
-        <Button className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]" onClick={() => updateStatus("delivered")}>
+        <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => updateStatus("delivered")}>
           <span lang="bn">ডেলিভারি দিয়েছি</span>
         </Button>
       </div>

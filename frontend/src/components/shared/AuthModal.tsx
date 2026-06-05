@@ -173,7 +173,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center text-[#1a6bdf]">Future Shop</DialogTitle>
+          <DialogTitle className="text-center text-[#f47920]">Future Shop</DialogTitle>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => onTabChange(v as AuthTab)}>
@@ -201,7 +201,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
             </div>
 
             {!otpSent ? (
-              <Button type="button" onClick={sendOtp} disabled={loading} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+              <Button type="button" onClick={sendOtp} disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <span lang="bn">OTP পাঠান</span>
               </Button>
@@ -219,7 +219,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
                   />
                   {errors.otp && <p className="text-xs text-red-600">{errors.otp}</p>}
                 </div>
-                <Button type="button" onClick={verifyOtp} disabled={loading} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+                <Button type="button" onClick={verifyOtp} disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <span lang="bn">যাচাই করুন</span>
                 </Button>
@@ -259,7 +259,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
                 />
                 {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
               </div>
-              <Button type="submit" disabled={loading} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+              <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <span lang="bn">লগইন করুন</span>
               </Button>
@@ -300,7 +300,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
                 <Input id="reg-password" className="h-11" type="password" placeholder="কমপক্ষে ৮ অক্ষর" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
               </div>
-              <Button type="submit" disabled={loading} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+              <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <span lang="bn">রেজিস্ট্রেশন করুন</span>
               </Button>

@@ -64,7 +64,7 @@ function LeftRail({
 }) {
   return (
     <aside
-      className="hidden h-screen w-16 shrink-0 flex-col items-center bg-[#1a6bdf] py-4 md:sticky md:top-0 md:flex"
+      className="hidden h-screen w-16 shrink-0 flex-col items-center bg-[#f47920] py-4 md:sticky md:top-0 md:flex"
       aria-label="Primary navigation rail"
     >
       {/* Brand mark */}
@@ -85,7 +85,7 @@ function LeftRail({
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
                 active
-                  ? "bg-white text-[#1a6bdf]"
+                  ? "bg-white text-[#f47920]"
                   : "text-white/85 hover:bg-white/15 hover:text-white",
               )}
             >
@@ -104,7 +104,7 @@ function LeftRail({
           className={cn(
             "flex h-10 w-10 items-center justify-center rounded-full",
             isActive(pathname, "/admin/settings")
-              ? "bg-white text-[#1a6bdf]"
+              ? "bg-white text-[#f47920]"
               : "text-white/85 hover:bg-white/15 hover:text-white",
           )}
         >
@@ -118,7 +118,7 @@ function LeftRail({
           aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
           aria-expanded={expanded}
           title={expanded ? "Collapse" : "Expand"}
-          className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#1a6bdf] bg-white text-[#1a6bdf] shadow-sm transition-transform hover:scale-105"
+          className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#f47920] bg-white text-[#f47920] shadow-sm transition-transform hover:scale-105"
         >
           <FontAwesomeIcon icon={expanded ? faChevronLeft : faChevronRight} className="h-3.5 w-3.5" />
         </button>
@@ -159,7 +159,7 @@ function RightPanel({
           </button>
         )}
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a6bdf] text-sm font-semibold text-white">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
             {user?.name?.charAt(0).toUpperCase() ?? "A"}
           </span>
           <div className="min-w-0">
@@ -187,7 +187,7 @@ function RightPanel({
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
                     active
-                      ? "bg-[#1a6bdf] text-white"
+                      ? "bg-[#f47920] text-white"
                       : "text-[#374151] hover:bg-[#eff6ff]",
                   )}
                 >
@@ -210,7 +210,7 @@ function RightPanel({
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
                 isActive(pathname, "/admin/settings")
-                  ? "bg-[#1a6bdf] text-white"
+                  ? "bg-[#f47920] text-white"
                   : "text-[#374151] hover:bg-[#eff6ff]",
               )}
             >
@@ -380,7 +380,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Button
               variant="default"
               size="icon"
-              className="fixed left-3 top-3 z-40 h-11 w-11 bg-[#1a6bdf] shadow-md hover:bg-[#1559bd] md:hidden"
+              className="fixed left-3 top-3 z-40 h-11 w-11 bg-[#f47920] shadow-md hover:bg-[#e56910] md:hidden"
               aria-label="Open admin menu"
             />
           }

@@ -102,6 +102,8 @@ class AdminController extends Controller
                 'total_cost' => $totalCost,
                 'gross_profit' => $grossProfit,
                 'profit_margin' => $profitMargin,
+                'total_customers' => User::where('role', 'customer')->count(),
+                'total_products' => Product::where('status', 'published')->count(),
                 'active_vendors' => Vendor::where('is_active', true)->where('status', 'approved')->count(),
                 'pending_orders' => Order::where('order_status', 'pending')->count(),
                 'recent_orders' => Order::with('user:id,name')

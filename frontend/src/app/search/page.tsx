@@ -65,7 +65,7 @@ function SearchContent() {
             onClick={() => setActiveCategory("")}
             className={cn(
               "shrink-0 rounded-full border px-3 py-2 text-sm md:rounded-md md:text-left",
-              activeCategory === "" ? "border-[#1a6bdf] bg-[#1a6bdf] text-white" : "hover:bg-muted",
+              activeCategory === "" ? "border-[#f47920] bg-[#f47920] text-white" : "hover:bg-muted",
             )}
           >
             <span lang="bn">সব</span>
@@ -76,7 +76,7 @@ function SearchContent() {
               onClick={() => setActiveCategory(c.slug)}
               className={cn(
                 "shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-sm md:rounded-md md:text-left",
-                activeCategory === c.slug ? "border-[#1a6bdf] bg-[#1a6bdf] text-white" : "hover:bg-muted",
+                activeCategory === c.slug ? "border-[#f47920] bg-[#f47920] text-white" : "hover:bg-muted",
               )}
             >
               {c.name}

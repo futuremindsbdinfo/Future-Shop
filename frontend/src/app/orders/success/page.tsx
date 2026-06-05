@@ -29,7 +29,7 @@ export default async function OrderSuccessPage({
       </p>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Button nativeButton={false} render={<Link href="/orders" />} className="bg-[#1a6bdf] hover:bg-[#1559bd]">
+        <Button nativeButton={false} render={<Link href="/orders" />} className="bg-[#f47920] hover:bg-[#e56910]">
           <span lang="bn">আমার অর্ডার দেখুন</span>
         </Button>
         <Button variant="outline" nativeButton={false} render={<Link href="/" />}>

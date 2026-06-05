@@ -74,7 +74,7 @@ export default function OrdersPage() {
           title="কোনো অর্ডার নেই"
           description="আপনি এখনও কোনো অর্ডার করেননি।"
           action={
-            <Button nativeButton={false} render={<Link href="/products" />} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">
+            <Button nativeButton={false} render={<Link href="/products" />} className="h-11 bg-[#f47920] hover:bg-[#e56910]">
               <span lang="bn">কেনাকাটা শুরু করুন</span>
             </Button>
           }

@@ -122,7 +122,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
           </SheetTrigger>
           <SheetContent side="left" className="flex w-72 flex-col">
             <SheetHeader>
-              <SheetTitle className="text-left text-[#1a6bdf]">{siteName}</SheetTitle>
+              <SheetTitle className="text-left text-[#f47920]">{siteName}</SheetTitle>
             </SheetHeader>
             <nav className="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-6">
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Home</Link>
@@ -147,7 +147,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
               {user ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 px-1">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a6bdf] text-base font-semibold text-white">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-base font-semibold text-white">
                       {user.name.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0 truncate text-sm font-medium">{user.name}</span>
@@ -166,7 +166,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
                 </div>
               ) : (
                 <Button
-                  className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]"
+                  className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
                   onClick={() => {
                     setMobileMenuOpen(false);
                     openAuth("login");
@@ -180,7 +180,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="shrink-0 text-xl font-bold text-[#1a6bdf]">
+        <Link href="/" className="shrink-0 text-xl font-bold text-[#f47920]">
           {siteName}
         </Link>
 
@@ -222,7 +222,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
             className="max-w-md"
             aria-label="Search products"
           />
-          <Button type="submit" size="icon" className="bg-[#1a6bdf] hover:bg-[#1559bd]" aria-label="Search">
+          <Button type="submit" size="icon" className="bg-[#f47920] hover:bg-[#e56910]" aria-label="Search">
             <Search className="h-4 w-4" />
           </Button>
         </form>
@@ -243,7 +243,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Account" />}>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1a6bdf] text-sm font-semibold text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
                 {user.name.charAt(0).toUpperCase()}
               </span>
             </DropdownMenuTrigger>
@@ -273,10 +273,18 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
           </DropdownMenu>
         ) : (
           <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <Button variant="ghost" onClick={() => openAuth("login")}>
+            {/* Login: orange gradient. Register: orange border + text. */}
+            <Button
+              className="bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90"
+              onClick={() => openAuth("login")}
+            >
               <span lang="bn">লগইন</span>
             </Button>
-            <Button className="bg-[#1a6bdf] hover:bg-[#1559bd]" onClick={() => openAuth("register")}>
+            <Button
+              variant="outline"
+              className="border-[#f47920] text-[#f47920] hover:bg-[#fff7ed]"
+              onClick={() => openAuth("register")}
+            >
               <span lang="bn">রেজিস্ট্রেশন</span>
             </Button>
           </div>

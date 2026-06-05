@@ -138,7 +138,7 @@ export default function ProfilePage() {
               <Label htmlFor="p-email" lang="bn">ইমেইল</Label>
               <Input id="p-email" className="h-11" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <Button type="submit" disabled={savingProfile} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd] sm:w-auto">
+            <Button type="submit" disabled={savingProfile} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910] sm:w-auto">
               <span lang="bn">সংরক্ষণ করুন</span>
             </Button>
           </form>
@@ -178,7 +178,7 @@ export default function ProfilePage() {
                 <Input className="h-11" placeholder="বিভাগ" value={addr.division} onChange={(e) => setAddr({ ...addr, division: e.target.value })} />
                 <Input className="h-11" placeholder="জেলা" value={addr.district} onChange={(e) => setAddr({ ...addr, district: e.target.value })} />
               </div>
-              <Button type="submit" disabled={savingAddr} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+              <Button type="submit" disabled={savingAddr} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]">
                 <span lang="bn">ঠিকানা সংরক্ষণ</span>
               </Button>
             </form>
@@ -205,7 +205,7 @@ export default function ProfilePage() {
               <Label htmlFor="conf-pwd" lang="bn">পাসওয়ার্ড নিশ্চিত করুন</Label>
               <Input id="conf-pwd" className="h-11" type="password" value={pwd.password_confirmation} onChange={(e) => setPwd({ ...pwd, password_confirmation: e.target.value })} required />
             </div>
-            <Button type="submit" disabled={savingPwd} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd] sm:w-auto">
+            <Button type="submit" disabled={savingPwd} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910] sm:w-auto">
               <span lang="bn">পরিবর্তন করুন</span>
             </Button>
           </form>

@@ -64,7 +64,7 @@ export default function DeliveryHomePage() {
           <Card key={order.id}>
             <CardContent className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-2">
-                <Link href={`/delivery/${order.id}`} className="font-mono font-semibold text-[#1a6bdf]">
+                <Link href={`/delivery/${order.id}`} className="font-mono font-semibold text-[#f47920]">
                   {order.order_number}
                 </Link>
                 <Badge variant="outline" lang="bn">{ORDER_STATUS_BN[order.order_status] ?? order.order_status}</Badge>
@@ -87,7 +87,7 @@ export default function DeliveryHomePage() {
                 <Button variant="outline" className="h-11" onClick={() => updateStatus(order, "processing")}>
                   <span lang="bn">পিকআপ করেছি</span>
                 </Button>
-                <Button className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]" onClick={() => updateStatus(order, "delivered")}>
+                <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => updateStatus(order, "delivered")}>
                   <span lang="bn">ডেলিভারি দিয়েছি</span>
                 </Button>
               </div>

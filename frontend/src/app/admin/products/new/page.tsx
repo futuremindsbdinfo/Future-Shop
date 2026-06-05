@@ -240,7 +240,7 @@ export default function AdminProductFormPage() {
               <span lang="bn">প্রকাশিত (Active)</span>
             </label>
 
-            <Button type="submit" disabled={saving} className="w-full bg-[#1a6bdf] hover:bg-[#1559bd]">
+            <Button type="submit" disabled={saving} className="w-full bg-[#f47920] hover:bg-[#e56910]">
               <span lang="bn">{editId ? "আপডেট করুন" : "সংরক্ষণ করুন"}</span>
             </Button>
           </form>

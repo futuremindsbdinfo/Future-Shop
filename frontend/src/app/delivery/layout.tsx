@@ -45,7 +45,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
-        <span className="font-bold text-[#1a6bdf]" lang="bn">Future Shop ডেলিভারি</span>
+        <span className="font-bold text-[#f47920]" lang="bn">Future Shop ডেলিভারি</span>
         <Button variant="outline" className="h-11" onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span lang="bn">লগআউট</span>

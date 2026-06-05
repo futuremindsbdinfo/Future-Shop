@@ -130,7 +130,7 @@ export default function AdminVendorsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Vendors</h1>
-        <Button className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]" onClick={() => setOpen(true)}>
+        <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => setOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add Vendor
         </Button>
       </div>
@@ -202,7 +202,7 @@ export default function AdminVendorsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" className="h-11" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]" disabled={creating} onClick={createVendor}>
+            <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" disabled={creating} onClick={createVendor}>
               Add Vendor
             </Button>
           </DialogFooter>

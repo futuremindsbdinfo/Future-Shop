@@ -29,7 +29,7 @@ export default function CartPage() {
           title="আপনার কার্ট খালি"
           description="পণ্য যোগ করতে কেনাকাটা শুরু করুন।"
           action={
-            <Button nativeButton={false} render={<Link href="/products" />} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">
+            <Button nativeButton={false} render={<Link href="/products" />} className="h-11 bg-[#f47920] hover:bg-[#e56910]">
               <span lang="bn">কেনাকাটা শুরু করুন</span>
             </Button>
           }
@@ -59,10 +59,10 @@ export default function CartPage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <Link href={`/product/${item.slug}`} className="line-clamp-2 font-medium hover:text-[#1a6bdf]">
+                  <Link href={`/product/${item.slug}`} className="line-clamp-2 font-medium hover:text-[#f47920]">
                     {item.name}
                   </Link>
-                  <p className="mt-1 text-sm text-[#1a6bdf]">{formatTk(item.price)}</p>
+                  <p className="mt-1 text-sm text-[#f47920]">{formatTk(item.price)}</p>
 
                   <div className="mt-2 flex items-center gap-2">
                     <div className="flex items-center rounded-md border">
@@ -129,7 +129,7 @@ export default function CartPage() {
               <Button
                 nativeButton={false}
                 render={<Link href="/checkout" />}
-                className="mt-2 h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]"
+                className="mt-2 h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
               >
                 <span lang="bn">চেকআউট করুন</span>
               </Button>

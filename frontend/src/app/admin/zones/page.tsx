@@ -119,7 +119,7 @@ export default function AdminZonesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Delivery Zones</h1>
-        <Button className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]" onClick={openCreate}>
+        <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" /> Add Zone
         </Button>
       </div>
@@ -207,7 +207,7 @@ export default function AdminZonesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" className="h-11" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]" disabled={saving} onClick={submit}>Save Zone</Button>
+            <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" disabled={saving} onClick={submit}>Save Zone</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

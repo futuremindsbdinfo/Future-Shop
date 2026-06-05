@@ -80,13 +80,13 @@ export function ProductCard({ product }: { product: Product }) {
         )}
 
         <Link href={`/product/${product.slug}`}>
-          <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium hover:text-[#1a6bdf]">
+          <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium hover:text-[#f47920]">
             {product.name}
           </h3>
         </Link>
 
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-base font-bold text-[#1a6bdf]">{formatTk(effectivePrice)}</span>
+          <span className="text-base font-bold text-[#f47920]">{formatTk(effectivePrice)}</span>
           {hasSale && (
             <span className="text-sm text-muted-foreground line-through">{formatTk(price)}</span>
           )}
@@ -96,7 +96,7 @@ export function ProductCard({ product }: { product: Product }) {
           type="button"
           onClick={handleAddToCart}
           disabled={outOfStock}
-          className="mt-3 h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]"
+          className="mt-3 h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
           {outOfStock ? "Unavailable" : "Add to Cart"}

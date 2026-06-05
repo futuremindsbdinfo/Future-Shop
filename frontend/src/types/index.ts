@@ -263,6 +263,8 @@ export interface DashboardStats {
   total_cost: number;
   gross_profit: number;
   profit_margin: number;
+  total_customers: number;
+  total_products: number;
   active_vendors: number;
   pending_orders: number;
   recent_orders: Order[];

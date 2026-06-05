@@ -65,7 +65,7 @@ export default async function CategoryPage({
           title="No products in this category"
           description="Check back soon — sellers are adding products."
           action={
-            <Button nativeButton={false} render={<Link href="/" />} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">
+            <Button nativeButton={false} render={<Link href="/" />} className="h-11 bg-[#f47920] hover:bg-[#e56910]">
               Back to Home
             </Button>
           }

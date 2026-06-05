@@ -146,7 +146,7 @@ export default function AdminSettingsPage() {
               <Label htmlFor="s-address">Contact address</Label>
               <Input id="s-address" className="h-11" value={settings.contact_address ?? ""} onChange={(e) => setSettings({ ...settings, contact_address: e.target.value })} />
             </div>
-            <Button type="submit" disabled={savingSettings} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd] sm:w-auto">Save Settings</Button>
+            <Button type="submit" disabled={savingSettings} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910] sm:w-auto">Save Settings</Button>
           </form>
         </CardContent>
       </Card>
@@ -183,7 +183,7 @@ export default function AdminSettingsPage() {
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={bActive} onChange={(e) => setBActive(e.target.checked)} /> Active
             </label>
-            <Button type="submit" disabled={savingBanner} className="h-11 w-full bg-[#1a6bdf] hover:bg-[#1559bd]">Add Banner</Button>
+            <Button type="submit" disabled={savingBanner} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]">Add Banner</Button>
           </form>
         </CardContent>
       </Card>
