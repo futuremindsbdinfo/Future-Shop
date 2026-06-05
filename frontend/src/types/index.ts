@@ -133,6 +133,7 @@ export interface Product {
   description: string | null;
   price: string;
   sale_price: string | null;
+  cost_price: string | null;
   sku: string | null;
   stock_quantity: number;
   images: ProductImage[] | null;
@@ -228,13 +229,46 @@ export interface CartItem {
   stock?: number;
 }
 
+/** A row in `dashboard.product_profits`. */
+export interface ProductProfitRow {
+  id: number;
+  name: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin: number;
+}
+
+/** Low-stock product summary returned by the dashboard. */
+export interface LowStockProduct {
+  id: number;
+  name: string;
+  slug: string;
+  stock_quantity: number;
+  category_id: number;
+  category?: { id: number; name: string; slug: string } | null;
+}
+
+/** Today's orders block returned by the dashboard. */
+export interface TodayOrders {
+  count: number;
+  total: number;
+  list: Order[];
+}
+
 /** Admin dashboard summary. */
 export interface DashboardStats {
   total_orders: number;
   total_revenue: number;
+  total_cost: number;
+  gross_profit: number;
+  profit_margin: number;
   active_vendors: number;
   pending_orders: number;
   recent_orders: Order[];
+  product_profits: ProductProfitRow[];
+  low_stock_products: LowStockProduct[];
+  today_orders: TodayOrders;
 }
 
 /** Wrapper used by single-resource endpoints: { data: T, message?: string }. */

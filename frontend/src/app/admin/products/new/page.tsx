@@ -33,6 +33,7 @@ export default function AdminProductFormPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
+  const [costPrice, setCostPrice] = useState("");
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [vendorId, setVendorId] = useState("");
@@ -57,6 +58,7 @@ export default function AdminProductFormPage() {
           setDescription(p.description ?? "");
           setPrice(String(p.price));
           setSalePrice(p.sale_price ? String(p.sale_price) : "");
+          setCostPrice(p.cost_price ? String(p.cost_price) : "");
           setStock(String(p.stock_quantity));
           setCategoryId(String(p.category_id));
           setVendorId(String(p.vendor_id));
@@ -102,6 +104,7 @@ export default function AdminProductFormPage() {
     form.append("description", description);
     form.append("price", price);
     if (salePrice) form.append("sale_price", salePrice);
+    if (costPrice) form.append("cost_price", costPrice);
     form.append("stock_quantity", stock);
     form.append("category_id", categoryId);
     form.append("vendor_id", vendorId);
@@ -160,6 +163,22 @@ export default function AdminProductFormPage() {
                 <Label htmlFor="sale_price" lang="bn">ছাড় মূল্য (৳)</Label>
                 <Input id="sale_price" type="number" min="0" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cost_price">Cost Price (৳)</Label>
+              <Input
+                id="cost_price"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                This is your purchase cost — not shown to customers.
+              </p>
             </div>
 
             <div className="space-y-2">

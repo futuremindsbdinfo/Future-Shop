@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\Vendor;
 use App\Services\ImageUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
@@ -143,6 +148,160 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(['message' => 'Product deleted.']);
+    }
+
+    /**
+     * Admin: download a CSV template with just the headers.
+     */
+    public function importTemplate(): StreamedResponse
+    {
+        $headers = ['name', 'price', 'cost_price', 'stock_qty', 'category_slug', 'description', 'sale_price'];
+
+        return response()->streamDownload(function () use ($headers) {
+            $fh = fopen('php://output', 'w');
+            fputcsv($fh, $headers);
+            // Include one example row to show the expected shape.
+            fputcsv($fh, ['Sample Product', '500', '350', '20', 'grocery-drinks', 'Optional description', '']);
+            fclose($fh);
+        }, 'products-import-template.csv', [
+            'Content-Type' => 'text/csv',
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    /**
+     * Admin: bulk-create products from a CSV upload.
+     *
+     * Required CSV columns: name, price, cost_price, stock_qty, category_slug
+     * Optional:             description, sale_price
+     *
+     * Invalid rows are skipped and reported; valid rows are created.
+     * Requires a vendor — uses ?vendor_id=<id> (must be an existing vendor),
+     * or the first approved vendor as a sensible default.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+            'vendor_id' => ['sometimes', 'integer', 'exists:vendors,id'],
+        ]);
+
+        $vendorId = (int) ($data['vendor_id'] ?? 0);
+        if ($vendorId === 0) {
+            $vendor = Vendor::where('status', 'approved')->orderBy('id')->first();
+            if (! $vendor) {
+                return response()->json([
+                    'imported' => 0,
+                    'skipped' => 0,
+                    'errors' => [['row' => 0, 'message' => 'No approved vendor exists. Create a vendor first or pass vendor_id.']],
+                ], 422);
+            }
+            $vendorId = $vendor->id;
+        }
+
+        $path = $request->file('file')->getRealPath();
+        $fh = fopen($path, 'r');
+        if (! $fh) {
+            return response()->json(['message' => 'Could not read file.'], 422);
+        }
+
+        // Read & normalise header row.
+        $rawHeader = fgetcsv($fh);
+        if (! $rawHeader) {
+            fclose($fh);
+            return response()->json(['message' => 'CSV is empty.'], 422);
+        }
+        $header = array_map(fn ($h) => strtolower(trim((string) $h)), $rawHeader);
+
+        $required = ['name', 'price', 'cost_price', 'stock_qty', 'category_slug'];
+        $missing = array_diff($required, $header);
+        if (! empty($missing)) {
+            fclose($fh);
+            return response()->json([
+                'message' => 'Missing required columns: '.implode(', ', $missing),
+            ], 422);
+        }
+
+        // Cache categories by slug for fast lookup.
+        $categories = Category::pluck('id', 'slug');
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $rowNum = 1; // header is row 1; data starts at 2
+
+        while (($row = fgetcsv($fh)) !== false) {
+            $rowNum++;
+            if (count(array_filter($row, fn ($v) => $v !== null && $v !== '')) === 0) {
+                continue; // skip blank lines silently
+            }
+
+            // Build associative row from header.
+            $assoc = [];
+            foreach ($header as $i => $col) {
+                $assoc[$col] = $row[$i] ?? '';
+            }
+
+            $categorySlug = trim((string) ($assoc['category_slug'] ?? ''));
+            $categoryId = $categories[$categorySlug] ?? null;
+
+            $payload = [
+                'vendor_id' => $vendorId,
+                'category_id' => $categoryId,
+                'name' => trim((string) ($assoc['name'] ?? '')),
+                'description' => trim((string) ($assoc['description'] ?? '')) ?: null,
+                'price' => $assoc['price'] ?? null,
+                'sale_price' => trim((string) ($assoc['sale_price'] ?? '')) === '' ? null : $assoc['sale_price'],
+                'cost_price' => $assoc['cost_price'] ?? null,
+                'stock_quantity' => $assoc['stock_qty'] ?? null,
+                'status' => 'draft',
+            ];
+
+            $v = Validator::make($payload, [
+                'vendor_id' => ['required', 'integer'],
+                'category_id' => ['required', 'integer'],
+                'name' => ['required', 'string', 'max:255'],
+                'description' => ['nullable', 'string'],
+                'price' => ['required', 'numeric', 'min:0'],
+                'sale_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
+                'cost_price' => ['nullable', 'numeric', 'min:0'],
+                'stock_quantity' => ['required', 'integer', 'min:0'],
+                'status' => ['required'],
+            ]);
+
+            if ($v->fails()) {
+                $skipped++;
+                $errors[] = [
+                    'row' => $rowNum,
+                    'name' => $payload['name'],
+                    'errors' => $v->errors()->all(),
+                ];
+                continue;
+            }
+
+            $validated = $v->validated();
+            $validated['slug'] = $this->uniqueSlug($validated['name']);
+
+            try {
+                Product::create($validated);
+                $imported++;
+            } catch (\Throwable $e) {
+                $skipped++;
+                $errors[] = [
+                    'row' => $rowNum,
+                    'name' => $payload['name'],
+                    'errors' => [$e->getMessage()],
+                ];
+            }
+        }
+
+        fclose($fh);
+
+        return response()->json([
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ], $imported > 0 ? Response::HTTP_CREATED : Response::HTTP_OK);
     }
 
     /**

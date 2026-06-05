@@ -23,6 +23,7 @@ class Product extends Model
         'description',
         'price',
         'sale_price',
+        'cost_price',
         'sku',
         'stock_quantity',
         'images',
@@ -40,6 +41,7 @@ class Product extends Model
         return [
             'price' => 'decimal:2',
             'sale_price' => 'decimal:2',
+            'cost_price' => 'decimal:2',
             'weight' => 'decimal:2',
             'stock_quantity' => 'integer',
             'images' => 'array',

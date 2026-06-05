@@ -108,6 +108,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             // Product management (list / create / update / soft delete).
             Route::get('products', [ProductController::class, 'adminIndex'])->name('products.index');
+            // IMPORTANT: these literal-path routes must come BEFORE the {product} wildcard.
+            Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
+            Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
             Route::get('products/{product}', [ProductController::class, 'adminShow'])->name('products.show');
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
             Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');

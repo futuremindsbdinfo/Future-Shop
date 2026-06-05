@@ -3,11 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, ImageOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -29,6 +36,16 @@ export default function AdminProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // CSV import modal state.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    imported: number;
+    skipped: number;
+    errors: { row: number; name?: string; errors?: string[]; message?: string }[];
+  } | null>(null);
 
   useEffect(() => {
     api.get<{ data: Category[] }>("/admin/categories").then((r) => setCategories(r.data.data)).catch(() => {});
@@ -61,13 +78,78 @@ export default function AdminProductsPage() {
     }
   };
 
+  const downloadTemplate = async () => {
+    try {
+      const res = await api.get("/admin/products/import-template", { responseType: "blob" });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "products-import-template.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download template");
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      toast.error("Choose a CSV file");
+      return;
+    }
+    setImporting(true);
+    setImportResult(null);
+    const form = new FormData();
+    form.append("file", importFile);
+    try {
+      const res = await api.post<{
+        imported: number;
+        skipped: number;
+        errors: { row: number; name?: string; errors?: string[]; message?: string }[];
+      }>("/admin/products/import", form);
+      setImportResult(res.data);
+      if (res.data.imported > 0) {
+        toast.success(`${res.data.imported} products imported, ${res.data.skipped} skipped`);
+        load();
+      } else {
+        toast.warning(`No products imported (${res.data.skipped} skipped)`);
+      }
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Import failed";
+      toast.error(msg);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const profitFor = (product: Product): number => {
+    const price = Number(product.sale_price ?? product.price);
+    const cost = Number(product.cost_price ?? 0);
+    return price - cost;
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Button nativeButton={false} render={<Link href="/admin/products/new" />} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">
-          <Plus className="mr-2 h-4 w-4" /> Add Product
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="h-11"
+            onClick={() => {
+              setImportFile(null);
+              setImportResult(null);
+              setImportOpen(true);
+            }}
+          >
+            <Upload className="mr-2 h-4 w-4" /> Import CSV
+          </Button>
+          <Button nativeButton={false} render={<Link href="/admin/products/new" />} className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]">
+            <Plus className="mr-2 h-4 w-4" /> Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -108,6 +190,8 @@ export default function AdminProductsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Vendor</TableHead>
                   <TableHead>Price</TableHead>
+                  <TableHead>Cost Price</TableHead>
+                  <TableHead>Profit</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -132,6 +216,17 @@ export default function AdminProductsPage() {
                       <TableCell className="max-w-[200px] truncate font-medium">{product.name}</TableCell>
                       <TableCell>{product.vendor?.shop_name ?? "—"}</TableCell>
                       <TableCell>{TK}{Number(product.sale_price ?? product.price).toLocaleString("en-US")}</TableCell>
+                      <TableCell>{TK}{Number(product.cost_price ?? 0).toLocaleString("en-US")}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const p = profitFor(product);
+                          return (
+                            <span className={p >= 0 ? "font-medium text-green-700" : "font-medium text-red-600"}>
+                              {TK}{p.toLocaleString("en-US")}
+                            </span>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>{product.stock_quantity}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{product.status}</Badge>
@@ -179,6 +274,82 @@ export default function AdminProductsPage() {
           </Button>
         </div>
       )}
+
+      {/* CSV Import modal */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Products from CSV</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Button variant="outline" className="h-11 w-full" onClick={downloadTemplate}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Template
+              </Button>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Required columns: <code>name, price, cost_price, stock_qty, category_slug</code>.
+                Optional: <code>description, sale_price</code>.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">CSV file</label>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                className="mt-1 flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              {importFile && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Selected: {importFile.name} ({Math.round(importFile.size / 1024)} KB)
+                </p>
+              )}
+            </div>
+
+            {importResult && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <p className="font-medium">
+                  <span className="text-green-700">{importResult.imported} imported</span>
+                  {", "}
+                  <span className="text-red-600">{importResult.skipped} skipped</span>
+                </p>
+                {importResult.errors.length > 0 && (
+                  <div className="mt-2 max-h-40 overflow-y-auto">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Errors
+                    </p>
+                    <ul className="space-y-1 text-xs">
+                      {importResult.errors.map((err, i) => (
+                        <li key={i} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+                          Row {err.row}
+                          {err.name ? ` — ${err.name}` : ""}: {(err.errors ?? [err.message ?? "error"]).join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="h-11" onClick={() => setImportOpen(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={importing || !importFile}
+              className="h-11 bg-[#1a6bdf] hover:bg-[#1559bd]"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {importing ? "Uploading…" : "Upload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
