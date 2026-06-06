@@ -279,6 +279,82 @@ export interface CustomerDetail {
   orders: Order[];
 }
 
+/** Sales report payload. */
+export interface SalesReport {
+  from: string;
+  to: string;
+  summary: {
+    total_revenue: number;
+    total_orders: number;
+    total_cost: number;
+    gross_profit: number;
+    profit_margin: number;
+    avg_order_value: number;
+  };
+  daily_breakdown: { date: string; revenue: number; orders: number; cost: number; profit: number }[];
+  payment_breakdown: { cod: number; sslcommerz: number };
+  status_breakdown: Record<string, number>;
+}
+
+export interface ProductsReportRow {
+  product_name: string;
+  units_sold: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin: number;
+}
+
+export interface VendorsReportRow {
+  vendor_name: string;
+  orders_count: number;
+  revenue: number;
+  commission_earned: number;
+  products_count: number;
+}
+
+/** Invoice list row. */
+export interface InvoiceRow {
+  id: number;
+  invoice_number: string;
+  customer_name: string;
+  customer_phone: string | null;
+  date: string;
+  items_count: number;
+  subtotal: string;
+  delivery_charge: string;
+  discount: string;
+  total: string;
+  payment_status: string;
+  payment_method: string;
+}
+
+/** Full invoice detail. */
+export interface InvoiceDetail {
+  invoice_number: string;
+  date: string;
+  payment_status: string;
+  payment_method: string;
+  order_status: string;
+  customer: { name: string; phone: string | null; email: string | null };
+  delivery_address: {
+    name: string;
+    phone: string;
+    address: string;
+    division: string | null;
+    district: string | null;
+    zone: string | null;
+  };
+  items: { product_name: string; quantity: number; price: string; subtotal: string }[];
+  totals: {
+    subtotal: string;
+    delivery_charge: string;
+    discount: string;
+    total: string;
+  };
+  company: { name: string; phone: string | null; email: string | null; address: string | null };
+}
+
 /** Analytics payload. */
 export interface AnalyticsData {
   days: number;

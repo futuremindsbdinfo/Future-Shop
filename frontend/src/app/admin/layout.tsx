@@ -9,11 +9,13 @@ import {
   faBagShopping,
   faBars,
   faBell,
+  faChartColumn,
   faChartLine,
   faChevronLeft,
   faChevronRight,
   faCircleQuestion,
   faClipboardList,
+  faFileInvoice,
   faGear,
   faLocationDot,
   faRightFromBracket,
@@ -50,6 +52,8 @@ const NAV: NavItem[] = [
   { href: "/admin/customers", label: "Customers", icon: faUserGroup },
   { href: "/admin/users", label: "Users", icon: faUsers },
   { href: "/admin/vendors", label: "Vendors", icon: faStore },
+  { href: "/admin/reports", label: "Reports", icon: faChartColumn },
+  { href: "/admin/invoices", label: "Invoices", icon: faFileInvoice },
   { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot },
 ];
 

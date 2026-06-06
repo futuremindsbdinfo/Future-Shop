@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BannerController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\DeliveryController;
+use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\UserManagementController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -114,6 +116,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             // Analytics.
             Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+
+            // Reports.
+            Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
+            Route::get('reports/products', [ReportController::class, 'products'])->name('reports.products');
+            Route::get('reports/vendors', [ReportController::class, 'vendors'])->name('reports.vendors');
+            Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+            // Invoices.
+            Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+            Route::get('invoices/{order}', [InvoiceController::class, 'show'])->name('invoices.show');
 
             // All categories (incl. inactive) for admin forms.
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
