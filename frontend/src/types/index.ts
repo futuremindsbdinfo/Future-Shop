@@ -256,6 +256,43 @@ export interface TodayOrders {
   list: Order[];
 }
 
+/** Row in the admin users list (User + orders_count). */
+export interface AdminUserRow extends User {
+  orders_count?: number;
+}
+
+/** Row in the admin customers list (User + aggregates). */
+export interface AdminCustomerRow extends User {
+  total_orders?: number;
+  total_spent?: number;
+  last_order_date?: string | null;
+}
+
+/** Customer detail (from GET /admin/customers/{id}). */
+export interface CustomerDetail {
+  user: User;
+  stats: {
+    total_orders: number;
+    total_spent: number;
+    last_order_date: string | null;
+  };
+  orders: Order[];
+}
+
+/** Analytics payload. */
+export interface AnalyticsData {
+  days: number;
+  sales_by_day: { date: string; revenue: number; orders: number }[];
+  orders_by_status: Record<string, number>;
+  top_categories: { name: string; sales: number; count: number }[];
+  revenue_total: number;
+  orders_total: number;
+  avg_order_value: number;
+  conversion_rate: number;
+  new_customers_count: number;
+  revenue_growth: number;
+}
+
 /** Admin dashboard summary. */
 export interface DashboardStats {
   total_orders: number;

@@ -9,6 +9,7 @@ import {
   faBagShopping,
   faBars,
   faBell,
+  faChartLine,
   faChevronLeft,
   faChevronRight,
   faCircleQuestion,
@@ -18,6 +19,8 @@ import {
   faRightFromBracket,
   faStore,
   faTableCells,
+  faUserGroup,
+  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,11 +44,13 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: faTableCells },
+  { href: "/admin/analytics", label: "Analytics", icon: faChartLine },
   { href: "/admin/products", label: "Products", icon: faBagShopping },
   { href: "/admin/orders", label: "Orders", icon: faClipboardList },
+  { href: "/admin/customers", label: "Customers", icon: faUserGroup },
+  { href: "/admin/users", label: "Users", icon: faUsers },
   { href: "/admin/vendors", label: "Vendors", icon: faStore },
   { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot },
-  { href: "/admin/settings", label: "Settings", icon: faGear },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -177,7 +182,7 @@ function RightPanel({
           Menu
         </p>
         <ul className="space-y-1">
-          {NAV.slice(0, 5).map((item) => {
+          {NAV.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <li key={item.href}>

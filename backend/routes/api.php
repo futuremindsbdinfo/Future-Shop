@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BannerController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\SettingController;
+use App\Http\Controllers\Api\V1\UserManagementController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\DeliveryZoneController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -102,6 +104,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             // Delivery agents (for order assignment).
             Route::get('delivery-users', [AdminController::class, 'deliveryUsers'])->name('delivery-users.index');
+
+            // Users / customers management.
+            Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
+            Route::patch('users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
+            Route::patch('users/{user}/role', [UserManagementController::class, 'changeRole'])->name('users.change-role');
+            Route::get('customers', [UserManagementController::class, 'customers'])->name('customers.index');
+            Route::get('customers/{user}', [UserManagementController::class, 'customerShow'])->name('customers.show');
+
+            // Analytics.
+            Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
 
             // All categories (incl. inactive) for admin forms.
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
