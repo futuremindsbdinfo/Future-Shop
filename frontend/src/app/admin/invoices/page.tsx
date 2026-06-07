@@ -136,10 +136,10 @@ export default function AdminInvoicesPage() {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="outline" size="icon" className="h-10 w-10" nativeButton={false} render={<Link href={`/admin/invoices/${inv.id}`} />} aria-label="View">
+                              <Button variant="outline" size="icon" className="h-11 w-11" nativeButton={false} render={<Link href={`/admin/invoices/${inv.id}`} />} aria-label="View">
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => openPrint(inv.id)} aria-label="Print">
+                              <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => openPrint(inv.id)} aria-label="Print">
                                 <Printer className="h-4 w-4" />
                               </Button>
                             </div>
