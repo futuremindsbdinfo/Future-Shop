@@ -34,12 +34,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyChart } from "@/components/shared/EmptyChart";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardStats, Order, PaginatedResponse, Product } from "@/types";
 
 const TK = "৳";
-const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 const fmtNum = (v: number) => v.toLocaleString("en-US");
 
 /* ------------------------------ Mock data ------------------------------ */
@@ -108,7 +109,7 @@ function StatCard({
   positive?: boolean;
 }) {
   return (
-    <Card className="rounded-xl border-0 shadow-sm">
+    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -251,7 +252,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total Revenue"
-          value={fmtTk(stats.total_revenue)}
+          value={formatTaka(stats.total_revenue)}
           icon={faCartShopping}
           iconBg="bg-orange-100"
           iconColor="text-[#f47920]"
@@ -289,7 +290,7 @@ export default function AdminDashboardPage() {
 
       {/* CHARTS ROW — Sales Overview (65%) + Top Products (35%) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="rounded-xl shadow-sm lg:col-span-3">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-3">
           <CardContent className="p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 text-base font-semibold">
@@ -322,6 +323,9 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <div className="h-72 w-full">
+              {stats.total_orders === 0 ? (
+                <EmptyChart message="No sales data yet" />
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={WEEKLY_DATA} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -335,7 +339,7 @@ export default function AdminDashboardPage() {
                   />
                   <Tooltip
                     contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #e5e7eb" }}
-                    formatter={(value, name) => [fmtTk(value as number), name === "thisWeek" ? "This Week" : "Last Week"]}
+                    formatter={(value, name) => [formatTaka(value as number), name === "thisWeek" ? "This Week" : "Last Week"]}
                   />
                   <Line
                     type="monotone"
@@ -357,12 +361,13 @@ export default function AdminDashboardPage() {
                   />
                 </LineChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Top Products */}
-        <Card className="rounded-xl shadow-sm lg:col-span-2">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-2">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="text-base font-semibold">Top Products</h2>
@@ -412,7 +417,7 @@ export default function AdminDashboardPage() {
       {/* BOTTOM ROW: Recent Orders (40%) + Customer Growth (35%) + Traffic Source (25%) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Recent Orders */}
-        <Card className="rounded-xl shadow-sm lg:col-span-5">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-5">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="text-base font-semibold">Recent Orders</h2>
@@ -441,7 +446,7 @@ export default function AdminDashboardPage() {
                           {new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </p>
                       </div>
-                      <span className="shrink-0 text-sm font-semibold">{fmtTk(order.total)}</span>
+                      <span className="shrink-0 text-sm font-semibold">{formatTaka(order.total)}</span>
                       <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_PILL_CLASS[sk] ?? "bg-gray-100 text-gray-700"}`}>
                         {STATUS_LABEL[sk] ?? order.order_status}
                       </span>
@@ -454,7 +459,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Customer Growth */}
-        <Card className="rounded-xl shadow-sm lg:col-span-4">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-4">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="text-base font-semibold">Customer Growth</h2>
@@ -470,20 +475,26 @@ export default function AdminDashboardPage() {
               </select>
             </div>
             <div className="relative h-44 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={CUSTOMER_GROWTH} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={2} stroke="none">
-                    {CUSTOMER_GROWTH.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p className="text-2xl font-bold">{growthTotal}</p>
-                <p className="text-[11px] text-[#6b7280]">Total</p>
-              </div>
+              {growthTotal === 0 ? (
+                <EmptyChart message="No customer data yet" />
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={CUSTOMER_GROWTH} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={2} stroke="none">
+                        {CUSTOMER_GROWTH.map((entry, index) => (
+                          <Cell key={index} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <p className="text-2xl font-bold">{growthTotal}</p>
+                    <p className="text-[11px] text-[#6b7280]">Total</p>
+                  </div>
+                </>
+              )}
             </div>
             <ul className="mt-4 space-y-2 text-xs">
               {CUSTOMER_GROWTH.map((seg) => {
@@ -502,7 +513,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Traffic Source */}
-        <Card className="rounded-xl shadow-sm lg:col-span-3">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-3">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="text-base font-semibold">Traffic Source</h2>

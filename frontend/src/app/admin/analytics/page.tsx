@@ -27,10 +27,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import type { AnalyticsData } from "@/types";
 
 const TK = "৳";
-const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
 const STATUS_COLORS: Record<string, string> = {
@@ -65,7 +65,7 @@ function MetricCard({
 }) {
   const positive = (growthPct ?? 0) >= 0;
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -165,7 +165,7 @@ export default function AdminAnalyticsPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label="Total Revenue"
-          value={fmtTk(data.revenue_total)}
+          value={formatTaka(data.revenue_total)}
           icon={faCircleDollarToSlot}
           iconBg="bg-orange-100"
           iconColor="text-[#f47920]"
@@ -181,7 +181,7 @@ export default function AdminAnalyticsPage() {
         />
         <MetricCard
           label="Avg Order Value"
-          value={fmtTk(data.avg_order_value)}
+          value={formatTaka(data.avg_order_value)}
           icon={faCartShopping}
           iconBg="bg-green-100"
           iconColor="text-green-700"
@@ -198,7 +198,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Sales trend */}
-      <Card className="rounded-xl shadow-sm">
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
         <CardContent className="p-6">
           <h2 className="mb-4 text-base font-semibold">Sales Trend</h2>
           <div className="h-72 w-full">
@@ -221,7 +221,7 @@ export default function AdminAnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #e5e7eb" }}
-                  formatter={(value) => fmtTk(value as number)}
+                  formatter={(value) => formatTaka(value as number)}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#f47920" strokeWidth={2.5} fill="url(#salesFill)" />
               </AreaChart>
@@ -232,7 +232,7 @@ export default function AdminAnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Orders by status (horizontal bars) */}
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="p-6">
             <h2 className="mb-4 text-base font-semibold">Orders by Status</h2>
             <div className="h-72 w-full">
@@ -254,7 +254,7 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Top categories donut */}
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="p-6">
             <h2 className="mb-4 text-base font-semibold">Top Categories</h2>
             {pie.length === 0 ? (
@@ -267,7 +267,7 @@ export default function AdminAnalyticsPage() {
                       <Pie data={pie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={88} paddingAngle={2} stroke="none">
                         {pie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtTk(v as number)} />
+                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => formatTaka(v as number)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -276,7 +276,7 @@ export default function AdminAnalyticsPage() {
                     <li key={c.name} className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
                       <span className="flex-1 truncate">{c.name}</span>
-                      <span className="font-medium">{fmtTk(c.sales)}</span>
+                      <span className="font-medium">{formatTaka(c.sales)}</span>
                       <span className="text-[#9ca3af]">({c.count})</span>
                     </li>
                   ))}

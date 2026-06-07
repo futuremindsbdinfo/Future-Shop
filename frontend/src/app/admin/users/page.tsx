@@ -140,7 +140,7 @@ export default function AdminUsersPage() {
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
       />
 
-      <Card className="rounded-xl shadow-sm">
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
         <CardContent className="p-0">
           {loading ? (
             <LoadingSpinner />

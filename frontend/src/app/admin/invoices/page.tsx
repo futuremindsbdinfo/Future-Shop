@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Eye, Printer } from "lucide-react";
+import { Eye, FileText, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,10 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import type { InvoiceRow, PaginatedResponse } from "@/types";
-
-const TK = "৳";
-const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 
 const STATUS_BADGE: Record<string, string> = {
   pending: "border-amber-300 text-amber-700",
@@ -79,12 +77,28 @@ export default function AdminInvoicesPage() {
         </select>
       </div>
 
-      <Card className="rounded-xl shadow-sm">
+      {/* Result count */}
+      {!loading && data && data.total > 0 && (
+        <p className="text-sm text-[#6b7280]">
+          Showing {data.from ?? 0}–{data.to ?? 0} of <span className="font-semibold text-[#374151]">{data.total}</span>{" "}
+          {data.total === 1 ? "invoice" : "invoices"}
+        </p>
+      )}
+
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
         <CardContent className="p-0">
           {loading ? (
             <LoadingSpinner />
           ) : !data || data.data.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">No invoices found.</p>
+            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff7ed] text-[#f47920]">
+                <FileText className="h-6 w-6" />
+              </span>
+              <p className="text-base font-medium text-[#111827]">No invoices yet</p>
+              <p className="max-w-xs text-sm text-[#6b7280]">
+                Once orders start coming in, their invoices will appear here.
+              </p>
+            </div>
           ) : (
             <>
               {/* Desktop table */}
@@ -114,7 +128,7 @@ export default function AdminInvoicesPage() {
                             {new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                           </td>
                           <td className="px-4 py-3">{inv.items_count}</td>
-                          <td className="px-4 py-3 font-semibold">{fmtTk(inv.total)}</td>
+                          <td className="px-4 py-3 font-semibold">{formatTaka(inv.total)}</td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className={STATUS_BADGE[inv.payment_status] ?? ""}>
                               {inv.payment_status}
@@ -122,10 +136,10 @@ export default function AdminInvoicesPage() {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="outline" size="icon" className="h-11 w-11" nativeButton={false} render={<Link href={`/admin/invoices/${inv.id}`} />} aria-label="View">
+                              <Button variant="outline" size="icon" className="h-10 w-10" nativeButton={false} render={<Link href={`/admin/invoices/${inv.id}`} />} aria-label="View">
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => openPrint(inv.id)} aria-label="Print">
+                              <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => openPrint(inv.id)} aria-label="Print">
                                 <Printer className="h-4 w-4" />
                               </Button>
                             </div>
@@ -150,7 +164,7 @@ export default function AdminInvoicesPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{fmtTk(inv.total)}</p>
+                        <p className="font-semibold">{formatTaka(inv.total)}</p>
                         <Badge variant="outline" className={STATUS_BADGE[inv.payment_status] ?? ""}>
                           {inv.payment_status}
                         </Badge>

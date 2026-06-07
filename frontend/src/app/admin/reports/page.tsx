@@ -29,11 +29,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyChart } from "@/components/shared/EmptyChart";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import type { ProductsReportRow, SalesReport, VendorsReportRow } from "@/types";
 
 const TK = "৳";
-const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
 function todayStr(): string { return new Date().toISOString().slice(0, 10); }
@@ -72,7 +73,7 @@ function StatTile({ label, value, icon, color = "text-[#f47920]", bg = "bg-orang
   label: string; value: string; icon: typeof faChartBar; color?: string; bg?: string;
 }) {
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
       <CardContent className="flex items-center gap-3 p-4">
         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bg}`}>
           <FontAwesomeIcon icon={icon} className={`h-4 w-4 ${color}`} />
@@ -204,19 +205,22 @@ function SalesTabContent({ sales }: { sales: SalesReport }) {
     <div className="space-y-6">
       {/* 6 summary cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
-        <StatTile label="Revenue" value={fmtTk(sales.summary.total_revenue)} icon={faCircleDollarToSlot} />
+        <StatTile label="Revenue" value={formatTaka(sales.summary.total_revenue)} icon={faCircleDollarToSlot} />
         <StatTile label="Orders" value={fmtNum(sales.summary.total_orders)} icon={faShoppingBag} color="text-blue-600" bg="bg-blue-100" />
-        <StatTile label="Cost" value={fmtTk(sales.summary.total_cost)} icon={faSackDollar} color="text-red-600" bg="bg-red-100" />
-        <StatTile label="Gross Profit" value={fmtTk(sales.summary.gross_profit)} icon={faChartBar} color="text-green-700" bg="bg-green-100" />
+        <StatTile label="Cost" value={formatTaka(sales.summary.total_cost)} icon={faSackDollar} color="text-red-600" bg="bg-red-100" />
+        <StatTile label="Gross Profit" value={formatTaka(sales.summary.gross_profit)} icon={faChartBar} color="text-green-700" bg="bg-green-100" />
         <StatTile label="Profit Margin" value={`${Number(sales.summary.profit_margin).toFixed(1)}%`} icon={faPercent} color="text-purple-600" bg="bg-purple-100" />
-        <StatTile label="Avg Order Value" value={fmtTk(sales.summary.avg_order_value)} icon={faCartShopping} />
+        <StatTile label="Avg Order Value" value={formatTaka(sales.summary.avg_order_value)} icon={faCartShopping} />
       </div>
 
       {/* Daily revenue/profit chart */}
-      <Card className="rounded-xl shadow-sm">
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
         <CardContent className="p-6">
           <h2 className="mb-4 text-base font-semibold">Daily Revenue & Profit</h2>
           <div className="h-72 w-full">
+            {sales.summary.total_orders === 0 ? (
+              <EmptyChart message="No sales in this period" />
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={daily} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                 <defs>
@@ -238,42 +242,50 @@ function SalesTabContent({ sales }: { sales: SalesReport }) {
                   tickFormatter={(v) => `${TK}${Math.round(Number(v) / 1000)}k`}
                   width={50}
                 />
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtTk(v as number)} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => formatTaka(v as number)} />
                 <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#f47920" strokeWidth={2.5} fill="url(#revFill)" />
                 <Area type="monotone" dataKey="profit" name="Profit" stroke="#16a34a" strokeWidth={2} fill="url(#profitFill)" />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Payment method donut */}
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="p-6">
             <h2 className="mb-4 text-base font-semibold">Payment Methods</h2>
             <div className="h-56 w-full">
+              {pay.length === 0 ? (
+                <EmptyChart message="No payment data yet" />
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={payDisplay} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} stroke="none">
                     {payDisplay.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtTk(v as number)} />
+                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => formatTaka(v as number)} />
                 </PieChart>
               </ResponsiveContainer>
+              )}
             </div>
             <ul className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#f47920]" />COD <span className="ml-auto font-medium">{fmtTk(sales.payment_breakdown.cod)}</span></li>
-              <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />Online <span className="ml-auto font-medium">{fmtTk(sales.payment_breakdown.sslcommerz)}</span></li>
+              <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#f47920]" />COD <span className="ml-auto font-medium">{formatTaka(sales.payment_breakdown.cod)}</span></li>
+              <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />Online <span className="ml-auto font-medium">{formatTaka(sales.payment_breakdown.sslcommerz)}</span></li>
             </ul>
           </CardContent>
         </Card>
 
         {/* Order status horizontal bars */}
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="p-6">
             <h2 className="mb-4 text-base font-semibold">Order Status</h2>
             <div className="h-56 w-full">
+              {statusBars.every((s) => s.value === 0) ? (
+                <EmptyChart message="No orders in this period" />
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart layout="vertical" data={statusBars} margin={{ top: 8, right: 16, left: 16, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
@@ -285,6 +297,7 @@ function SalesTabContent({ sales }: { sales: SalesReport }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -295,7 +308,7 @@ function SalesTabContent({ sales }: { sales: SalesReport }) {
 
 function ProductsTab({ rows }: { rows: ProductsReportRow[] }) {
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
       <CardContent className="p-0">
         {rows.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No products sold in this range.</p>
@@ -317,9 +330,9 @@ function ProductsTab({ rows }: { rows: ProductsReportRow[] }) {
                   <tr key={r.product_name} className="border-b border-[#f3f4f6] last:border-0">
                     <td className="max-w-[220px] truncate px-4 py-3 font-medium">{r.product_name}</td>
                     <td className="px-4 py-3">{r.units_sold}</td>
-                    <td className="px-4 py-3">{fmtTk(r.revenue)}</td>
-                    <td className="px-4 py-3 text-red-600">{fmtTk(r.cost)}</td>
-                    <td className={`px-4 py-3 font-medium ${r.profit >= 0 ? "text-green-700" : "text-red-600"}`}>{fmtTk(r.profit)}</td>
+                    <td className="px-4 py-3">{formatTaka(r.revenue)}</td>
+                    <td className="px-4 py-3 text-red-600">{formatTaka(r.cost)}</td>
+                    <td className={`px-4 py-3 font-medium ${r.profit >= 0 ? "text-green-700" : "text-red-600"}`}>{formatTaka(r.profit)}</td>
                     <td className="px-4 py-3"><MarginBar pct={r.margin} /></td>
                   </tr>
                 ))}
@@ -334,7 +347,7 @@ function ProductsTab({ rows }: { rows: ProductsReportRow[] }) {
 
 function VendorsTab({ rows }: { rows: VendorsReportRow[] }) {
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
       <CardContent className="p-0">
         {rows.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No vendor activity in this range.</p>
@@ -355,8 +368,8 @@ function VendorsTab({ rows }: { rows: VendorsReportRow[] }) {
                   <tr key={r.vendor_name} className="border-b border-[#f3f4f6] last:border-0">
                     <td className="px-4 py-3 font-medium">{r.vendor_name}</td>
                     <td className="px-4 py-3">{r.orders_count}</td>
-                    <td className="px-4 py-3">{fmtTk(r.revenue)}</td>
-                    <td className="px-4 py-3 text-[#f47920]">{fmtTk(r.commission_earned)}</td>
+                    <td className="px-4 py-3">{formatTaka(r.revenue)}</td>
+                    <td className="px-4 py-3 text-[#f47920]">{formatTaka(r.commission_earned)}</td>
                     <td className="px-4 py-3">{r.products_count}</td>
                   </tr>
                 ))}

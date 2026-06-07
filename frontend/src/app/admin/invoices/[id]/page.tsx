@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import type { InvoiceDetail } from "@/types";
-
-const TK = "৳";
-const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 
 const STATUS_BADGE: Record<string, string> = {
   pending: "border-amber-300 text-amber-700",
@@ -144,8 +142,8 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
                   <tr key={i} className="border-b border-[#f3f4f6]">
                     <td className="py-2 pr-2">{item.product_name}</td>
                     <td className="py-2 text-center">{item.quantity}</td>
-                    <td className="py-2 text-right">{fmtTk(item.price)}</td>
-                    <td className="py-2 text-right">{fmtTk(item.subtotal)}</td>
+                    <td className="py-2 text-right">{formatTaka(item.price)}</td>
+                    <td className="py-2 text-right">{formatTaka(item.subtotal)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -155,12 +153,12 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
 
         {/* Totals */}
         <div className="mt-6 ml-auto max-w-xs space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-[#6b7280]">Subtotal</span><span>{fmtTk(data.totals.subtotal)}</span></div>
-          <div className="flex justify-between"><span className="text-[#6b7280]">Delivery</span><span>{fmtTk(data.totals.delivery_charge)}</span></div>
-          <div className="flex justify-between"><span className="text-[#6b7280]">Discount</span><span>−{fmtTk(data.totals.discount)}</span></div>
+          <div className="flex justify-between"><span className="text-[#6b7280]">Subtotal</span><span>{formatTaka(data.totals.subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-[#6b7280]">Delivery</span><span>{formatTaka(data.totals.delivery_charge)}</span></div>
+          <div className="flex justify-between"><span className="text-[#6b7280]">Discount</span><span>−{formatTaka(data.totals.discount)}</span></div>
           <div className="flex justify-between border-t border-[#e5e7eb] pt-2 text-base font-bold">
             <span>Grand Total</span>
-            <span className="text-[#f47920]">{fmtTk(data.totals.total)}</span>
+            <span className="text-[#f47920]">{formatTaka(data.totals.total)}</span>
           </div>
         </div>
 

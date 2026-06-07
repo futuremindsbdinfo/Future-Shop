@@ -16,10 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import type { AdminCustomerRow, CustomerDetail, Order, PaginatedResponse } from "@/types";
-
-const TK = "৳";
-const fmtTk = (v: number | string) => `${TK}${Number(v).toLocaleString("en-US")}`;
 
 function getErrorMessage(e: unknown, fallback: string): string {
   if (typeof e === "object" && e !== null && "response" in e) {
@@ -90,7 +88,7 @@ export default function AdminCustomersPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-100 text-purple-600">
               <FontAwesomeIcon icon={faUsers} className="h-4 w-4" />
@@ -101,7 +99,7 @@ export default function AdminCustomersPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-green-100 text-green-700">
               <FontAwesomeIcon icon={faUserCheck} className="h-4 w-4" />
@@ -113,14 +111,14 @@ export default function AdminCustomersPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-xl shadow-sm">
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-[#f47920]">
               <FontAwesomeIcon icon={faSackDollar} className="h-4 w-4" />
             </span>
             <div>
               <p className="text-xs text-[#6b7280]">Total Spending</p>
-              <p className="text-2xl font-bold">{fmtTk(totalSpending)}</p>
+              <p className="text-2xl font-bold">{formatTaka(totalSpending)}</p>
               <p className="text-[11px] text-[#9ca3af]">on this page</p>
             </div>
           </CardContent>
@@ -134,7 +132,7 @@ export default function AdminCustomersPage() {
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
       />
 
-      <Card className="rounded-xl shadow-sm">
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
         <CardContent className="p-0">
           {loading ? (
             <LoadingSpinner />
@@ -169,7 +167,7 @@ export default function AdminCustomersPage() {
                           </td>
                           <td className="px-4 py-3 text-[#374151]">{c.phone ?? "—"}</td>
                           <td className="px-4 py-3">{c.total_orders ?? 0}</td>
-                          <td className="px-4 py-3 font-semibold text-[#f47920]">{fmtTk(c.total_spent ?? 0)}</td>
+                          <td className="px-4 py-3 font-semibold text-[#f47920]">{formatTaka(c.total_spent ?? 0)}</td>
                           <td className="px-4 py-3 text-xs text-[#6b7280]">
                             {c.last_order_date ? new Date(c.last_order_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                           </td>
@@ -201,7 +199,7 @@ export default function AdminCustomersPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-[#f47920]">{fmtTk(c.total_spent ?? 0)}</p>
+                        <p className="font-semibold text-[#f47920]">{formatTaka(c.total_spent ?? 0)}</p>
                         <Badge variant="outline" className={c.is_active ? "mt-1 border-green-300 text-green-700" : "mt-1 border-gray-300 text-gray-500"}>
                           {c.is_active ? "Active" : "Inactive"}
                         </Badge>
@@ -252,7 +250,7 @@ export default function AdminCustomersPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-[#9ca3af]">Spent</p>
-                  <p className="text-lg font-bold text-[#f47920]">{fmtTk(detail.stats.total_spent)}</p>
+                  <p className="text-lg font-bold text-[#f47920]">{formatTaka(detail.stats.total_spent)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-[#9ca3af]">Last Order</p>
@@ -278,7 +276,7 @@ export default function AdminCustomersPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold">{fmtTk(o.total)}</p>
+                          <p className="font-semibold">{formatTaka(o.total)}</p>
                           <p className="text-[10px] text-[#6b7280]">{o.order_status}</p>
                         </div>
                       </li>
