@@ -18,8 +18,12 @@ export function Chrome({
   settings?: SiteSettings;
 }) {
   const pathname = usePathname();
+  // Admin, delivery, and the hidden /fuminds admin login use their own
+  // full-width chrome (no storefront nav/footer).
   const isBareLayout =
-    (pathname?.startsWith("/admin") ?? false) || (pathname?.startsWith("/delivery") ?? false);
+    (pathname?.startsWith("/admin") ?? false) ||
+    (pathname?.startsWith("/delivery") ?? false) ||
+    (pathname?.startsWith("/fuminds") ?? false);
 
   if (isBareLayout) {
     return <>{children}</>;

@@ -28,9 +28,13 @@ export function proxy(request: NextRequest) {
 
   const home = () => NextResponse.redirect(new URL('/', request.url));
 
-  // /admin/* → admin only
+  // /admin/* → admin only. The dedicated admin login lives at /fuminds, so
+  // unauthenticated visitors are sent there (not to the public AuthModal).
   if (pathname.startsWith('/admin')) {
-    if (!isAuthed) return loginRedirect();
+    if (!isAuthed) {
+      const url = new URL('/fuminds', request.url);
+      return NextResponse.redirect(url);
+    }
     if (role !== 'admin') return home();
     return NextResponse.next();
   }

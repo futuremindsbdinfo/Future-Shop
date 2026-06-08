@@ -3,7 +3,7 @@ import type { SiteSettings } from "@/types";
 /** Hardcoded fallback used when the settings API is unavailable. */
 export const FALLBACK_SETTINGS: SiteSettings = {
   site_name: "Future Shop",
-  site_tagline: "আপনার পাড়ার বাজার, এখন অনলাইনে",
+  site_tagline: "বাজারে নয়, বাজার আসবে আপনার ঘরে।",
   contact_phone: null,
   contact_email: null,
   contact_address: null,

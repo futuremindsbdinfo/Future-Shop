@@ -8,6 +8,7 @@ use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Transaction;
 use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -121,6 +122,24 @@ class OrderController extends Controller
             $order->forceFill([
                 'order_number' => sprintf('FS-%s-%05d', now()->year, $order->id),
             ])->save();
+
+            // COD orders are auto-confirmed at placement; payment stays pending
+            // (cash is collected on delivery). Uses 'processing' because the
+            // order_status enum has no 'confirmed' value.
+            if ($data['payment_method'] === 'cod') {
+                $order->update(['order_status' => 'processing']);
+
+                Transaction::create([
+                    'order_id'         => $order->id,
+                    'vendor_id'        => null,
+                    'reference'        => 'COD-'.$order->order_number,
+                    'payment_method'   => 'cod',
+                    'type'             => 'payment',
+                    'amount'           => $order->total,
+                    'status'           => 'pending', // collected on delivery
+                    'gateway_response' => null,
+                ]);
+            }
 
             foreach ($lineData as $line) {
                 /** @var Product $product */

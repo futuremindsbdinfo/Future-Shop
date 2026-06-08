@@ -15,16 +15,18 @@ class SettingController extends Controller
     }
 
     /**
-     * Allowed setting keys (site config).
+     * Allowed setting keys (site config) with default values used when the
+     * admin hasn't saved a value yet. Defaults are used by both the admin
+     * settings form and the public storefront fetch.
      *
-     * @var list<string>
+     * @var array<string, string|null>
      */
-    private const KEYS = [
-        'site_name',
-        'site_tagline',
-        'contact_phone',
-        'contact_email',
-        'contact_address',
+    private const DEFAULTS = [
+        'site_name' => 'Future Shop',
+        'site_tagline' => 'বাজারে নয়, বাজার আসবে আপনার ঘরে।',
+        'contact_phone' => null,
+        'contact_email' => null,
+        'contact_address' => null,
     ];
 
     /** Admin: get all settings as a key→value object. */
@@ -33,8 +35,11 @@ class SettingController extends Controller
         $stored = Setting::pluck('value', 'key')->toArray();
 
         $data = [];
-        foreach (self::KEYS as $key) {
-            $data[$key] = $stored[$key] ?? null;
+        foreach (self::DEFAULTS as $key => $default) {
+            $value = $stored[$key] ?? null;
+            // Empty stored values fall back to the default so the public
+            // storefront always has a meaningful tagline / site_name.
+            $data[$key] = ($value === null || $value === '') ? $default : $value;
         }
 
         return response()->json(['data' => $data]);
