@@ -75,8 +75,12 @@ export function ProductCard({ product }: { product: Product }) {
       </Link>
 
       <div className="flex flex-1 flex-col p-3">
-        {product.vendor && (
-          <p className="truncate text-xs text-muted-foreground">{product.vendor.shop_name}</p>
+        {(product.vendor || product.brand) && (
+          <p className="truncate text-xs text-muted-foreground">
+            {[product.vendor?.shop_name, product.brand?.name]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         )}
 
         <Link href={`/product/${product.slug}`}>

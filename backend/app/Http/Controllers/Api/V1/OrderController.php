@@ -176,6 +176,15 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $orders = Order::where('user_id', $request->user()->id)
+            ->when(
+                $request->filled('status')
+                && in_array(
+                    $request->string('status')->toString(),
+                    ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+                    true
+                ),
+                fn ($q) => $q->where('order_status', $request->string('status'))
+            )
             ->with('items')
             ->latest()
             ->paginate(15);

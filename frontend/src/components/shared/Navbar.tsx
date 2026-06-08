@@ -106,7 +106,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
       ? "/admin"
       : user?.role === "delivery"
         ? "/delivery"
-        : "/orders";
+        : "/dashboard";
 
   return (
     <header className="sticky top-0 z-50 border-b bg-white">
@@ -127,6 +127,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
             <nav className="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-6">
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Home</Link>
               <Link href="/categories" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Categories</Link>
+              <Link href="/brands" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Brands</Link>
               <div className="mt-2 px-2 text-xs font-semibold uppercase text-muted-foreground">
                 Shop by category
               </div>
@@ -152,6 +153,15 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
                     </span>
                     <span className="min-w-0 truncate text-sm font-medium">{user.name}</span>
                   </div>
+                  <Button
+                    nativeButton={false}
+                    render={<Link href={dashboardHref} />}
+                    className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    My Dashboard
+                  </Button>
                   <Button
                     variant="outline"
                     className="h-11 w-full"
@@ -211,6 +221,16 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Brands (desktop) */}
+        <Button
+          variant="ghost"
+          className="hidden md:inline-flex"
+          nativeButton={false}
+          render={<Link href="/brands" />}
+        >
+          Brands
+        </Button>
 
         {/* Search */}
         <form onSubmit={handleSearch} className="flex flex-1 items-center gap-2">

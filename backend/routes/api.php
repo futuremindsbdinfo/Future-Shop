@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BannerController;
 use App\Http\Controllers\Api\V1\BrandController;
 use App\Http\Controllers\Api\V1\CartController;
+use App\Http\Controllers\Api\V1\CustomerDashboardController;
+use App\Http\Controllers\Api\V1\WishlistController;
 use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -85,6 +87,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Saved addresses.
         Route::get('addresses', [AddressController::class, 'index'])->name('addresses.index');
         Route::post('addresses', [AddressController::class, 'store'])->name('addresses.store');
+        Route::put('addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
+        Route::patch('addresses/{address}/default', [AddressController::class, 'setDefault'])->name('addresses.set-default');
         Route::delete('addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
 
         // Merge a guest cart into the user's cart after login.
@@ -185,6 +189,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
 
         Route::middleware('role:customer')->prefix('account')->name('account.')->group(function () {
+            Route::get('dashboard', [CustomerDashboardController::class, 'summary'])->name('dashboard');
+            Route::get('wishlists', [WishlistController::class, 'index'])->name('wishlists.index');
+            Route::post('wishlists', [WishlistController::class, 'store'])->name('wishlists.store');
+            Route::delete('wishlists/{wishlist}', [WishlistController::class, 'destroy'])->name('wishlists.destroy');
             // e.g. Route::apiResource('orders', CustomerOrderController::class);
         });
     });

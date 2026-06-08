@@ -94,6 +94,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Wishlisted products.
+     */
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * Customer reward / coupon credit wallet.
+     */
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    /**
      * Convenience role checks.
      */
     public function isVendor(): bool

@@ -400,6 +400,25 @@ export interface DashboardStats {
   today_orders: TodayOrders;
 }
 
+export interface Wishlist {
+  id: number;
+  user_id: number;
+  product_id: number;
+  product?: Pick<Product, 'id' | 'name' | 'slug' | 'price' | 'sale_price' | 'images' | 'status' | 'stock_quantity'> & {
+    brand?: Pick<Brand, 'id' | 'name' | 'slug'> | null;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerDashboardSummary {
+  orders_count: number;
+  active_orders_count: number;
+  total_spent: string;
+  wishlist_count: number;
+  wallet_balance: string;
+}
+
 /** Wrapper used by single-resource endpoints: { data: T, message?: string }. */
 export interface ApiResponse<T> {
   data: T;
