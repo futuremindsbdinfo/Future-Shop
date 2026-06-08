@@ -23,6 +23,7 @@ class StoreProductRequest extends FormRequest
         return [
             'vendor_id' => ['required', 'integer', Rule::exists('vendors', 'id')],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')],
+            'brand_id' => ['nullable', 'integer', Rule::exists('brands', 'id')],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],

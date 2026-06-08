@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
-import type { Category, PaginatedResponse, Product, Vendor } from "@/types";
+import type { Brand, Category, PaginatedResponse, Product, Vendor } from "@/types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -28,6 +28,7 @@ export default function AdminProductFormPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -37,6 +38,7 @@ export default function AdminProductFormPage() {
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [vendorId, setVendorId] = useState("");
+  const [brandId, setBrandId] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
@@ -47,6 +49,7 @@ export default function AdminProductFormPage() {
     const tasks: Promise<unknown>[] = [
       api.get<{ data: Category[] }>("/admin/categories").then((r) => setCategories(r.data.data)),
       api.get<PaginatedResponse<Vendor>>("/admin/vendors?per_page=50").then((r) => setVendors(r.data.data)),
+      api.get<PaginatedResponse<Brand>>("/admin/brands?per_page=100").then((r) => setBrands(r.data.data)),
     ];
 
     if (id) {
@@ -62,6 +65,7 @@ export default function AdminProductFormPage() {
           setStock(String(p.stock_quantity));
           setCategoryId(String(p.category_id));
           setVendorId(String(p.vendor_id));
+          setBrandId(p.brand_id ? String(p.brand_id) : "");
           setStatus(p.status === "published" ? "published" : "draft");
         }),
       );
@@ -108,6 +112,7 @@ export default function AdminProductFormPage() {
     form.append("stock_quantity", stock);
     form.append("category_id", categoryId);
     form.append("vendor_id", vendorId);
+    if (brandId) form.append("brand_id", brandId);
     form.append("status", status);
     images.forEach((file) => form.append("images[]", file));
 
@@ -215,6 +220,21 @@ export default function AdminProductFormPage() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="brand">Brand</Label>
+              <select
+                id="brand"
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="">No Brand</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={String(b.id)}>{b.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

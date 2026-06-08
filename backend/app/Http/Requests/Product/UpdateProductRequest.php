@@ -25,6 +25,7 @@ class UpdateProductRequest extends FormRequest
         return [
             'vendor_id' => ['sometimes', 'integer', Rule::exists('vendors', 'id')],
             'category_id' => ['sometimes', 'integer', Rule::exists('categories', 'id')],
+            'brand_id' => ['nullable', 'integer', Rule::exists('brands', 'id')],
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['sometimes', 'numeric', 'min:0', 'max:99999999.99'],

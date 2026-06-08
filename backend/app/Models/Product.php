@@ -18,6 +18,7 @@ class Product extends Model
     protected $fillable = [
         'vendor_id',
         'category_id',
+        'brand_id',
         'name',
         'slug',
         'description',
@@ -39,15 +40,21 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2',
-            'sale_price' => 'decimal:2',
-            'cost_price' => 'decimal:2',
-            'weight' => 'decimal:2',
+            'brand_id'       => 'integer',
+            'price'          => 'decimal:2',
+            'sale_price'     => 'decimal:2',
+            'cost_price'     => 'decimal:2',
+            'weight'         => 'decimal:2',
             'stock_quantity' => 'integer',
-            'images' => 'array',
-            'is_featured' => 'boolean',
-            'views' => 'integer',
+            'images'         => 'array',
+            'is_featured'    => 'boolean',
+            'views'          => 'integer',
         ];
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function vendor(): BelongsTo

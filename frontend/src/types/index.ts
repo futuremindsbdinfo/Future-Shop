@@ -124,6 +124,18 @@ export interface ProductImage {
   disk: string;
 }
 
+export interface Brand {
+  id: number;
+  name: string;
+  slug: string;
+  logo: ProductImage | null;
+  description: string | null;
+  is_active: boolean;
+  products_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Product {
   id: number;
   vendor_id: number;
@@ -144,8 +156,10 @@ export interface Product {
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+  brand_id: number | null;
   vendor?: Pick<Vendor, 'id' | 'shop_name' | 'slug'>;
   category?: Pick<Category, 'id' | 'name' | 'slug'>;
+  brand?: Pick<Brand, 'id' | 'name' | 'slug'>;
 }
 
 export interface OrderItem {

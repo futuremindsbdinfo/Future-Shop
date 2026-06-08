@@ -35,7 +35,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->where('status', 'published')
-            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug'])
+            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
             ->when($request->filled('category'), fn ($q) => $q->whereHas(
                 'category', fn ($c) => $c->where('slug', $request->string('category'))
             ))
@@ -46,6 +46,10 @@ class ProductController extends Controller
             ->when($request->filled('max_price'), fn ($q) => $q->where('price', '<=', $request->float('max_price')))
             ->when($request->boolean('is_featured'), fn ($q) => $q->where('is_featured', true))
             ->when($request->filled('search'), fn ($q) => $q->where('name', 'ilike', '%'.$request->string('search').'%'))
+            ->when(
+                $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
+                fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
+            )
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -62,11 +66,15 @@ class ProductController extends Controller
         $perPage = max(min((int) $request->get('per_page', 15), 50), 1);
 
         $products = Product::query()
-            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug'])
+            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
             ->when($request->filled('category'), fn ($q) => $q->whereHas(
                 'category', fn ($c) => $c->where('slug', $request->string('category'))
             ))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when(
+                $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
+                fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
+            )
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -80,7 +88,7 @@ class ProductController extends Controller
     public function adminShow(Product $product): JsonResponse
     {
         return response()->json([
-            'data' => $product->load(['vendor:id,shop_name,slug', 'category:id,name,slug']),
+            'data' => $product->load(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug']),
         ]);
     }
 
@@ -91,7 +99,7 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug'])
+            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
             ->firstOrFail();
 
         return response()->json(['data' => $product]);
@@ -112,7 +120,7 @@ class ProductController extends Controller
         $product = Product::create($data);
 
         return response()->json([
-            'data' => $product->load(['vendor:id,shop_name,slug', 'category:id,name,slug']),
+            'data' => $product->load(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug']),
         ], 201);
     }
 
@@ -136,7 +144,7 @@ class ProductController extends Controller
         $product->update($data);
 
         return response()->json([
-            'data' => $product->fresh(['vendor:id,shop_name,slug', 'category:id,name,slug']),
+            'data' => $product->fresh(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug']),
         ]);
     }
 

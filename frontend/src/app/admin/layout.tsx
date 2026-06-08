@@ -21,6 +21,7 @@ import {
   faRightFromBracket,
   faStore,
   faTableCells,
+  faTags,
   faUserGroup,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
@@ -48,6 +49,7 @@ const NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: faTableCells },
   { href: "/admin/analytics", label: "Analytics", icon: faChartLine },
   { href: "/admin/products", label: "Products", icon: faBagShopping },
+  { href: "/admin/brands", label: "Brands", icon: faTags },
   { href: "/admin/orders", label: "Orders", icon: faClipboardList },
   { href: "/admin/customers", label: "Customers", icon: faUserGroup },
   { href: "/admin/users", label: "Users", icon: faUsers },

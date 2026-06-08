@@ -25,16 +25,18 @@ import {
 } from "@/components/ui/table";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
-import type { Category, PaginatedResponse, Product } from "@/types";
+import type { Brand, Category, PaginatedResponse, Product } from "@/types";
 
 const TK = "৳";
 
 export default function AdminProductsPage() {
   const [data, setData] = useState<PaginatedResponse<Product> | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [page, setPage] = useState(1);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
   // CSV import modal state.
@@ -49,6 +51,7 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     api.get<{ data: Category[] }>("/admin/categories").then((r) => setCategories(r.data.data)).catch(() => {});
+    api.get<PaginatedResponse<Brand>>("/admin/brands?per_page=100").then((r) => setBrands(r.data.data)).catch(() => {});
   }, []);
 
   const load = useCallback(() => {
@@ -56,12 +59,13 @@ export default function AdminProductsPage() {
     const params = new URLSearchParams({ page: String(page), per_page: "15" });
     if (categoryFilter) params.set("category", categoryFilter);
     if (statusFilter) params.set("status", statusFilter);
+    if (brandFilter) params.set("brand_id", brandFilter);
     api
       .get<PaginatedResponse<Product>>(`/admin/products?${params.toString()}`)
       .then((r) => setData(r.data))
       .catch(() => toast.error("Failed to load products"))
       .finally(() => setLoading(false));
-  }, [page, categoryFilter, statusFilter]);
+  }, [page, categoryFilter, statusFilter, brandFilter]);
 
   useEffect(() => {
     load();
@@ -174,6 +178,16 @@ export default function AdminProductsPage() {
           <option value="published">Published</option>
           <option value="out_of_stock">Out of stock</option>
         </select>
+        <select
+          value={brandFilter}
+          onChange={(e) => { setBrandFilter(e.target.value); setPage(1); }}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+        >
+          <option value="">All Brands</option>
+          {brands.map((b) => (
+            <option key={b.id} value={String(b.id)}>{b.name}</option>
+          ))}
+        </select>
       </div>
 
       <Card>
@@ -188,6 +202,7 @@ export default function AdminProductsPage() {
                 <TableRow>
                   <TableHead>Image</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Brand</TableHead>
                   <TableHead>Vendor</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Cost Price</TableHead>
@@ -214,6 +229,9 @@ export default function AdminProductsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate font-medium">{product.name}</TableCell>
+                      <TableCell className="text-sm">
+                        {product.brand?.name ?? <span className="text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell>{product.vendor?.shop_name ?? "—"}</TableCell>
                       <TableCell>{TK}{Number(product.sale_price ?? product.price).toLocaleString("en-US")}</TableCell>
                       <TableCell>{TK}{Number(product.cost_price ?? 0).toLocaleString("en-US")}</TableCell>

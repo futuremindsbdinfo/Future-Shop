@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BannerController;
+use App\Http\Controllers\Api\V1\BrandController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\InvoiceController;
@@ -50,6 +51,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::get('banners', [BannerController::class, 'publicIndex'])->name('banners.index');
+    Route::get('brands', [BrandController::class, 'publicIndex'])->name('brands.index');
+    Route::get('brands/{brand:slug}', [BrandController::class, 'publicShow'])->name('brands.show');
 
     /*
     | Cart — works for guests (X-Cart-Token header) and authenticated users
@@ -163,6 +166,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             // Site settings.
             Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
             Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+
+            // Brand management.
+            Route::get('brands', [BrandController::class, 'index'])->name('brands.index');
+            Route::post('brands', [BrandController::class, 'store'])->name('brands.store');
+            Route::match(['put', 'patch'], 'brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
+            Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
         });
 
         Route::middleware('role:vendor')->prefix('vendor')->name('vendor.')->group(function () {

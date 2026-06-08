@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             DeliveryZoneSeeder::class,
             CategorySeeder::class,
+            BrandSeeder::class,
         ]);
     }
 }
