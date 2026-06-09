@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\AdminCouponController;
+use App\Http\Controllers\Api\V1\AdminPromotionRuleController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BannerController;
@@ -176,6 +178,19 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('brands', [BrandController::class, 'store'])->name('brands.store');
             Route::match(['put', 'patch'], 'brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
             Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
+
+            // Coupons (Batch D).
+            Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons.index');
+            Route::post('coupons', [AdminCouponController::class, 'store'])->name('coupons.store');
+            Route::get('coupons/{coupon}', [AdminCouponController::class, 'show'])->name('coupons.show');
+            Route::match(['put', 'patch'], 'coupons/{coupon}', [AdminCouponController::class, 'update'])->name('coupons.update');
+            Route::delete('coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('coupons.destroy');
+
+            // Promotion rules (Buy X Get Y).
+            Route::get('promotions', [AdminPromotionRuleController::class, 'index'])->name('promotions.index');
+            Route::post('promotions', [AdminPromotionRuleController::class, 'store'])->name('promotions.store');
+            Route::match(['put', 'patch'], 'promotions/{promotionRule}', [AdminPromotionRuleController::class, 'update'])->name('promotions.update');
+            Route::delete('promotions/{promotionRule}', [AdminPromotionRuleController::class, 'destroy'])->name('promotions.destroy');
         });
 
         Route::middleware('role:vendor')->prefix('vendor')->name('vendor.')->group(function () {
@@ -193,6 +208,92 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('wishlists', [WishlistController::class, 'index'])->name('wishlists.index');
             Route::post('wishlists', [WishlistController::class, 'store'])->name('wishlists.store');
             Route::delete('wishlists/{wishlist}', [WishlistController::class, 'destroy'])->name('wishlists.destroy');
+
+            // Wallet (Batch D) — balance + paginated immutable ledger.
+            Route::get('wallet', function (\Illuminate\Http\Request $r) {
+                $wallet = \App\Models\Wallet::where('user_id', $r->user()->id)->first();
+                $transactions = \App\Models\WalletTransaction::where('user_id', $r->user()->id)
+                    ->latest('created_at')
+                    ->paginate(20);
+
+                return response()->json([
+                    'balance'      => $wallet ? number_format((float) $wallet->balance, 2, '.', '') : '0.00',
+                    'transactions' => $transactions,
+                ]);
+            })->name('wallet');
+
+            // Coupon preview — validate without consuming (Batch D-2b).
+            Route::get('coupons/check', function (\Illuminate\Http\Request $r) {
+                $code = strtoupper(trim((string) $r->input('code', '')));
+                if ($code === '') {
+                    return response()->json(['valid' => false, 'message' => 'No code provided.']);
+                }
+
+                $coupon = \App\Models\Coupon::where('code', $code)->where('is_active', true)->first();
+                if (! $coupon || ! $coupon->isValid()) {
+                    return response()->json(['valid' => false, 'message' => 'Invalid or expired coupon.']);
+                }
+
+                $alreadyUsed = \App\Models\CouponUsage::where('coupon_id', $coupon->id)
+                    ->where('user_id', $r->user()->id)
+                    ->exists();
+                if ($alreadyUsed) {
+                    return response()->json(['valid' => false, 'message' => 'You have already used this coupon.']);
+                }
+
+                if ($coupon->is_first_purchase_only) {
+                    $hasPrior = \App\Models\Order::where('user_id', $r->user()->id)
+                        ->whereNotIn('order_status', ['cancelled'])
+                        ->exists();
+                    if ($hasPrior) {
+                        return response()->json(['valid' => false, 'message' => 'This coupon is for first-time buyers only.']);
+                    }
+                }
+
+                return response()->json([
+                    'valid'               => true,
+                    'discount_percentage' => $coupon->discount_percentage,
+                    'description'         => $coupon->description,
+                    'message'             => $coupon->discount_percentage.'% off your order!',
+                ]);
+            })->name('coupons.check');
+
+            // Customer coupon history + available coupons (Batch D-2b).
+            Route::get('coupons', function (\Illuminate\Http\Request $r) {
+                $usages = \App\Models\CouponUsage::where('user_id', $r->user()->id)
+                    ->with('coupon:id,code,discount_percentage,description')
+                    ->latest()
+                    ->get();
+
+                $isFirstTimeBuyer = ! \App\Models\Order::where('user_id', $r->user()->id)
+                    ->whereNotIn('order_status', ['cancelled'])
+                    ->exists();
+
+                $available = $isFirstTimeBuyer
+                    ? \App\Models\Coupon::where('is_active', true)
+                        ->where('is_first_purchase_only', true)
+                        ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                        ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))
+                        ->whereNotIn('id', $usages->pluck('coupon_id'))
+                        ->select('id', 'code', 'discount_percentage', 'description', 'expires_at')
+                        ->get()
+                    : collect();
+
+                return response()->json(['available' => $available, 'used' => $usages]);
+            })->name('coupons.list');
+
+            // Referral (Batch D) — user's own code + stats.
+            Route::get('referral', function (\Illuminate\Http\Request $r) {
+                $user = $r->user();
+
+                return response()->json([
+                    'referral_code'   => $user->referral_code,
+                    'referral_count'  => $user->referrals()->count(),
+                    'referral_earned' => \App\Models\WalletTransaction::where('user_id', $user->id)
+                        ->where('reference', 'like', 'REFERRAL-%')
+                        ->sum('amount'),
+                ]);
+            })->name('referral');
             // e.g. Route::apiResource('orders', CustomerOrderController::class);
         });
     });

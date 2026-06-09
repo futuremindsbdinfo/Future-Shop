@@ -26,7 +26,10 @@ class AuthController extends Controller
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'password' => ['required', Password::min(8)->mixedCase()->numbers()],
+            'referral_code' => ['nullable', 'string', 'max:12'],
         ]);
+
+        $referrerId = $this->resolveReferrer($data['referral_code'] ?? null, $data['phone']);
 
         // The User model's 'password' => 'hashed' cast bcrypts using BCRYPT_ROUNDS=12.
         $user = User::create([
@@ -36,6 +39,8 @@ class AuthController extends Controller
             'password' => $data['password'],
             'role' => 'customer',
             'is_active' => true,
+            'referred_by_id' => $referrerId,
+            // referral_code is auto-assigned via the User::boot() creating hook.
         ]);
 
         $token = $user->createToken('api')->plainTextToken;
@@ -114,6 +119,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
             'otp' => ['required', 'string'],
+            'referral_code' => ['nullable', 'string', 'max:12'],
         ]);
 
         $cached = Cache::get($this->otpKey($data['phone']));
@@ -126,12 +132,17 @@ class AuthController extends Controller
 
         Cache::forget($this->otpKey($data['phone']));
 
+        // Referral applies to the FIRST signup only; ignored if the phone already exists.
+        $referrerId = $this->resolveReferrer($data['referral_code'] ?? null, $data['phone']);
+
         $user = User::firstOrCreate(
             ['phone' => $data['phone']],
             [
                 'name' => 'Future Shop User',
                 'role' => 'customer',
                 'is_active' => true,
+                'referred_by_id' => $referrerId,
+                // referral_code auto-assigned via User::boot() creating hook.
             ],
         );
 
@@ -156,6 +167,36 @@ class AuthController extends Controller
     private function otpKey(string $phone): string
     {
         return 'otp_'.$phone;
+    }
+
+    /**
+     * Resolve a referral_code to a referrer user id.
+     *
+     * Returns null when the code is missing, invalid, points to an inactive user,
+     * or matches the phone of the user being registered (self-referral guard).
+     * Invalid/unknown codes are silently ignored — never surfaced as a 422 — to
+     * avoid leaking which referral codes exist (enumeration prevention).
+     */
+    private function resolveReferrer(?string $code, string $registeringPhone): ?int
+    {
+        if ($code === null || $code === '') {
+            return null;
+        }
+
+        $referrer = User::where('referral_code', $code)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $referrer) {
+            return null;
+        }
+
+        // Self-referral prevention: registering user has no id yet, so compare phones.
+        if ($referrer->phone === $registeringPhone) {
+            return null;
+        }
+
+        return $referrer->id;
     }
 
     /**

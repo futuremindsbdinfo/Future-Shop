@@ -45,6 +45,17 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [loading, setLoading] = useState(false);
 
+  // Coupon + wallet (Batch D-2b)
+  const [couponCode, setCouponCode] = useState("");
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponResult, setCouponResult] = useState<{
+    valid: boolean;
+    message: string;
+    discount_percentage?: number;
+  } | null>(null);
+  const [useWallet, setUseWallet] = useState(false);
+  const [walletBalance, setWalletBalance] = useState("0.00");
+
   // Wait one tick for AuthHydrator to restore from sessionStorage before
   // deciding the user is unauthenticated (avoids a redirect race on refresh).
   const [hydrated, setHydrated] = useState(false);
@@ -70,6 +81,40 @@ export default function CheckoutPage() {
       .catch(() => toast.error("ডেলিভারি জোন লোড করা যায়নি"));
   }, []);
 
+  // Pull the user's wallet balance for the "Use wallet" toggle (Batch D-2b).
+  useEffect(() => {
+    if (!hydrated || !isAuthenticated) return;
+    api
+      .get<{ balance: string }>("/account/wallet")
+      .then((r) => setWalletBalance(r.data.balance))
+      .catch(() => {
+        /* wallet may not exist yet — fine */
+      });
+  }, [hydrated, isAuthenticated]);
+
+  const checkCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+    setCouponChecking(true);
+    setCouponResult(null);
+    try {
+      const res = await api.get<{
+        valid: boolean;
+        message: string;
+        discount_percentage?: number;
+      }>(`/account/coupons/check?code=${encodeURIComponent(code)}`);
+      setCouponResult(res.data);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      setCouponResult({
+        valid: false,
+        message: err?.response?.data?.message ?? "Check failed",
+      });
+    } finally {
+      setCouponChecking(false);
+    }
+  };
+
   if (!hydrated) return <LoadingSpinner fullHeight />;
   if (!isAuthenticated) {
     return <LoadingSpinner fullHeight />;
@@ -78,7 +123,20 @@ export default function CheckoutPage() {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const selectedZone = zones.find((z) => z.id === zoneId) ?? null;
   const deliveryCharge = selectedZone ? Number(selectedZone.delivery_charge) : 0;
-  const total = subtotal + deliveryCharge;
+
+  // Preview discount / wallet usage (the server recomputes authoritatively).
+  const couponDiscount =
+    couponResult?.valid && couponResult.discount_percentage
+      ? Math.round((subtotal * couponResult.discount_percentage) / 100 * 100) / 100
+      : 0;
+  const walletNumber = Number(walletBalance) || 0;
+  const subtotalPlusDelivery = subtotal + deliveryCharge;
+  const amountAfterDiscount = Math.max(0, subtotalPlusDelivery - couponDiscount);
+  const walletApplied =
+    useWallet && walletNumber > 0
+      ? Math.min(walletNumber, amountAfterDiscount)
+      : 0;
+  const total = Math.max(0, amountAfterDiscount - walletApplied);
 
   const handlePlaceOrder = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -105,6 +163,8 @@ export default function CheckoutPage() {
         shipping_address: address,
         delivery_zone_id: zoneId,
         payment_method: paymentMethod,
+        coupon_code: couponResult?.valid ? couponCode.trim() : undefined,
+        use_wallet: useWallet && walletNumber > 0 ? true : undefined,
       });
 
       clearCart();
@@ -162,6 +222,70 @@ export default function CheckoutPage() {
             </CardContent>
           </Card>
 
+          {/* Coupon + Wallet (Batch D-2b) */}
+          <Card>
+            <CardContent className="space-y-4 p-4">
+              <h2 className="font-semibold">Coupon &amp; Wallet</h2>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="coupon_code">
+                  Coupon Code
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="coupon_code"
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      setCouponResult(null);
+                    }}
+                    placeholder="Enter coupon code"
+                    className="h-11 flex-1 rounded-md border border-input bg-transparent px-3 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <Button
+                    type="button"
+                    onClick={checkCoupon}
+                    disabled={!couponCode.trim() || couponChecking}
+                    className="h-11 bg-[#f47920] px-4 hover:bg-[#e56910]"
+                  >
+                    {couponChecking ? "..." : "Apply"}
+                  </Button>
+                </div>
+                {couponResult && (
+                  <p
+                    className={`text-sm ${
+                      couponResult.valid ? "text-green-600" : "text-red-500"
+                    }`}
+                  >
+                    {couponResult.valid ? "✓ " : "✗ "}
+                    {couponResult.message}
+                  </p>
+                )}
+              </div>
+
+              {walletNumber > 0 && (
+                <div className="flex items-center gap-3 rounded-lg border border-input p-3">
+                  <input
+                    type="checkbox"
+                    id="use_wallet"
+                    checked={useWallet}
+                    onChange={(e) => setUseWallet(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <label
+                    htmlFor="use_wallet"
+                    className="flex-1 cursor-pointer text-sm"
+                  >
+                    Use wallet balance
+                    <span className="ml-2 font-medium text-[#f47920]">
+                      {formatTk(walletNumber)}
+                    </span>
+                  </label>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent className="space-y-3 p-4">
               <h2 className="font-semibold" lang="bn">পেমেন্ট পদ্ধতি</h2>
@@ -198,6 +322,18 @@ export default function CheckoutPage() {
                 <span lang="bn">ডেলিভারি চার্জ</span>
                 <span>{formatTk(deliveryCharge)}</span>
               </div>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Coupon discount</span>
+                  <span>-{formatTk(couponDiscount)}</span>
+                </div>
+              )}
+              {walletApplied > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Wallet applied</span>
+                  <span>-{formatTk(walletApplied)}</span>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between font-bold">
                 <span lang="bn">মোট</span>

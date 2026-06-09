@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -35,6 +36,8 @@ class User extends Authenticatable
         'role',
         'avatar',
         'is_active',
+        'referral_code',
+        'referred_by_id',
     ];
 
     /**
@@ -107,6 +110,56 @@ class User extends Authenticatable
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * Immutable wallet ledger entries for this user.
+     */
+    public function walletTransactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
+    }
+
+    /**
+     * The user who referred this user (if any).
+     */
+    public function referredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by_id');
+    }
+
+    /**
+     * Users that this user referred (via their referral_code).
+     */
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by_id');
+    }
+
+    /**
+     * Generate a unique alphanumeric referral code (8 chars, ambiguity-resistant alphabet).
+     */
+    public static function generateReferralCode(): string
+    {
+        do {
+            $code = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 8));
+        } while (static::where('referral_code', $code)->exists());
+
+        return $code;
+    }
+
+    /**
+     * Auto-assign a referral_code to new users that don't have one.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (User $user) {
+            if (empty($user->referral_code)) {
+                $user->referral_code = static::generateReferralCode();
+            }
+        });
     }
 
     /**

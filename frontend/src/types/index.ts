@@ -136,6 +136,59 @@ export interface Brand {
   updated_at: string;
 }
 
+export interface Coupon {
+  id: number;
+  code: string;
+  description: string | null;
+  discount_percentage: number;
+  usage_limit: number | null;
+  used_count: number;
+  is_first_purchase_only: boolean;
+  is_active: boolean;
+  wallet_credit_enabled: boolean;
+  expires_at: string | null;
+  usages_count?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CouponUsage {
+  id: number;
+  coupon_id: number;
+  user_id: number;
+  order_id: number;
+  discount_amount: string;
+  wallet_credited: boolean;
+  credited_at: string | null;
+  created_at: string;
+  coupon?: Pick<Coupon, 'id' | 'code' | 'discount_percentage' | 'description'>;
+}
+
+export interface PromotionRule {
+  id: number;
+  name: string;
+  trigger_product_id: number;
+  trigger_quantity: number;
+  free_product_id: number;
+  free_quantity: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+  trigger_product?: { id: number; name: string; slug?: string; images?: ProductImage[] | null };
+  free_product?: { id: number; name: string; slug?: string; images?: ProductImage[] | null; stock_quantity?: number };
+}
+
+export interface WalletTransaction {
+  id: number;
+  user_id: number;
+  type: 'credit' | 'debit';
+  amount: string;
+  description: string;
+  reference: string | null;
+  balance_after: string;
+  created_at: string;
+}
+
 export interface Product {
   id: number;
   vendor_id: number;

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -20,9 +21,11 @@ class Order extends Model
         'delivery_user_id',
         'delivery_zone_id',
         'promo_code_id',
+        'coupon_id',
         'subtotal',
         'delivery_charge',
         'discount',
+        'wallet_used',
         'total',
         'payment_method',
         'payment_status',
@@ -45,6 +48,7 @@ class Order extends Model
             'subtotal' => 'decimal:2',
             'delivery_charge' => 'decimal:2',
             'discount' => 'decimal:2',
+            'wallet_used' => 'decimal:2',
             'total' => 'decimal:2',
             'delivery_address' => 'array',
         ];
@@ -65,9 +69,25 @@ class Order extends Model
         return $this->belongsTo(DeliveryZone::class);
     }
 
+    /**
+     * Legacy promo code (separate from Batch D coupon system).
+     */
     public function promoCode(): BelongsTo
     {
         return $this->belongsTo(PromoCode::class);
+    }
+
+    /**
+     * Batch D coupon applied to this order (separate FK column from promo_code_id).
+     */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class, 'coupon_id');
+    }
+
+    public function couponUsage(): HasOne
+    {
+        return $this->hasOne(CouponUsage::class);
     }
 
     public function items(): HasMany

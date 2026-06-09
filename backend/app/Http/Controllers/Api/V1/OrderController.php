@@ -4,22 +4,29 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
+use App\Models\Coupon;
+use App\Models\CouponUsage;
 use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\PromotionRule;
 use App\Models\Transaction;
 use App\Services\CartService;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class OrderController extends Controller
 {
-    public function __construct(private readonly CartService $cart)
-    {
+    public function __construct(
+        private readonly CartService $cart,
+        private readonly WalletService $walletService,
+    ) {
     }
 
     /**
@@ -43,125 +50,291 @@ class OrderController extends Controller
         }
 
         $data = $request->validated();
+        $walletService = $this->walletService;
 
-        $order = DB::transaction(function () use ($items, $data, $user) {
-            // Lock the product rows to prevent oversell under concurrency.
-            $products = Product::whereIn('id', array_keys($items))
-                ->lockForUpdate()
-                ->with('vendor:id,commission_rate')
-                ->get()
-                ->keyBy('id');
+        try {
+            $order = DB::transaction(function () use ($items, $data, $user, $walletService) {
+                $cartProductIds = array_keys($items);
 
-            $subtotal = 0.0;
-            $lineData = [];
+                // ── BLOCK C: load active promotion rules whose trigger is in the cart ──
+                $promotionRules = PromotionRule::where('is_active', true)
+                    ->whereIn('trigger_product_id', $cartProductIds)
+                    ->with('freeProduct:id,name,slug,status,stock_quantity,price,sale_price,cost_price,vendor_id')
+                    ->get();
 
-            foreach ($items as $productId => $qty) {
-                $product = $products->get($productId);
+                $freeProductIds = $promotionRules->pluck('free_product_id')->unique()->toArray();
 
-                if (! $product || $product->status !== 'published') {
-                    throw ValidationException::withMessages([
-                        'cart' => ["A product in your cart is no longer available (#{$productId})."],
+                // ── BLOCK D: lock cart + free product rows together ───────────────────
+                $allProductIds = array_unique(array_merge($cartProductIds, $freeProductIds));
+
+                $locked = Product::whereIn('id', $allProductIds)
+                    ->lockForUpdate()
+                    ->with('vendor:id,commission_rate')
+                    ->get()
+                    ->keyBy('id');
+
+                // Only cart products go through validation / line-data construction.
+                $products = $locked->only($cartProductIds);
+
+                $subtotal = 0.0;
+                $lineData = [];
+
+                foreach ($items as $productId => $qty) {
+                    $product = $products->get($productId);
+
+                    if (! $product || $product->status !== 'published') {
+                        throw ValidationException::withMessages([
+                            'cart' => ["A product in your cart is no longer available (#{$productId})."],
+                        ]);
+                    }
+
+                    if ($product->stock_quantity < $qty) {
+                        throw ValidationException::withMessages([
+                            'cart' => ["Insufficient stock for \"{$product->name}\" (have {$product->stock_quantity}, need {$qty})."],
+                        ]);
+                    }
+
+                    $unit = (float) ($product->sale_price ?? $product->price);
+                    $lineSubtotal = round($unit * $qty, 2);
+                    $commissionRate = (float) ($product->vendor->commission_rate ?? 0);
+                    $subtotal += $lineSubtotal;
+
+                    $lineData[] = [
+                        'product' => $product,
+                        'quantity' => $qty,
+                        'unit' => $unit,
+                        'line_subtotal' => $lineSubtotal,
+                        'commission' => round($lineSubtotal * $commissionRate / 100, 2),
+                    ];
+                }
+
+                $zone = DeliveryZone::where('is_active', true)->findOrFail($data['delivery_zone_id']);
+                $deliveryCharge = (float) $zone->delivery_charge;
+                $subtotal = round($subtotal, 2);
+
+                // ── BLOCK E: coupon validation + discount math (all bcmath) ──────────
+                $subtotalStr = number_format($subtotal, 2, '.', '');
+                $deliveryStr = number_format($deliveryCharge, 2, '.', '');
+
+                $couponDiscount = '0.00';
+                $appliedCoupon = null;
+
+                if (! empty($data['coupon_code'])) {
+                    $coupon = Coupon::where('code', strtoupper(trim($data['coupon_code'])))
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $coupon || ! $coupon->isValid()) {
+                        throw new InvalidArgumentException('INVALID_COUPON');
+                    }
+
+                    // One-use-per-user (DB unique index also enforces this).
+                    $alreadyUsed = CouponUsage::where('coupon_id', $coupon->id)
+                        ->where('user_id', $user->id)
+                        ->exists();
+                    if ($alreadyUsed) {
+                        throw new InvalidArgumentException('COUPON_ALREADY_USED');
+                    }
+
+                    if ($coupon->is_first_purchase_only) {
+                        $priorOrders = Order::where('user_id', $user->id)
+                            ->whereNotIn('order_status', ['cancelled'])
+                            ->exists();
+                        if ($priorOrders) {
+                            throw new InvalidArgumentException('COUPON_FIRST_PURCHASE_ONLY');
+                        }
+                    }
+
+                    // Percentage of subtotal (delivery never discounted).
+                    $couponDiscount = bcmul(
+                        bcdiv((string) $coupon->discount_percentage, '100', 6),
+                        $subtotalStr,
+                        2
+                    );
+                    $appliedCoupon = $coupon;
+                }
+
+                // ── Wallet deduction ─────────────────────────────────────────────
+                $walletUsed = '0.00';
+
+                if (! empty($data['use_wallet'])) {
+                    $walletBalance = $walletService->getBalance($user->id);
+                    if (bccomp($walletBalance, '0.00', 2) > 0) {
+                        $amountDue = bcsub(
+                            bcadd($subtotalStr, $deliveryStr, 2),
+                            $couponDiscount,
+                            2
+                        );
+                        $walletUsed = bccomp($walletBalance, $amountDue, 2) >= 0
+                            ? $amountDue
+                            : $walletBalance;
+                        if (bccomp($walletUsed, '0.00', 2) < 0) {
+                            $walletUsed = '0.00';
+                        }
+                    }
+                }
+
+                // ── Recalculate total ────────────────────────────────────────────
+                $total = bcsub(
+                    bcsub(
+                        bcadd($subtotalStr, $deliveryStr, 2),
+                        $couponDiscount,
+                        2
+                    ),
+                    $walletUsed,
+                    2
+                );
+                if (bccomp($total, '0.00', 2) < 0) {
+                    $total = '0.00';
+                    $walletUsed = bcsub(
+                        bcadd($subtotalStr, $deliveryStr, 2),
+                        $couponDiscount,
+                        2
+                    );
+                }
+
+                // ── BLOCK F: create the order with discount / wallet_used / coupon_id ─
+                $order = Order::create([
+                    'order_number' => 'TMP',
+                    'user_id' => $user->id,
+                    'delivery_zone_id' => $zone->id,
+                    'promo_code_id' => null,
+                    'coupon_id' => $appliedCoupon?->id,
+                    'subtotal' => $subtotalStr,
+                    'delivery_charge' => $deliveryStr,
+                    'discount' => $couponDiscount,
+                    'wallet_used' => $walletUsed,
+                    'total' => $total,
+                    'payment_method' => $data['payment_method'],
+                    'payment_status' => 'pending',
+                    'order_status' => 'pending',
+                    'shipping_name' => $data['shipping_name'],
+                    'shipping_phone' => $data['shipping_phone'],
+                    'shipping_address' => $data['shipping_address'],
+                    'shipping_division' => $data['shipping_division'] ?? null,
+                    'shipping_district' => $data['shipping_district'] ?? null,
+                    'delivery_address' => [
+                        'name' => $data['shipping_name'],
+                        'phone' => $data['shipping_phone'],
+                        'address' => $data['shipping_address'],
+                        'division' => $data['shipping_division'] ?? null,
+                        'district' => $data['shipping_district'] ?? null,
+                        'zone' => $zone->name,
+                        'snapshot_at' => now()->toIso8601String(),
+                    ],
+                    'notes' => $data['notes'] ?? null,
+                ]);
+
+                // FS-2026-XXXXX (year + zero-padded id, guaranteed unique).
+                $order->forceFill([
+                    'order_number' => sprintf('FS-%s-%05d', now()->year, $order->id),
+                ])->save();
+
+                // COD orders are auto-confirmed at placement; payment stays pending.
+                if ($data['payment_method'] === 'cod') {
+                    $order->update(['order_status' => 'processing']);
+
+                    Transaction::create([
+                        'order_id'         => $order->id,
+                        'vendor_id'        => null,
+                        'reference'        => 'COD-'.$order->order_number,
+                        'payment_method'   => 'cod',
+                        'type'             => 'payment',
+                        'amount'           => $order->total,
+                        'status'           => 'pending',
+                        'gateway_response' => null,
                     ]);
                 }
 
-                if ($product->stock_quantity < $qty) {
-                    throw ValidationException::withMessages([
-                        'cart' => ["Insufficient stock for \"{$product->name}\" (have {$product->stock_quantity}, need {$qty})."],
+                // ── BLOCK G: persist coupon usage + debit wallet ─────────────────
+                if ($appliedCoupon !== null) {
+                    CouponUsage::create([
+                        'coupon_id'       => $appliedCoupon->id,
+                        'user_id'         => $user->id,
+                        'order_id'        => $order->id,
+                        'discount_amount' => $couponDiscount,
+                        'wallet_credited' => false,
                     ]);
+                    // used_count is incremented again by OrderObserver on delivery
+                    // (when wallet_credit_enabled) — that's intentional double-bookkeeping
+                    // for analytics: usages = attempted, used_count = applied + credited.
+                    $appliedCoupon->increment('used_count');
                 }
 
-                $unit = (float) ($product->sale_price ?? $product->price);
-                $lineSubtotal = round($unit * $qty, 2);
-                $commissionRate = (float) ($product->vendor->commission_rate ?? 0);
-                $subtotal += $lineSubtotal;
+                if (bccomp($walletUsed, '0.00', 2) > 0) {
+                    $walletService->debit(
+                        $user->id,
+                        $walletUsed,
+                        'Wallet used on order #'.$order->order_number,
+                        'WALLETPAY-'.$order->order_number
+                    );
+                }
 
-                $lineData[] = [
-                    'product' => $product,
-                    'quantity' => $qty,
-                    'unit' => $unit,
-                    'line_subtotal' => $lineSubtotal,
-                    'commission' => round($lineSubtotal * $commissionRate / 100, 2),
-                ];
-            }
+                // ── OrderItems + stock decrement (cart products) ─────────────────
+                foreach ($lineData as $line) {
+                    /** @var Product $product */
+                    $product = $line['product'];
 
-            $zone = DeliveryZone::where('is_active', true)->findOrFail($data['delivery_zone_id']);
-            $deliveryCharge = (float) $zone->delivery_charge;
-            $subtotal = round($subtotal, 2);
-            $total = round($subtotal + $deliveryCharge, 2);
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->id,
+                        'vendor_id' => $product->vendor_id,
+                        'product_name' => $product->name,
+                        'price' => $line['unit'],
+                        'quantity' => $line['quantity'],
+                        'subtotal' => $line['line_subtotal'],
+                        'commission' => $line['commission'],
+                    ]);
 
-            $order = Order::create([
-                'order_number' => 'TMP', // replaced with id-based number below
-                'user_id' => $user->id,
-                'delivery_zone_id' => $zone->id,
-                'promo_code_id' => null,
-                'subtotal' => $subtotal,
-                'delivery_charge' => $deliveryCharge,
-                'discount' => 0,
-                'total' => $total,
-                'payment_method' => $data['payment_method'],
-                'payment_status' => 'pending',
-                'order_status' => 'pending',
-                'shipping_name' => $data['shipping_name'],
-                'shipping_phone' => $data['shipping_phone'],
-                'shipping_address' => $data['shipping_address'],
-                'shipping_division' => $data['shipping_division'] ?? null,
-                'shipping_district' => $data['shipping_district'] ?? null,
-                'delivery_address' => [
-                    'name' => $data['shipping_name'],
-                    'phone' => $data['shipping_phone'],
-                    'address' => $data['shipping_address'],
-                    'division' => $data['shipping_division'] ?? null,
-                    'district' => $data['shipping_district'] ?? null,
-                    'zone' => $zone->name,
-                    'snapshot_at' => now()->toIso8601String(),
-                ],
-                'notes' => $data['notes'] ?? null,
-            ]);
+                    $product->decrement('stock_quantity', $line['quantity']);
+                }
 
-            // FS-2026-XXXXX (year + zero-padded id, guaranteed unique).
-            $order->forceFill([
-                'order_number' => sprintf('FS-%s-%05d', now()->year, $order->id),
-            ])->save();
+                // ── BLOCK H: apply Buy X Get Y promotion rules ───────────────────
+                foreach ($promotionRules as $rule) {
+                    $cartQty = $items[$rule->trigger_product_id] ?? 0;
+                    if ($cartQty < $rule->trigger_quantity) {
+                        continue;
+                    }
 
-            // COD orders are auto-confirmed at placement; payment stays pending
-            // (cash is collected on delivery). Uses 'processing' because the
-            // order_status enum has no 'confirmed' value.
-            if ($data['payment_method'] === 'cod') {
-                $order->update(['order_status' => 'processing']);
+                    $freeProduct = $locked->get($rule->free_product_id);
+                    if (! $freeProduct || $freeProduct->status !== 'published') {
+                        continue;
+                    }
 
-                Transaction::create([
-                    'order_id'         => $order->id,
-                    'vendor_id'        => null,
-                    'reference'        => 'COD-'.$order->order_number,
-                    'payment_method'   => 'cod',
-                    'type'             => 'payment',
-                    'amount'           => $order->total,
-                    'status'           => 'pending', // collected on delivery
-                    'gateway_response' => null,
-                ]);
-            }
+                    // Refresh stock from the row we already locked.
+                    $latestStock = Product::where('id', $freeProduct->id)
+                        ->value('stock_quantity');
+                    if ($latestStock < $rule->free_quantity) {
+                        continue;
+                    }
 
-            foreach ($lineData as $line) {
-                /** @var Product $product */
-                $product = $line['product'];
+                    $order->items()->create([
+                        'product_id'   => $freeProduct->id,
+                        'vendor_id'    => $freeProduct->vendor_id,
+                        'product_name' => $freeProduct->name.' (Free)',
+                        'price'        => '0.00',
+                        'quantity'     => $rule->free_quantity,
+                        'subtotal'     => '0.00',
+                        'commission'   => '0.00',
+                    ]);
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'vendor_id' => $product->vendor_id,
-                    'product_name' => $product->name, // snapshot
-                    'price' => $line['unit'],          // snapshot
-                    'quantity' => $line['quantity'],
-                    'subtotal' => $line['line_subtotal'],
-                    'commission' => $line['commission'],
-                ]);
+                    Product::where('id', $freeProduct->id)
+                        ->decrement('stock_quantity', $rule->free_quantity);
+                }
 
-                // Deduct stock now that the order is confirmed.
-                $product->decrement('stock_quantity', $line['quantity']);
-            }
+                return $order;
+            });
+        } catch (InvalidArgumentException $e) {
+            $messages = [
+                'INVALID_COUPON'             => 'Coupon code is invalid or has expired.',
+                'COUPON_ALREADY_USED'        => 'You have already used this coupon.',
+                'COUPON_FIRST_PURCHASE_ONLY' => 'This coupon is for first-time buyers only.',
+            ];
 
-            return $order;
-        });
+            return response()->json([
+                'message' => $messages[$e->getMessage()] ?? 'Invalid request.',
+            ], 422);
+        }
 
         $this->cart->clear($owner);
 

@@ -29,6 +29,8 @@ class StoreOrderRequest extends FormRequest
             'delivery_zone_id' => ['required', 'integer', Rule::exists('delivery_zones', 'id')->where('is_active', true)],
             'payment_method' => ['required', Rule::in(['cod', 'bkash', 'nagad', 'rocket', 'card'])],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'coupon_code' => ['nullable', 'string', 'max:50'],
+            'use_wallet' => ['nullable', 'boolean'],
         ];
     }
 }
