@@ -71,15 +71,12 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
-  // login (email + password) state
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-
   // register state
   const [name, setName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -87,6 +84,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
   const finishAuth = (data: AuthSuccess) => {
     login(data.user, data.token);
     setErrors({});
+    setReferralCode("");
     onOpenChange(false);
     onSuccess?.();
   };
@@ -126,25 +124,6 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
     }
   };
 
-  const emailLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setErrors({});
-    setLoading(true);
-    try {
-      const res = await api.post<AuthSuccess>("/auth/login", {
-        email: loginEmail,
-        password: loginPassword,
-      });
-      finishAuth(res.data);
-    } catch (error) {
-      const { message, fields } = extractErrors(error);
-      setErrors(fields);
-      if (Object.keys(fields).length === 0) toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const register = async (event: React.FormEvent) => {
     event.preventDefault();
     setErrors({});
@@ -155,6 +134,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
         phone: regPhone,
         email: email.trim() || undefined,
         password,
+        referral_code: referralCode.trim() || undefined,
       });
       finishAuth(res.data);
       toast.success("রেজিস্ট্রেশন সফল হয়েছে");
@@ -232,45 +212,6 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
               <Separator className="flex-1" />
             </div>
 
-            {/* Email + password */}
-            <form onSubmit={emailLogin} className="space-y-3">
-              <p className="text-sm font-medium" lang="bn">ইমেইল দিয়ে লগইন</p>
-              <div className="space-y-1">
-                <Label htmlFor="login-email" lang="bn">ইমেইল</Label>
-                <Input
-                  id="login-email"
-                  className="h-11"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="login-password" lang="bn">পাসওয়ার্ড</Label>
-                <Input
-                  id="login-password"
-                  className="h-11"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  required
-                />
-                {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
-              </div>
-              <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <span lang="bn">লগইন করুন</span>
-              </Button>
-            </form>
-
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground" lang="bn">অথবা</span>
-              <Separator className="flex-1" />
-            </div>
-
             <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={googlePlaceholder}>
               <GoogleIcon />
               <span className="ml-2" lang="bn">Google দিয়ে লগইন</span>
@@ -299,6 +240,17 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
                 <Label htmlFor="reg-password" lang="bn">পাসওয়ার্ড</Label>
                 <Input id="reg-password" className="h-11" type="password" placeholder="কমপক্ষে ৮ অক্ষর" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="reg-referral">Referral code <span className="text-muted-foreground">(optional)</span></Label>
+                <input
+                  id="reg-referral"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                  placeholder="Referral code (optional)"
+                  maxLength={12}
+                  className="h-10 w-full rounded-md border border-input bg-transparent px-3 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
               </div>
               <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
