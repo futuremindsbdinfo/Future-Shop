@@ -73,14 +73,14 @@ class OrderController extends Controller
                     ->get()
                     ->keyBy('id');
 
-                // Only cart products go through validation / line-data construction.
-                $products = $locked->only($cartProductIds);
-
+                // $locked is keyed by integer id and contains cart + free products.
+                // The foreach iterates only over cart $items, so free products never
+                // pass through the validation loop.
                 $subtotal = 0.0;
                 $lineData = [];
 
                 foreach ($items as $productId => $qty) {
-                    $product = $products->get($productId);
+                    $product = $locked->get($productId);
 
                     if (! $product || $product->status !== 'published') {
                         throw ValidationException::withMessages([
