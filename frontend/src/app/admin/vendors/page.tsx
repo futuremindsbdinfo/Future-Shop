@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,15 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function VendorRow({ vendor, onSaved }: { vendor: Vendor; onSaved: () => void }) {
+function VendorRow({
+  vendor,
+  onSaved,
+  onEdit,
+}: {
+  vendor: Vendor;
+  onSaved: () => void;
+  onEdit: (v: Vendor) => void;
+}) {
   const [commission, setCommission] = useState(String(vendor.commission_rate));
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +81,16 @@ function VendorRow({ vendor, onSaved }: { vendor: Vendor; onSaved: () => void })
       </TableCell>
       <TableCell>{TK}{(vendor.net_earnings ?? 0).toLocaleString("en-US")}</TableCell>
       <TableCell><Badge variant="outline">{vendor.status}</Badge></TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          className="h-10 w-10 p-0"
+          onClick={() => onEdit(vendor)}
+          aria-label={`Edit ${vendor.shop_name}`}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </TableCell>
     </TableRow>
   );
 }
@@ -88,6 +106,13 @@ export default function AdminVendorsPage() {
   const [status, setStatus] = useState("approved");
   const [creating, setCreating] = useState(false);
 
+  // Edit dialog (Batch E-2).
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [editShopName, setEditShopName] = useState("");
+  const [editCommission, setEditCommission] = useState("10");
+  const [editStatus, setEditStatus] = useState("approved");
+  const [editSaving, setEditSaving] = useState(false);
+
   const load = useCallback(() => {
     setLoading(true);
     api
@@ -100,6 +125,36 @@ export default function AdminVendorsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const openEdit = (vendor: Vendor) => {
+    setEditingVendor(vendor);
+    setEditShopName(vendor.shop_name);
+    setEditCommission(String(vendor.commission_rate));
+    setEditStatus(vendor.status);
+  };
+
+  const saveEdit = async () => {
+    if (!editingVendor) return;
+    if (!editShopName.trim()) {
+      toast.error("দোকানের নাম দিন");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await api.patch(`/admin/vendors/${editingVendor.id}`, {
+        shop_name: editShopName.trim(),
+        commission_rate: Number(editCommission),
+        status: editStatus,
+      });
+      toast.success("বিক্রেতা আপডেট হয়েছে");
+      setEditingVendor(null);
+      load();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "আপডেট ব্যর্থ হয়েছে"));
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const createVendor = async () => {
     if (!userId || !shopName.trim()) {
@@ -150,11 +205,12 @@ export default function AdminVendorsPage() {
                   <TableHead>Commission %</TableHead>
                   <TableHead>Earnings</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {vendors.map((vendor) => (
-                  <VendorRow key={vendor.id} vendor={vendor} onSaved={load} />
+                  <VendorRow key={vendor.id} vendor={vendor} onSaved={load} onEdit={openEdit} />
                 ))}
               </TableBody>
             </Table>
@@ -204,6 +260,68 @@ export default function AdminVendorsPage() {
             <Button variant="outline" className="h-11" onClick={() => setOpen(false)}>Cancel</Button>
             <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" disabled={creating} onClick={createVendor}>
               Add Vendor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Vendor modal */}
+      <Dialog open={!!editingVendor} onOpenChange={(o) => !o && setEditingVendor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Vendor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_shop_name">Shop Name</Label>
+              <Input
+                id="edit_shop_name"
+                value={editShopName}
+                onChange={(e) => setEditShopName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_commission">Commission %</Label>
+                <Input
+                  id="edit_commission"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editCommission}
+                  onChange={(e) => setEditCommission(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_status">Status</Label>
+                <select
+                  id="edit_status"
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => setEditingVendor(null)}
+              disabled={editSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+              disabled={editSaving}
+              onClick={saveEdit}
+            >
+              {editSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

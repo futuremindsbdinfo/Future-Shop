@@ -5,7 +5,7 @@
  * so monetary fields are typed as `string`. The cart computes with numbers.
  */
 
-export type UserRole = 'customer' | 'vendor' | 'admin' | 'delivery';
+export type UserRole = 'customer' | 'vendor' | 'admin' | 'delivery' | 'staff';
 export type VendorStatus = 'pending' | 'approved' | 'suspended';
 export type ProductStatus = 'draft' | 'published' | 'out_of_stock';
 export type PaymentMethod = 'cod' | 'bkash' | 'nagad' | 'rocket' | 'card';
@@ -252,6 +252,8 @@ export interface Order {
   total: string;
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
+  payment_code: string | null;
+  online_transaction_id: string | null;
   order_status: OrderStatus;
   shipping_name: string;
   shipping_phone: string;

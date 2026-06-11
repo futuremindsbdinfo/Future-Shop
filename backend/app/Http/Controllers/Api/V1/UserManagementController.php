@@ -7,12 +7,13 @@ use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class UserManagementController extends Controller
 {
-    private const ALLOWED_ROLES = ['customer', 'vendor', 'delivery', 'admin'];
+    private const ALLOWED_ROLES = ['customer', 'vendor', 'delivery', 'admin', 'staff'];
 
     /**
      * Admin: list all users with optional role/search filters.
@@ -84,6 +85,83 @@ class UserManagementController extends Controller
         return response()->json([
             'data' => $user->fresh(),
         ]);
+    }
+
+    /**
+     * Admin / Admin only: create a new user account.
+     * Staff cannot create admin accounts. Password is bcrypted (BCRYPT_ROUNDS=12).
+     */
+    public function create(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'phone'    => ['required', 'string', 'max:20', Rule::unique('users', 'phone')],
+            'email'    => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')],
+            'password' => ['required', 'string', 'min:8'],
+            'role'     => ['required', Rule::in(self::ALLOWED_ROLES)],
+        ]);
+
+        if ($validated['role'] === 'admin' && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Only admins can create admin accounts.'], 403);
+        }
+
+        $user = User::create([
+            'name'      => $validated['name'],
+            'phone'     => $validated['phone'],
+            'email'     => $validated['email'] ?? null,
+            'password'  => Hash::make($validated['password']),
+            'role'      => $validated['role'],
+            'is_active' => true,
+        ]);
+
+        return response()->json($user, 201);
+    }
+
+    /**
+     * Admin / Admin only: update a user. Cannot edit self via this endpoint.
+     * Staff cannot edit admin accounts or promote anyone to admin.
+     */
+    public function update(Request $request, User $user): JsonResponse
+    {
+        if ($user->id === $request->user()->id) {
+            return response()->json([
+                'message' => 'Use your profile settings to edit your own account.',
+            ], 403);
+        }
+
+        if ($user->role === 'admin' && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Only admins can edit admin accounts.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name'      => ['sometimes', 'string', 'max:255'],
+            'phone'     => ['sometimes', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->id)],
+            'email'     => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password'  => ['nullable', 'string', 'min:8'],
+            'role'      => ['sometimes', Rule::in(self::ALLOWED_ROLES)],
+            'is_active' => ['boolean'],
+        ]);
+
+        if (isset($validated['role']) && $validated['role'] === 'admin'
+            && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Only admins can promote to admin role.'], 403);
+        }
+
+        $data = array_filter([
+            'name'      => $validated['name'] ?? null,
+            'phone'     => $validated['phone'] ?? null,
+            'email'     => array_key_exists('email', $validated) ? $validated['email'] : null,
+            'role'      => $validated['role'] ?? null,
+            'is_active' => $validated['is_active'] ?? null,
+        ], fn ($v) => $v !== null);
+
+        if (! empty($validated['password'])) {
+            $data['password'] = Hash::make($validated['password']);
+        }
+
+        $user->update($data);
+
+        return response()->json($user->fresh());
     }
 
     /**

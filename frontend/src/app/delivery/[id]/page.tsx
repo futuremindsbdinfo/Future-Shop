@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -108,9 +109,19 @@ export default function DeliveryOrderDetailPage({ params }: { params: Promise<{ 
         <Button variant="outline" className="h-11" onClick={() => updateStatus("processing")}>
           <span lang="bn">পিকআপ করেছি</span>
         </Button>
-        <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => updateStatus("delivered")}>
-          <span lang="bn">ডেলিভারি দিয়েছি</span>
-        </Button>
+        {isCod && unpaid ? (
+          <Button
+            nativeButton={false}
+            render={<Link href="/delivery/payment-confirm" />}
+            className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+          >
+            <span lang="bn">কোড দিয়ে পেমেন্ট কনফার্ম করুন →</span>
+          </Button>
+        ) : (
+          <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => updateStatus("delivered")}>
+            <span lang="bn">ডেলিভারি দিয়েছি</span>
+          </Button>
+        )}
       </div>
     </div>
   );

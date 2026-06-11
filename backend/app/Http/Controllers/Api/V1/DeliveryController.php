@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class DeliveryController extends Controller
@@ -39,8 +37,12 @@ class DeliveryController extends Controller
     }
 
     /**
-     * Update an assigned order's status. Marking COD orders "delivered" also
-     * records the cash collection (payment → paid + transaction).
+     * Update an assigned order's status.
+     *
+     * On 'delivered': OrderObserver is the single source of truth — it marks
+     * payment paid, creates the CODCOLLECT transaction, and awards
+     * referral + coupon wallet credits. We deliberately only touch
+     * order_status here so the observer's guards fire correctly.
      */
     public function updateStatus(Request $request, Order $order): JsonResponse
     {
@@ -52,28 +54,7 @@ class DeliveryController extends Controller
             'order_status' => ['required', Rule::in(['processing', 'shipped', 'delivered'])],
         ]);
 
-        DB::transaction(function () use ($order, $data) {
-            $order->update(['order_status' => $data['order_status']]);
-
-            if (
-                $data['order_status'] === 'delivered'
-                && $order->payment_method === 'cod'
-                && $order->payment_status !== 'paid'
-            ) {
-                $order->update(['payment_status' => 'paid']);
-
-                Transaction::create([
-                    'order_id' => $order->id,
-                    'vendor_id' => null,
-                    'reference' => 'CODCOLLECT-'.$order->order_number,
-                    'payment_method' => 'cod',
-                    'type' => 'payment',
-                    'amount' => $order->total,
-                    'status' => 'completed',
-                    'gateway_response' => null,
-                ]);
-            }
-        });
+        $order->update(['order_status' => $data['order_status']]);
 
         return response()->json(['data' => $order->fresh(['user:id,name', 'items'])]);
     }

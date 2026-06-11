@@ -31,6 +31,7 @@ class StoreOrderRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:1000'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
             'use_wallet' => ['nullable', 'boolean'],
+            'online_transaction_id' => ['nullable', 'string', 'max:100'],
         ];
     }
 }

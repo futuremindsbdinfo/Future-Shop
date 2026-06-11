@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AdminCouponController;
+use App\Http\Controllers\Api\V1\AdminPaymentController;
 use App\Http\Controllers\Api\V1\AdminPromotionRuleController;
+use App\Http\Controllers\Api\V1\DeliveryPaymentController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BannerController;
@@ -118,10 +120,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             // Users / customers management.
             Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
+            Route::post('users', [UserManagementController::class, 'create'])->name('users.create');
+            Route::match(['put', 'patch'], 'users/{user}', [UserManagementController::class, 'update'])->name('users.update');
             Route::patch('users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
             Route::patch('users/{user}/role', [UserManagementController::class, 'changeRole'])->name('users.change-role');
-            Route::get('customers', [UserManagementController::class, 'customers'])->name('customers.index');
-            Route::get('customers/{user}', [UserManagementController::class, 'customerShow'])->name('customers.show');
+            // (Customer browse routes moved to admin,staff group below.)
 
             // Analytics.
             Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
@@ -139,25 +142,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             // All categories (incl. inactive) for admin forms.
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
 
-            // Product management (list / create / update / soft delete).
-            Route::get('products', [ProductController::class, 'adminIndex'])->name('products.index');
-            // IMPORTANT: these literal-path routes must come BEFORE the {product} wildcard.
+            // Product mutations — admin only. (Read access moved to admin,staff group below.)
+            // IMPORTANT: literal-path routes must come BEFORE any {product} wildcard.
             Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
             Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
-            Route::get('products/{product}', [ProductController::class, 'adminShow'])->name('products.show');
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
             Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
             Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
-            // Orders (list with filters + status update).
-            Route::get('orders', [OrderController::class, 'adminIndex'])->name('orders.index');
-            Route::match(['put', 'patch'], 'orders/{order}', [OrderController::class, 'updateStatus'])->name('orders.update');
-
-            // Vendor management.
-            Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');
-            Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');
-            Route::get('vendors/{vendor}', [VendorController::class, 'show'])->name('vendors.show');
-            Route::match(['put', 'patch'], 'vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update');
+            // Manual verification of an online payment (admin only).
+            Route::patch('orders/{order}/verify-payment', [AdminPaymentController::class, 'verify'])->name('orders.verify-payment');
 
             // Delivery zones.
             Route::get('delivery-zones', [DeliveryZoneController::class, 'adminIndex'])->name('delivery-zones.index');
@@ -173,24 +167,53 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
             Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 
-            // Brand management.
-            Route::get('brands', [BrandController::class, 'index'])->name('brands.index');
-            Route::post('brands', [BrandController::class, 'store'])->name('brands.store');
-            Route::match(['put', 'patch'], 'brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
-            Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
+            // (Brands, coupons, promotions moved to admin,staff group below.)
+        });
 
-            // Coupons (Batch D).
-            Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons.index');
-            Route::post('coupons', [AdminCouponController::class, 'store'])->name('coupons.store');
-            Route::get('coupons/{coupon}', [AdminCouponController::class, 'show'])->name('coupons.show');
-            Route::match(['put', 'patch'], 'coupons/{coupon}', [AdminCouponController::class, 'update'])->name('coupons.update');
-            Route::delete('coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('coupons.destroy');
+        /*
+        | Admin + Staff group (Batch E-1). Routes accessible to both roles —
+        | day-to-day fulfillment: read products, manage orders, manage vendors.
+        | Sibling of the admin-only group above (same /admin prefix). No
+        | name('admin.') prefix here to avoid duplicate route-name registration.
+        */
+        Route::middleware('role:admin,staff')->prefix('admin')->group(function () {
+            // Product catalog (read-only).
+            Route::get('products', [ProductController::class, 'adminIndex']);
+            Route::get('products/{product}', [ProductController::class, 'adminShow']);
+
+            // Orders: list + status update (status update fires OrderObserver).
+            Route::get('orders', [OrderController::class, 'adminIndex']);
+            Route::match(['put', 'patch'], 'orders/{order}', [OrderController::class, 'updateStatus']);
+
+            // Vendor management. Note: VendorController has no destroy() method,
+            // so DELETE is intentionally not registered here.
+            Route::get('vendors', [VendorController::class, 'index']);
+            Route::post('vendors', [VendorController::class, 'store']);
+            Route::get('vendors/{vendor}', [VendorController::class, 'show']);
+            Route::match(['put', 'patch'], 'vendors/{vendor}', [VendorController::class, 'update']);
+
+            // Brands.
+            Route::get('brands', [BrandController::class, 'index']);
+            Route::post('brands', [BrandController::class, 'store']);
+            Route::match(['put', 'patch'], 'brands/{brand}', [BrandController::class, 'update']);
+            Route::delete('brands/{brand}', [BrandController::class, 'destroy']);
+
+            // Coupons.
+            Route::get('coupons', [AdminCouponController::class, 'index']);
+            Route::post('coupons', [AdminCouponController::class, 'store']);
+            Route::get('coupons/{coupon}', [AdminCouponController::class, 'show']);
+            Route::match(['put', 'patch'], 'coupons/{coupon}', [AdminCouponController::class, 'update']);
+            Route::delete('coupons/{coupon}', [AdminCouponController::class, 'destroy']);
 
             // Promotion rules (Buy X Get Y).
-            Route::get('promotions', [AdminPromotionRuleController::class, 'index'])->name('promotions.index');
-            Route::post('promotions', [AdminPromotionRuleController::class, 'store'])->name('promotions.store');
-            Route::match(['put', 'patch'], 'promotions/{promotionRule}', [AdminPromotionRuleController::class, 'update'])->name('promotions.update');
-            Route::delete('promotions/{promotionRule}', [AdminPromotionRuleController::class, 'destroy'])->name('promotions.destroy');
+            Route::get('promotions', [AdminPromotionRuleController::class, 'index']);
+            Route::post('promotions', [AdminPromotionRuleController::class, 'store']);
+            Route::match(['put', 'patch'], 'promotions/{promotionRule}', [AdminPromotionRuleController::class, 'update']);
+            Route::delete('promotions/{promotionRule}', [AdminPromotionRuleController::class, 'destroy']);
+
+            // Customers (read-only).
+            Route::get('customers', [UserManagementController::class, 'customers']);
+            Route::get('customers/{user}', [UserManagementController::class, 'customerShow']);
         });
 
         Route::middleware('role:vendor')->prefix('vendor')->name('vendor.')->group(function () {
@@ -201,6 +224,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('orders', [DeliveryController::class, 'myOrders'])->name('orders.index');
             Route::get('orders/{order}', [DeliveryController::class, 'show'])->name('orders.show');
             Route::match(['put', 'patch'], 'orders/{order}', [DeliveryController::class, 'updateStatus'])->name('orders.update');
+
+            // Cash collection with 6-digit verification code (Batch E-1).
+            Route::get('payment-confirm', [DeliveryPaymentController::class, 'preview'])->name('payment-confirm.preview');
+            Route::post('payment-confirm', [DeliveryPaymentController::class, 'confirm'])->name('payment-confirm.confirm');
         });
 
         Route::middleware('role:customer')->prefix('account')->name('account.')->group(function () {

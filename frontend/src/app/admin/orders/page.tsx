@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,6 +39,34 @@ export default function AdminOrdersPage() {
   const [deliveryUsers, setDeliveryUsers] = useState<DeliveryUser[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Verify online payment dialog (Batch E-2).
+  const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
+  const [txInput, setTxInput] = useState("");
+  const [verifying, setVerifying] = useState(false);
+
+  const openVerify = (order: Order) => {
+    setVerifyingOrder(order);
+    setTxInput(order.online_transaction_id ?? "");
+  };
+
+  const submitVerify = async () => {
+    if (!verifyingOrder) return;
+    setVerifying(true);
+    try {
+      await api.patch(`/admin/orders/${verifyingOrder.id}/verify-payment`, {
+        transaction_id: txInput.trim() || null,
+      });
+      toast.success("Payment verified");
+      setVerifyingOrder(null);
+      load();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message ?? "Verify failed");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   useEffect(() => {
     api
@@ -116,9 +152,27 @@ export default function AdminOrdersPage() {
                     <TableCell>{order.user?.name ?? "—"}</TableCell>
                     <TableCell>{TK}{Number(order.total).toLocaleString("en-US")}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" lang="bn">
-                        {PAYMENT_STATUS_BN[order.payment_status] ?? order.payment_status}
-                      </Badge>
+                      {order.payment_status === "paid" ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                          Paid
+                        </Badge>
+                      ) : order.payment_method === "cod" && order.payment_code ? (
+                        <span className="font-mono text-sm font-semibold text-[#f47920]">
+                          {order.payment_code}
+                        </span>
+                      ) : order.payment_method !== "cod" ? (
+                        <Button
+                          variant="outline"
+                          className="h-9 border-[#f47920] text-[#f47920] hover:bg-[#fff7ed]"
+                          onClick={() => openVerify(order)}
+                        >
+                          Verify
+                        </Button>
+                      ) : (
+                        <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100">
+                          Pending
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <select
@@ -163,6 +217,64 @@ export default function AdminOrdersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Verify online payment dialog */}
+      <Dialog open={!!verifyingOrder} onOpenChange={(o) => !o && setVerifyingOrder(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verify Payment</DialogTitle>
+          </DialogHeader>
+          {verifyingOrder && (
+            <div className="space-y-3 py-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Order</span>
+                <p className="font-mono font-semibold">{verifyingOrder.order_number}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Amount</span>
+                <p className="font-semibold">
+                  {TK}{Number(verifyingOrder.total).toLocaleString("en-US")}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Method</span>
+                <p className="font-medium">{verifyingOrder.payment_method}</p>
+              </div>
+              <div className="space-y-1 pt-2">
+                <label className="text-sm font-medium">
+                  Transaction ID
+                </label>
+                <Input
+                  className="h-11 font-mono"
+                  value={txInput}
+                  onChange={(e) => setTxInput(e.target.value)}
+                  placeholder="Enter gateway transaction id"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Optional — leave blank to mark as verified without recording an id.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              onClick={() => setVerifyingOrder(null)}
+              variant="ghost"
+              className="h-11"
+              disabled={verifying}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitVerify}
+              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+              disabled={verifying}
+            >
+              {verifying ? "Verifying..." : "Mark Paid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

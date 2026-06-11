@@ -1,13 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 import type { AdminUserRow, PaginatedResponse, UserRole } from "@/types";
 
 type FilterRole = "all" | UserRole;
@@ -17,6 +26,7 @@ const FILTER_TABS: { key: FilterRole; label: string }[] = [
   { key: "vendor", label: "Vendors" },
   { key: "delivery", label: "Delivery" },
   { key: "admin", label: "Admins" },
+  { key: "staff", label: "Staff" },
 ];
 
 const ROLE_BADGE: Record<UserRole, string> = {
@@ -24,6 +34,7 @@ const ROLE_BADGE: Record<UserRole, string> = {
   vendor: "bg-blue-100 text-blue-700",
   delivery: "bg-orange-100 text-orange-700",
   customer: "bg-gray-100 text-gray-700",
+  staff: "bg-amber-100 text-amber-700",
 };
 
 function getErrorMessage(e: unknown, fallback: string): string {
@@ -37,13 +48,24 @@ function getErrorMessage(e: unknown, fallback: string): string {
 export default function AdminUsersPage() {
   const [data, setData] = useState<PaginatedResponse<AdminUserRow> | null>(null);
   const [counts, setCounts] = useState<Record<FilterRole, number>>({
-    all: 0, customer: 0, vendor: 0, delivery: 0, admin: 0,
+    all: 0, customer: 0, vendor: 0, delivery: 0, admin: 0, staff: 0,
   });
   const [filter, setFilter] = useState<FilterRole>("all");
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
+  // Create / Edit dialog (Batch E-2).
+  const currentUser = useAuthStore((s) => s.user);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [fName, setFName] = useState("");
+  const [fPhone, setFPhone] = useState("");
+  const [fEmail, setFEmail] = useState("");
+  const [fPassword, setFPassword] = useState("");
+  const [fRole, setFRole] = useState<UserRole>("customer");
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -52,7 +74,7 @@ export default function AdminUsersPage() {
 
   // Refresh tab counts whenever data changes by hitting the API per role once.
   const refreshCounts = useCallback(async () => {
-    const roles: FilterRole[] = ["customer", "vendor", "delivery", "admin"];
+    const roles: UserRole[] = ["customer", "vendor", "delivery", "admin", "staff"];
     const results = await Promise.all(
       roles.map((r) =>
         api.get<PaginatedResponse<AdminUserRow>>(`/admin/users?role=${r}&per_page=1`).then((res) => res.data.total).catch(() => 0),
@@ -60,7 +82,7 @@ export default function AdminUsersPage() {
     );
     const next: Record<FilterRole, number> = {
       all: results.reduce((a, b) => a + b, 0),
-      customer: results[0], vendor: results[1], delivery: results[2], admin: results[3],
+      customer: results[0], vendor: results[1], delivery: results[2], admin: results[3], staff: results[4],
     };
     setCounts(next);
   }, []);
@@ -106,9 +128,80 @@ export default function AdminUsersPage() {
     }
   };
 
+  const openCreate = () => {
+    setEditingUser(null);
+    setFName("");
+    setFPhone("");
+    setFEmail("");
+    setFPassword("");
+    setFRole("customer");
+    setDialogOpen(true);
+  };
+
+  const openEdit = (u: AdminUserRow) => {
+    setEditingUser(u);
+    setFName(u.name);
+    setFPhone(u.phone ?? "");
+    setFEmail(u.email ?? "");
+    setFPassword("");
+    setFRole(u.role);
+    setDialogOpen(true);
+  };
+
+  const isEditingSelf = editingUser && currentUser && editingUser.id === currentUser.id;
+
+  const save = async () => {
+    if (!fName.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    if (!fPhone.trim()) {
+      toast.error("Phone is required");
+      return;
+    }
+    if (!editingUser && !fPassword.trim()) {
+      toast.error("Password is required when creating a user");
+      return;
+    }
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        name: fName.trim(),
+        phone: fPhone.trim(),
+        email: fEmail.trim() || null,
+        role: fRole,
+      };
+      if (fPassword.trim()) body.password = fPassword;
+
+      if (editingUser) {
+        await api.patch(`/admin/users/${editingUser.id}`, body);
+        toast.success("User updated");
+      } else {
+        await api.post("/admin/users", body);
+        toast.success("User created");
+      }
+      setDialogOpen(false);
+      load();
+      refreshCounts();
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Save failed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Users Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Users Management</h1>
+        <Button
+          onClick={openCreate}
+          className="h-11 min-w-[44px] bg-[#f47920] hover:bg-[#e56910]"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create User
+        </Button>
+      </div>
 
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2">
@@ -193,17 +286,28 @@ export default function AdminUsersPage() {
                             </button>
                           </td>
                           <td className="px-4 py-3">
-                            <select
-                              value={u.role}
-                              onChange={(e) => changeRole(u, e.target.value as UserRole)}
-                              className="h-9 rounded-md border border-[#e5e7eb] bg-transparent px-2 text-xs"
-                              aria-label="Change role"
-                            >
-                              <option value="customer">customer</option>
-                              <option value="vendor">vendor</option>
-                              <option value="delivery">delivery</option>
-                              <option value="admin">admin</option>
-                            </select>
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={u.role}
+                                onChange={(e) => changeRole(u, e.target.value as UserRole)}
+                                className="h-9 rounded-md border border-[#e5e7eb] bg-transparent px-2 text-xs"
+                                aria-label="Change role"
+                              >
+                                <option value="customer">customer</option>
+                                <option value="vendor">vendor</option>
+                                <option value="delivery">delivery</option>
+                                <option value="admin">admin</option>
+                                <option value="staff">staff</option>
+                              </select>
+                              <Button
+                                onClick={() => openEdit(u)}
+                                variant="ghost"
+                                className="h-10 w-10 p-0"
+                                aria-label={`Edit ${u.name}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -246,7 +350,16 @@ export default function AdminUsersPage() {
                       <option value="vendor">vendor</option>
                       <option value="delivery">delivery</option>
                       <option value="admin">admin</option>
+                      <option value="staff">staff</option>
                     </select>
+                    <Button
+                      onClick={() => openEdit(u)}
+                      variant="outline"
+                      className="mt-2 h-11 w-full"
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -262,6 +375,106 @@ export default function AdminUsersPage() {
           <Button variant="outline" className="h-11" disabled={page >= data.last_page} onClick={() => setPage((p) => p + 1)}>Next</Button>
         </div>
       )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingUser ? `Edit ${editingUser.name}` : "Create User"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {isEditingSelf && (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              You cannot edit your own account. Use your profile settings.
+            </p>
+          )}
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Name <span className="text-red-500">*</span>
+              </label>
+              <Input
+                className="h-11"
+                value={fName}
+                onChange={(e) => setFName(e.target.value)}
+                disabled={!!isEditingSelf}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Phone <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="tel"
+                className="h-11"
+                value={fPhone}
+                onChange={(e) => setFPhone(e.target.value)}
+                disabled={!!isEditingSelf}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                className="h-11"
+                value={fEmail}
+                onChange={(e) => setFEmail(e.target.value)}
+                disabled={!!isEditingSelf}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Password{!editingUser && <span className="text-red-500"> *</span>}
+              </label>
+              <Input
+                type="password"
+                className="h-11"
+                value={fPassword}
+                onChange={(e) => setFPassword(e.target.value)}
+                placeholder={editingUser ? "Leave blank to keep current" : "Min 8 characters"}
+                disabled={!!isEditingSelf}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Role <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={fRole}
+                onChange={(e) => setFRole(e.target.value as UserRole)}
+                disabled={!!isEditingSelf}
+                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="customer">customer</option>
+                <option value="vendor">vendor</option>
+                <option value="delivery">delivery</option>
+                <option value="admin">admin</option>
+                <option value="staff">staff</option>
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              onClick={() => setDialogOpen(false)}
+              variant="ghost"
+              className="h-11"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={save}
+              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+              disabled={saving || !!isEditingSelf}
+            >
+              {saving ? "Saving..." : editingUser ? "Update User" : "Create User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

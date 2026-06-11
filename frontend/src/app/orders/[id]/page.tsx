@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
+import QRCode from "react-qr-code";
 import { ImageOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,6 +81,28 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           {ORDER_STATUS_BN[order.order_status] ?? order.order_status}
         </Badge>
       </div>
+
+      {/* COD payment code — show only when an active COD payment is awaiting collection. */}
+      {order.payment_method === "cod"
+        && order.payment_status === "pending"
+        && order.payment_code && (
+        <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <p className="mb-3 text-sm font-medium text-orange-800" lang="bn">
+            ডেলিভারি এজেন্টকে এই কোডটি দেখান
+          </p>
+          <div className="flex flex-col items-center gap-4">
+            <p className="font-mono text-4xl font-bold tracking-[0.3em] text-[#f47920]">
+              {order.payment_code}
+            </p>
+            <div className="rounded-lg bg-white p-2">
+              <QRCode value={order.payment_code} size={128} />
+            </div>
+          </div>
+          <p className="mt-3 text-center text-xs text-orange-600" lang="bn">
+            ক্যাশ সংগ্রহের সময় এজেন্ট এই কোড ব্যবহার করবে
+          </p>
+        </div>
+      )}
 
       {/* Items */}
       <Card className="mb-6">

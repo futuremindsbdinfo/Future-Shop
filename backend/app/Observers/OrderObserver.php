@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\CouponUsage;
 use App\Models\Order;
+use App\Models\Transaction;
 use App\Models\WalletTransaction;
 use App\Services\WalletService;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,28 @@ class OrderObserver
     {
         if (! $order->wasChanged('order_status') || $order->order_status !== 'delivered') {
             return;
+        }
+
+        // Single source of truth for "what happens when an order becomes delivered":
+        // COD payment confirmation, referral credit, coupon cashback.
+        // updateQuietly + Transaction unique-reference guard prevents observer loops
+        // and double-execution if the order is re-flipped to delivered later.
+        if ($order->payment_method === 'cod' && $order->payment_status !== 'paid') {
+            $codRef = 'CODCOLLECT-'.$order->order_number;
+            if (Transaction::where('reference', $codRef)->doesntExist()) {
+                $order->updateQuietly(['payment_status' => 'paid']);
+
+                Transaction::create([
+                    'order_id'         => $order->id,
+                    'vendor_id'        => null,
+                    'reference'        => $codRef,
+                    'payment_method'   => 'cod',
+                    'type'             => 'payment',
+                    'amount'           => $order->total,
+                    'status'           => 'completed',
+                    'gateway_response' => null,
+                ]);
+            }
         }
 
         $this->awardReferralCredit($order);

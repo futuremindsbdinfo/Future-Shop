@@ -207,6 +207,7 @@ class OrderController extends Controller
                     'total' => $total,
                     'payment_method' => $data['payment_method'],
                     'payment_status' => 'pending',
+                    'online_transaction_id' => $data['online_transaction_id'] ?? null,
                     'order_status' => 'pending',
                     'shipping_name' => $data['shipping_name'],
                     'shipping_phone' => $data['shipping_phone'],
@@ -229,6 +230,15 @@ class OrderController extends Controller
                 $order->forceFill([
                     'order_number' => sprintf('FS-%s-%05d', now()->year, $order->id),
                 ])->save();
+
+                // 6-digit COD verification code, server-generated only. Used by
+                // the delivery agent to confirm cash collection on the doorstep.
+                if ($order->payment_method === 'cod') {
+                    do {
+                        $code = sprintf('%06d', random_int(100000, 999999));
+                    } while (Order::where('payment_code', $code)->exists());
+                    $order->updateQuietly(['payment_code' => $code]);
+                }
 
                 // COD orders are auto-confirmed at placement; payment stays pending.
                 if ($data['payment_method'] === 'cod') {

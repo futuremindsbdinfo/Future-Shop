@@ -45,22 +45,24 @@ interface NavItem {
   href: string;
   label: string;
   icon: IconDefinition;
+  /** If true, only role === 'admin' can see this item. Staff is hidden. */
+  adminOnly?: boolean;
 }
 
 const NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: faTableCells },
-  { href: "/admin/analytics", label: "Analytics", icon: faChartLine },
+  { href: "/admin/analytics", label: "Analytics", icon: faChartLine, adminOnly: true },
   { href: "/admin/products", label: "Products", icon: faBagShopping },
   { href: "/admin/brands", label: "Brands", icon: faTags },
   { href: "/admin/coupons", label: "Coupons", icon: faPercent },
   { href: "/admin/promotions", label: "Promotions", icon: faGift },
   { href: "/admin/orders", label: "Orders", icon: faClipboardList },
   { href: "/admin/customers", label: "Customers", icon: faUserGroup },
-  { href: "/admin/users", label: "Users", icon: faUsers },
+  { href: "/admin/users", label: "Users", icon: faUsers, adminOnly: true },
   { href: "/admin/vendors", label: "Vendors", icon: faStore },
-  { href: "/admin/reports", label: "Reports", icon: faChartColumn },
-  { href: "/admin/invoices", label: "Invoices", icon: faFileInvoice },
-  { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot },
+  { href: "/admin/reports", label: "Reports", icon: faChartColumn, adminOnly: true },
+  { href: "/admin/invoices", label: "Invoices", icon: faFileInvoice, adminOnly: true },
+  { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot, adminOnly: true },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -72,10 +74,14 @@ function LeftRail({
   pathname,
   expanded,
   onToggle,
+  visibleNav,
+  isAdmin,
 }: {
   pathname: string;
   expanded: boolean;
   onToggle: () => void;
+  visibleNav: NavItem[];
+  isAdmin: boolean;
 }) {
   return (
     <aside
@@ -89,7 +95,7 @@ function LeftRail({
 
       {/* Icons */}
       <nav className="flex flex-1 flex-col items-center gap-2">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <Link
@@ -110,21 +116,23 @@ function LeftRail({
         })}
       </nav>
 
-      {/* Bottom: settings + collapse/expand toggle */}
+      {/* Bottom: settings (admin only) + collapse/expand toggle */}
       <div className="mt-2 flex flex-col items-center gap-2">
-        <Link
-          href="/admin/settings"
-          title="Settings"
-          aria-label="Settings"
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-full",
-            isActive(pathname, "/admin/settings")
-              ? "bg-white text-[#f47920]"
-              : "text-white/85 hover:bg-white/15 hover:text-white",
-          )}
-        >
-          <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/admin/settings"
+            title="Settings"
+            aria-label="Settings"
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              isActive(pathname, "/admin/settings")
+                ? "bg-white text-[#f47920]"
+                : "text-white/85 hover:bg-white/15 hover:text-white",
+            )}
+          >
+            <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
+          </Link>
+        )}
 
         {/* High-contrast toggle button — white circle, blue chevron */}
         <button
@@ -150,6 +158,8 @@ function RightPanel({
   notifications,
   onItemClick,
   onCollapse,
+  visibleNav,
+  isAdmin,
 }: {
   pathname: string;
   user: { name: string; email: string | null } | null;
@@ -157,6 +167,8 @@ function RightPanel({
   notifications: Order[];
   onItemClick?: () => void;
   onCollapse?: () => void;
+  visibleNav: NavItem[];
+  isAdmin: boolean;
 }) {
   return (
     <div className="flex h-full w-[220px] flex-col border-r border-[#e5e7eb] bg-white">
@@ -192,7 +204,7 @@ function RightPanel({
           Menu
         </p>
         <ul className="space-y-1">
-          {NAV.map((item) => {
+          {visibleNav.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <li key={item.href}>
@@ -215,24 +227,26 @@ function RightPanel({
         </ul>
 
         <p className="mt-6 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9ca3af]">
-          Settings
+          {isAdmin ? "Settings" : "Help"}
         </p>
         <ul className="space-y-1">
-          <li>
-            <Link
-              href="/admin/settings"
-              onClick={onItemClick}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-                isActive(pathname, "/admin/settings")
-                  ? "bg-[#f47920] text-white"
-                  : "text-[#374151] hover:bg-[#eff6ff]",
-              )}
-            >
-              <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
-              Settings
-            </Link>
-          </li>
+          {isAdmin && (
+            <li>
+              <Link
+                href="/admin/settings"
+                onClick={onItemClick}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
+                  isActive(pathname, "/admin/settings")
+                    ? "bg-[#f47920] text-white"
+                    : "text-[#374151] hover:bg-[#eff6ff]",
+                )}
+              >
+                <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
+                Settings
+              </Link>
+            </li>
+          )}
           <li>
             <a
               href="https://github.com/ashrafulalamashik/localbazaar"
@@ -321,23 +335,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.localStorage.setItem("admin-sidebar-expanded", String(expanded));
   }, [expanded, hydrated]);
 
+  const isAllowed = user?.role === "admin" || user?.role === "staff";
+  const isAdmin = user?.role === "admin";
+
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated || user?.role !== "admin") {
+    if (!isAuthenticated || !isAllowed) {
       router.replace("/?auth=login&next=/admin");
     }
-  }, [hydrated, isAuthenticated, user, router]);
+  }, [hydrated, isAuthenticated, isAllowed, router]);
 
   // Fetch last few orders for the notifications panel.
+  // Dashboard endpoint is admin-only; staff just sees an empty notifications block.
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "admin") return;
+    if (!isAuthenticated || !isAdmin) return;
     api
       .get<{ data: DashboardStats }>("/admin/dashboard")
       .then((r) => setNotifications(r.data.data.recent_orders ?? []))
       .catch(() => {
         /* non-fatal */
       });
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, isAdmin]);
 
   const handleLogout = async () => {
     try {
@@ -350,11 +368,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   if (!hydrated) return <LoadingSpinner fullHeight />;
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || !isAllowed) {
     return <LoadingSpinner fullHeight />;
   }
 
   const userInfo = { name: user.name, email: user.email };
+  const visibleNav = NAV.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <div className="flex min-h-screen bg-[#f9fafb]">
@@ -362,11 +381,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <LeftRail
         pathname={pathname}
         expanded={expanded}
-        onToggle={() => {
-          // Debug: confirm the click is registering at the layout level.
-          console.log("sidebar toggled:", !expanded);
-          setExpanded((v) => !v);
-        }}
+        onToggle={() => setExpanded((v) => !v)}
+        visibleNav={visibleNav}
+        isAdmin={isAdmin}
       />
 
       {/* Right panel — width animates between 0 and 220px (inline style for
@@ -381,10 +398,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           user={userInfo}
           onLogout={handleLogout}
           notifications={notifications}
-          onCollapse={() => {
-            console.log("sidebar toggled:", false);
-            setExpanded(false);
-          }}
+          onCollapse={() => setExpanded(false)}
+          visibleNav={visibleNav}
+          isAdmin={isAdmin}
         />
       </aside>
 
@@ -412,6 +428,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             onLogout={handleLogout}
             notifications={notifications}
             onItemClick={() => setMobileOpen(false)}
+            visibleNav={visibleNav}
+            isAdmin={isAdmin}
           />
         </SheetContent>
       </Sheet>

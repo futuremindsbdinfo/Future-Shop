@@ -51,6 +51,14 @@ class VendorController extends Controller
     {
         $data = $request->validated();
 
+        // Security: never demote a privileged account to vendor.
+        $userToPromote = User::findOrFail($data['user_id']);
+        if (in_array($userToPromote->role, ['admin', 'staff'], true)) {
+            return response()->json([
+                'message' => 'Cannot convert an admin or staff account to a vendor.',
+            ], 422);
+        }
+
         $vendor = DB::transaction(function () use ($data) {
             $data['slug'] = $this->uniqueSlug($data['shop_name']);
             $data['is_active'] = $data['is_active'] ?? true;

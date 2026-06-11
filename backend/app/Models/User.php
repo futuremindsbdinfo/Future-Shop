@@ -21,7 +21,7 @@ class User extends Authenticatable
      * Allowed account roles. Enforced at the application layer via validation,
      * since Postgres enum constraints are impractical to alter.
      */
-    public const ROLES = ['customer', 'vendor', 'admin', 'delivery'];
+    public const ROLES = ['customer', 'vendor', 'admin', 'delivery', 'staff'];
 
     /**
      * The attributes that are mass assignable.
