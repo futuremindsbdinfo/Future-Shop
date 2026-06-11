@@ -143,3 +143,38 @@
     @apply font-sans;
   }
 }
+
+/* Bengali typography */
+.bn,
+[lang="bn"] {
+  font-family: var(--font-bengali), "Hind Siliguri", system-ui, sans-serif;
+}
+
+/* Dense market-feel product grid */
+.product-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (min-width: 1280px) {
+  .product-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Hide scrollbar for horizontal-scroll sections (categories, brands). */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
