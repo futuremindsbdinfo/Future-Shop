@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ImageOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
 import type { Banner, SiteSettings } from "@/types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
+const TEXTAREA_CLASS =
+  "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-none min-h-[64px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -32,14 +33,16 @@ export default function AdminSettingsPage() {
     contact_email: "",
     contact_address: "",
   });
-  const [savingSettings, setSavingSettings] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bTitle, setBTitle] = useState("");
   const [bLink, setBLink] = useState("");
   const [bFile, setBFile] = useState<File | null>(null);
   const [bActive, setBActive] = useState(true);
+  const [bPreviewUrl, setBPreviewUrl] = useState<string | null>(null);
   const [savingBanner, setSavingBanner] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.allSettled([
@@ -57,23 +60,34 @@ export default function AdminSettingsPage() {
     ]).finally(() => setLoading(false));
   }, []);
 
+  // Revoke any blob URL when the preview changes or the component unmounts —
+  // avoids a leak when the user picks several files in a row.
+  useEffect(() => {
+    if (!bPreviewUrl) return;
+    return () => URL.revokeObjectURL(bPreviewUrl);
+  }, [bPreviewUrl]);
+
   if (loading) return <LoadingSpinner fullHeight />;
 
-  const saveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingSettings(true);
+  const saveSettings = async () => {
+    setSaving(true);
     try {
       await api.put("/admin/settings", settings);
       toast.success("সেটিংস সংরক্ষিত হয়েছে");
     } catch (error) {
       toast.error(getErrorMessage(error, "সংরক্ষণ ব্যর্থ হয়েছে"));
     } finally {
-      setSavingSettings(false);
+      setSaving(false);
     }
   };
 
-  const addBanner = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setBFile(file);
+    setBPreviewUrl(file ? URL.createObjectURL(file) : null);
+  };
+
+  const addBanner = async () => {
     if (!bTitle.trim() || !bFile) {
       toast.error("শিরোনাম ও ছবি দিন");
       return;
@@ -92,9 +106,13 @@ export default function AdminSettingsPage() {
     try {
       const res = await api.post<{ data: Banner }>("/admin/banners", form);
       setBanners((prev) => [res.data.data, ...prev]);
+      // Full form reset including the file input DOM and the active checkbox.
       setBTitle("");
       setBLink("");
       setBFile(null);
+      setBActive(true);
+      setBPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       toast.success("ব্যানার যোগ হয়েছে");
     } catch (error) {
       toast.error(getErrorMessage(error, "ব্যানার যোগ ব্যর্থ হয়েছে"));
@@ -114,77 +132,258 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">সেটিংস</h1>
+      </div>
 
-      {/* Site settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Site Settings</CardTitle>
+      {/* ── Card 1: Site Info ── */}
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">সাইটের তথ্য</CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={saveSettings} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="s-name">Site name</Label>
-              <Input id="s-name" className="h-11" value={settings.site_name ?? ""} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="s-tagline" lang="bn">ট্যাগলাইন (বাংলা)</Label>
-              <Input id="s-tagline" className="h-11" value={settings.site_tagline ?? ""} onChange={(e) => setSettings({ ...settings, site_tagline: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="s-phone">Contact phone</Label>
-                <Input id="s-phone" className="h-11" value={settings.contact_phone ?? ""} onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="s-email">Contact email</Label>
-                <Input id="s-email" className="h-11" type="email" value={settings.contact_email ?? ""} onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="s-address">Contact address</Label>
-              <Input id="s-address" className="h-11" value={settings.contact_address ?? ""} onChange={(e) => setSettings({ ...settings, contact_address: e.target.value })} />
-            </div>
-            <Button type="submit" disabled={savingSettings} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910] sm:w-auto">Save Settings</Button>
-          </form>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium" htmlFor="site_name">
+              সাইটের নাম
+            </label>
+            <Input
+              id="site_name"
+              className="h-11"
+              value={settings.site_name ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, site_name: e.target.value }))
+              }
+              placeholder="Future Shop"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium" htmlFor="site_tagline">
+              ট্যাগলাইন (বাংলা)
+            </label>
+            <textarea
+              id="site_tagline"
+              value={settings.site_tagline ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, site_tagline: e.target.value }))
+              }
+              rows={2}
+              placeholder="বাজারে নয়, বাজার আসবে আপনার ঘরে।"
+              className={TEXTAREA_CLASS}
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Banners */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Banner Management</CardTitle>
+      {/* ── Card 2: Contact ── */}
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">যোগাযোগের তথ্য</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {banners.length === 0 && <p className="text-sm text-muted-foreground">No banners yet.</p>}
-          {banners.map((b) => (
-            <div key={b.id} className="flex items-center gap-3 rounded-md border p-2">
-              <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded bg-muted">
-                <Image src={b.image} alt={b.title} fill sizes="96px" className="object-cover" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{b.title}</p>
-                <Badge variant="outline" className={b.is_active ? "border-green-300 text-green-700" : "border-gray-300 text-gray-500"}>
-                  {b.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-red-600" onClick={() => deleteBanner(b.id)} aria-label="Delete">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="contact_phone">
+                ফোন নম্বর
+              </label>
+              <Input
+                id="contact_phone"
+                className="h-11"
+                type="tel"
+                value={settings.contact_phone ?? ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, contact_phone: e.target.value }))
+                }
+                placeholder="01XXXXXXXXX"
+              />
             </div>
-          ))}
-
-          <form onSubmit={addBanner} className="space-y-3 rounded-md border p-3">
-            <p className="text-sm font-medium">Add banner</p>
-            <Input className="h-11" placeholder="Title" value={bTitle} onChange={(e) => setBTitle(e.target.value)} />
-            <Input className="h-11" placeholder="Link URL (optional)" value={bLink} onChange={(e) => setBLink(e.target.value)} />
-            <Input className="h-11" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setBFile(e.target.files?.[0] ?? null)} />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={bActive} onChange={(e) => setBActive(e.target.checked)} /> Active
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="contact_email">
+                ইমেইল
+              </label>
+              <Input
+                id="contact_email"
+                className="h-11"
+                type="email"
+                value={settings.contact_email ?? ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, contact_email: e.target.value }))
+                }
+                placeholder="info@futureshop.com"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium" htmlFor="contact_address">
+              ঠিকানা
             </label>
-            <Button type="submit" disabled={savingBanner} className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]">Add Banner</Button>
-          </form>
+            <textarea
+              id="contact_address"
+              value={settings.contact_address ?? ""}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, contact_address: e.target.value }))
+              }
+              rows={2}
+              placeholder="শেরপুর, বগুড়া, বাংলাদেশ"
+              className={TEXTAREA_CLASS}
+            />
+          </div>
+
+          {/* Save button covers BOTH Card 1 and Card 2 (single PUT). */}
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={saveSettings}
+              disabled={saving}
+              className="h-11 min-w-[140px] bg-[#f47920] hover:bg-orange-600"
+            >
+              {saving ? "সেভ হচ্ছে..." : "সেটিংস সেভ করুন"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Card 3: Banner List ── */}
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">ব্যানার তালিকা</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {banners.length === 0 ? (
+            <EmptyState
+              icon={<ImageOff className="h-7 w-7" />}
+              title="কোনো ব্যানার নেই"
+              description="নিচের ফর্ম থেকে নতুন ব্যানার যোগ করুন।"
+            />
+          ) : (
+            <div className="space-y-3">
+              {banners.map((banner) => (
+                <div
+                  key={banner.id}
+                  className="flex items-center gap-3 rounded-lg border border-[#f1f5f9] p-3"
+                >
+                  {banner.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={banner.image}
+                      alt={banner.title}
+                      className="h-12 w-20 flex-shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-20 flex-shrink-0 rounded bg-muted" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{banner.title}</p>
+                    {banner.link_url && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        🔗 {banner.link_url}
+                      </p>
+                    )}
+                  </div>
+                  <Badge
+                    className={
+                      banner.is_active
+                        ? "flex-shrink-0 bg-green-100 text-green-800 hover:bg-green-100"
+                        : "flex-shrink-0 bg-gray-100 text-gray-600 hover:bg-gray-100"
+                    }
+                  >
+                    {banner.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}
+                  </Badge>
+                  <Button
+                    onClick={() => deleteBanner(banner.id)}
+                    variant="ghost"
+                    className="h-10 w-10 flex-shrink-0 p-0 text-red-500"
+                    aria-label={`Delete ${banner.title}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Card 4: Add New Banner ── */}
+      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">নতুন ব্যানার যোগ করুন</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="banner_title">
+                শিরোনাম <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="banner_title"
+                className="h-11"
+                value={bTitle}
+                onChange={(e) => setBTitle(e.target.value)}
+                placeholder="গ্রীষ্মকালীন অফার"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="banner_link">
+                লিংক URL (ঐচ্ছিক)
+              </label>
+              <Input
+                id="banner_link"
+                className="h-11"
+                value={bLink}
+                onChange={(e) => setBLink(e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="banner_file">
+              ছবি <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="banner_file"
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={onPickFile}
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#f47920] file:px-3 file:text-sm file:text-white"
+            />
+            {bPreviewUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={bPreviewUrl}
+                alt="Preview"
+                className="mt-2 h-24 w-40 rounded-md border border-input object-cover"
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              JPG, PNG বা WebP, সর্বোচ্চ 5MB
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="bActive"
+              checked={bActive}
+              onChange={(e) => setBActive(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <label htmlFor="bActive" className="text-sm font-medium">
+              সঙ্গে সঙ্গে সক্রিয় করুন
+            </label>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={addBanner}
+              disabled={savingBanner || !bTitle.trim() || !bFile}
+              className="h-11 min-w-[140px] bg-[#f47920] hover:bg-orange-600"
+            >
+              {savingBanner ? "যোগ হচ্ছে..." : "ব্যানার যোগ করুন"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
