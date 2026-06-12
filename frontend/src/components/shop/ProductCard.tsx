@@ -75,7 +75,7 @@ export function ProductCard({ product }: Props) {
     <div className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#f1f5f9] bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       {/* Image block */}
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <Link href={`/products/${slug}`} className="block h-full w-full">
+        <Link href={`/products/${slug}`} className="absolute inset-0">
           {imageUrl ? (
             <Image
               src={imageUrl}

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AdminCouponController;
+use App\Http\Controllers\Api\V1\AdminMappedImportController;
 use App\Http\Controllers\Api\V1\AdminPaymentController;
 use App\Http\Controllers\Api\V1\AdminPromotionRuleController;
 use App\Http\Controllers\Api\V1\DeliveryPaymentController;
@@ -146,6 +147,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             // IMPORTANT: literal-path routes must come BEFORE any {product} wildcard.
             Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
             Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
+            Route::post('products/import-mapped', [AdminMappedImportController::class, 'import'])->name('products.import-mapped');
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
             Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
             Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');

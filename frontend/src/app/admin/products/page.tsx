@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Download, ImageOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ImageOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,36 @@ import type { Brand, Category, PaginatedResponse, Product } from "@/types";
 
 const TK = "৳";
 
+// Canonical fields a CSV column can map to. Must match the server-side allowlist
+// in AdminMappedImportController::ALLOWED_FIELDS.
+const FIELD_OPTIONS = [
+  { value: "ignore", label: "Ignore (skip)" },
+  { value: "name", label: "Product Name *" },
+  { value: "category", label: "Category *" },
+  { value: "price", label: "Selling Price *" },
+  { value: "cost_price", label: "Trade / Cost Price" },
+  { value: "sale_price", label: "Sale Price (Discount)" },
+  { value: "stock_quantity", label: "Quantity / Stock" },
+  { value: "weight", label: "Weight" },
+  { value: "sku", label: "SKU / Item Code" },
+  { value: "description", label: "Add to Description" },
+] as const;
+
+function autoMap(header: string): string {
+  const h = header.toLowerCase().trim();
+  if (h.includes("product name") || h === "item name" || h === "name") return "name";
+  if (h.includes("category")) return "category";
+  if (h.includes("selling price") || h === "mrp") return "price";
+  if (h.includes("trade price") || h.includes("trade") || h.includes("cost")) return "cost_price";
+  if (h.includes("sale price") || h.includes("discount")) return "sale_price";
+  if (h.includes("qtn") || h.includes("qty") || h.includes("quantity") || h.includes("stock")) return "stock_quantity";
+  if (h === "weight") return "weight";
+  if (h === "sku" || h.includes("item code")) return "sku";
+  if (["size", "flavour", "flavor", "quality", "gift", "cp", "colour", "color"].some((k) => h.includes(k))) return "description";
+  if (h === "profit" || h === "sl" || h === "no" || h === "#") return "ignore";
+  return "ignore";
+}
+
 export default function AdminProductsPage() {
   const [data, setData] = useState<PaginatedResponse<Product> | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -39,14 +70,19 @@ export default function AdminProductsPage() {
   const [brandFilter, setBrandFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // CSV import modal state.
+  // CSV import wizard state.
   const [importOpen, setImportOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [wizardVendorId, setWizardVendorId] = useState<string>("");
+  const [wizardVendors, setWizardVendors] = useState<{ id: number; shop_name: string }[]>([]);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
-    imported: number;
-    skipped: number;
-    errors: { row: number; name?: string; errors?: string[]; message?: string }[];
+    success: number;
+    errors: { row: number; data: Record<string, string>; error: string }[];
+    total: number;
   } | null>(null);
 
   useEffect(() => {
@@ -82,47 +118,66 @@ export default function AdminProductsPage() {
     }
   };
 
-  const downloadTemplate = async () => {
+  const openWizard = async () => {
+    setWizardStep(1);
+    setCsvHeaders([]);
+    setCsvRows([]);
+    setColumnMapping({});
+    setImportResult(null);
+    setImporting(false);
     try {
-      const res = await api.get("/admin/products/import-template", { responseType: "blob" });
-      const url = URL.createObjectURL(res.data as Blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "products-import-template.csv";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const res = await api.get<{ data: { id: number; shop_name: string }[] }>("/admin/vendors");
+      setWizardVendors(res.data.data ?? []);
+      setWizardVendorId(String(res.data.data?.[0]?.id ?? ""));
     } catch {
-      toast.error("Failed to download template");
+      setWizardVendors([]);
     }
+    setImportOpen(true);
   };
 
-  const handleImport = async () => {
-    if (!importFile) {
-      toast.error("Choose a CSV file");
+  const handleCsvFile = (file: File | null) => {
+    if (!file) return;
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const headers = result.meta.fields ?? [];
+        const rows = (result.data as Record<string, string>[]).filter(Boolean);
+        setCsvHeaders(headers);
+        setCsvRows(rows);
+        const autoMapping: Record<string, string> = {};
+        headers.forEach((h) => {
+          autoMapping[h] = autoMap(h);
+        });
+        setColumnMapping(autoMapping);
+        setWizardStep(2);
+      },
+      error: () => toast.error("CSV parse করা যায়নি। ফাইল সঠিক কিনা দেখুন।"),
+    });
+  };
+
+  const runImport = async () => {
+    if (!wizardVendorId) {
+      toast.error("Vendor select করুন");
       return;
     }
     setImporting(true);
-    setImportResult(null);
-    const form = new FormData();
-    form.append("file", importFile);
     try {
       const res = await api.post<{
-        imported: number;
-        skipped: number;
-        errors: { row: number; name?: string; errors?: string[]; message?: string }[];
-      }>("/admin/products/import", form);
+        success: number;
+        errors: { row: number; data: Record<string, string>; error: string }[];
+        total: number;
+      }>("/admin/products/import-mapped", {
+        vendor_id: parseInt(wizardVendorId, 10),
+        mapping: columnMapping,
+        rows: csvRows,
+      });
       setImportResult(res.data);
-      if (res.data.imported > 0) {
-        toast.success(`${res.data.imported} products imported, ${res.data.skipped} skipped`);
-        load();
-      } else {
-        toast.warning(`No products imported (${res.data.skipped} skipped)`);
-      }
-    } catch (e) {
-      const msg = (e as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Import failed";
-      toast.error(msg);
+      setWizardStep(3);
+      load();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message ?? "Import failed");
     } finally {
       setImporting(false);
     }
@@ -142,11 +197,7 @@ export default function AdminProductsPage() {
           <Button
             variant="outline"
             className="h-11"
-            onClick={() => {
-              setImportFile(null);
-              setImportResult(null);
-              setImportOpen(true);
-            }}
+            onClick={openWizard}
           >
             <Upload className="mr-2 h-4 w-4" /> Import CSV
           </Button>
@@ -293,79 +344,226 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* CSV Import modal */}
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
+      {/* CSV Import Wizard */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setImportOpen(false);
+            setWizardStep(1);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Import Products from CSV</DialogTitle>
+            <DialogTitle>
+              {wizardStep === 1 && "Step 1 — CSV ফাইল আপলোড করুন"}
+              {wizardStep === 2 && "Step 2 — কলাম ম্যাপিং ও Vendor"}
+              {wizardStep === 3 && "Step 3 — Import ফলাফল"}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Button variant="outline" className="h-11 w-full" onClick={downloadTemplate}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Template
-              </Button>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Required columns: <code>name, price, cost_price, stock_qty, category_slug</code>.
-                Optional: <code>description, sale_price</code>.
-              </p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">CSV file</label>
-              <input
-                type="file"
-                accept=".csv,text/csv"
-                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-                className="mt-1 flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          {/* Step indicator */}
+          <div className="mb-4 flex items-center gap-2">
+            {[1, 2, 3].map((s) => (
+              <div
+                key={s}
+                className={`h-2 flex-1 rounded-full transition-colors ${
+                  s <= wizardStep ? "bg-[#f47920]" : "bg-muted"
+                }`}
               />
-              {importFile && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Selected: {importFile.name} ({Math.round(importFile.size / 1024)} KB)
-                </p>
-              )}
-            </div>
-
-            {importResult && (
-              <div className="rounded-md border bg-muted/40 p-3 text-sm">
-                <p className="font-medium">
-                  <span className="text-green-700">{importResult.imported} imported</span>
-                  {", "}
-                  <span className="text-red-600">{importResult.skipped} skipped</span>
-                </p>
-                {importResult.errors.length > 0 && (
-                  <div className="mt-2 max-h-40 overflow-y-auto">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Errors
-                    </p>
-                    <ul className="space-y-1 text-xs">
-                      {importResult.errors.map((err, i) => (
-                        <li key={i} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700">
-                          Row {err.row}
-                          {err.name ? ` — ${err.name}` : ""}: {(err.errors ?? [err.message ?? "error"]).join(", ")}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
+            ))}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" className="h-11" onClick={() => setImportOpen(false)}>
-              Close
-            </Button>
-            <Button
-              onClick={handleImport}
-              disabled={importing || !importFile}
-              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {importing ? "Uploading…" : "Upload"}
-            </Button>
-          </DialogFooter>
+          {/* ── STEP 1: Upload ── */}
+          {wizardStep === 1 && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground" lang="bn">
+                যেকোনো ফরম্যাটের CSV আপলোড করুন। পরের ধাপে আপনি নির্ধারণ করবেন
+                কোন কলাম কোন ফিল্ডে যাবে।
+              </p>
+              <div
+                className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-input p-10 text-center transition-colors hover:border-[#f47920]"
+                onClick={() => document.getElementById("csv-wizard-input")?.click()}
+              >
+                <Upload className="mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm font-medium" lang="bn">
+                  CSV ফাইল ড্র্যাগ করুন বা ক্লিক করুন
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground" lang="bn">
+                  .csv ফরম্যাট, যেকোনো হেডার
+                </p>
+              </div>
+              <input
+                id="csv-wizard-input"
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => handleCsvFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+          )}
+
+          {/* ── STEP 2: Column Mapping ── */}
+          {wizardStep === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium" lang="bn">
+                  Vendor নির্বাচন করুন *
+                </label>
+                <select
+                  value={wizardVendorId}
+                  onChange={(e) => setWizardVendorId(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                >
+                  <option value="" lang="bn">-- Vendor select করুন --</option>
+                  {wizardVendors.map((v) => (
+                    <option key={v.id} value={String(v.id)}>
+                      {v.shop_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium" lang="bn">
+                  কলাম ম্যাপিং
+                </label>
+                <p className="mb-2 text-xs text-muted-foreground" lang="bn">
+                  CSV-এর প্রতিটি কলাম কোন ফিল্ডে যাবে তা নির্বাচন করুন। তারকা (*) চিহ্নিত
+                  ফিল্ড বাধ্যতামূলক।
+                </p>
+                <div className="overflow-hidden rounded-lg border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium" lang="bn">
+                          CSV কলাম
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium" lang="bn">
+                          ম্যাপ করুন →
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground" lang="bn">
+                          নমুনা মান
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvHeaders.map((header) => (
+                        <tr key={header} className="border-t">
+                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                            {header}
+                          </td>
+                          <td className="px-3 py-2">
+                            <select
+                              value={columnMapping[header] ?? "ignore"}
+                              onChange={(e) =>
+                                setColumnMapping((prev) => ({
+                                  ...prev,
+                                  [header]: e.target.value,
+                                }))
+                              }
+                              className="h-8 w-full rounded border border-input bg-transparent px-2 text-xs"
+                            >
+                              {FIELD_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="max-w-[120px] truncate px-3 py-2 text-xs text-muted-foreground">
+                            {csvRows[0]?.[header] ?? "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground" lang="bn">
+                মোট {csvRows.length} টি পণ্য পাওয়া গেছে। Import হবে{" "}
+                <strong>draft</strong> হিসেবে — পরে Publish করতে পারবেন।
+              </p>
+
+              <DialogFooter className="gap-2">
+                <Button variant="ghost" onClick={() => setWizardStep(1)} className="h-11">
+                  <span lang="bn">← পেছনে</span>
+                </Button>
+                <Button
+                  onClick={runImport}
+                  disabled={importing || !wizardVendorId}
+                  className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+                >
+                  {importing ? (
+                    <span lang="bn">Import হচ্ছে...</span>
+                  ) : (
+                    <span lang="bn">Import করুন ({csvRows.length} পণ্য)</span>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {/* ── STEP 3: Result ── */}
+          {wizardStep === 3 && importResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg bg-green-50 p-3 text-center">
+                  <p className="text-2xl font-bold text-green-700">{importResult.success}</p>
+                  <p className="mt-0.5 text-xs text-green-600" lang="bn">
+                    সফল
+                  </p>
+                </div>
+                <div className="rounded-lg bg-red-50 p-3 text-center">
+                  <p className="text-2xl font-bold text-red-700">{importResult.errors.length}</p>
+                  <p className="mt-0.5 text-xs text-red-600" lang="bn">
+                    ত্রুটি
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted p-3 text-center">
+                  <p className="text-2xl font-bold">{importResult.total}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground" lang="bn">
+                    মোট
+                  </p>
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-red-600" lang="bn">
+                    ত্রুটিপূর্ণ সারি:
+                  </p>
+                  <div className="max-h-48 overflow-y-auto rounded-lg border text-xs">
+                    {importResult.errors.map((err, i) => (
+                      <div
+                        key={i}
+                        className="flex gap-2 border-b px-3 py-2 last:border-b-0"
+                      >
+                        <span className="flex-shrink-0 text-muted-foreground">
+                          Row {err.row}:
+                        </span>
+                        <span className="text-red-600">{err.error}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setImportOpen(false);
+                    setWizardStep(1);
+                  }}
+                  className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+                >
+                  <span lang="bn">সম্পন্ন</span>
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
