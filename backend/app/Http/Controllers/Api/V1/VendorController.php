@@ -102,6 +102,45 @@ class VendorController extends Controller
         ]);
     }
 
+    /**
+     * Admin: permanently delete a vendor.
+     *
+     * Guarded against orphaning catalog/order data:
+     *  - blocked if the vendor still has products
+     *  - blocked if the vendor is referenced by any order_items (historical orders stay intact)
+     * The linked user account is intentionally NOT touched.
+     */
+    public function destroy(Vendor $vendor): JsonResponse
+    {
+        $productCount = $vendor->products()->count();
+        if ($productCount > 0) {
+            return response()->json([
+                'message' => "Cannot delete vendor: {$productCount} product(s) still assigned. Deactivate the vendor instead.",
+            ], 409);
+        }
+
+        $orderItemCount = $vendor->orderItems()->count();
+        if ($orderItemCount > 0) {
+            return response()->json([
+                'message' => "Cannot delete vendor: referenced by {$orderItemCount} order item(s). Deactivate the vendor instead.",
+            ], 409);
+        }
+
+        try {
+            DB::transaction(function () use ($vendor) {
+                $vendor->delete();
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to delete vendor. Please try again.',
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Vendor deleted.',
+        ], 200);
+    }
+
     private function uniqueSlug(string $name, ?int $ignoreId = null): string
     {
         $base = Str::slug($name);
