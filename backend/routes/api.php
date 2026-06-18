@@ -165,6 +165,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('banners', [BannerController::class, 'store'])->name('banners.store');
             Route::delete('banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
 
+            // Vendor delete — admin-only. List/create/show/update live in the
+            // shared admin+staff group below; only DELETE is gated to admin.
+            Route::delete('vendors/{vendor}', [VendorController::class, 'destroy'])->name('vendors.destroy');
+
             // Site settings.
             Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
             Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
@@ -187,8 +191,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('orders', [OrderController::class, 'adminIndex']);
             Route::match(['put', 'patch'], 'orders/{order}', [OrderController::class, 'updateStatus']);
 
-            // Vendor management. Note: VendorController has no destroy() method,
-            // so DELETE is intentionally not registered here.
+            // Vendor management (admin + staff). DELETE is admin-only and
+            // lives in the admin-only group above.
             Route::get('vendors', [VendorController::class, 'index']);
             Route::post('vendors', [VendorController::class, 'store']);
             Route::get('vendors/{vendor}', [VendorController::class, 'show']);
