@@ -142,6 +142,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             // All categories (incl. inactive) for admin forms.
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
+            // Category management (admin-only): create / update / delete.
+            Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+            Route::match(['put', 'patch'], 'categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+            Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
             // Product mutations — admin only. (Read access moved to admin,staff group below.)
             // IMPORTANT: literal-path routes must come BEFORE any {product} wildcard.

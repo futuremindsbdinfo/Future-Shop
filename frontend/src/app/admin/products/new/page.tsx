@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
 import type { Brand, Category, PaginatedResponse, Product, Vendor } from "@/types";
@@ -42,6 +49,13 @@ export default function AdminProductFormPage() {
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Inline "+ নতুন category" mini-dialog.
+  const [catDialogOpen, setCatDialogOpen] = useState(false);
+  const [catName, setCatName] = useState("");
+  const [catParentId, setCatParentId] = useState("");
+  const [catIcon, setCatIcon] = useState("");
+  const [catSaving, setCatSaving] = useState(false);
 
   // Load dropdowns + (optional) the product being edited.
   useEffect(() => {
@@ -135,6 +149,50 @@ export default function AdminProductFormPage() {
     }
   };
 
+  // Re-fetch the category list (same endpoint as the initial load) so a freshly
+  // created category shows up in the dropdown.
+  const refetchCategories = async (): Promise<Category[]> => {
+    const r = await api.get<{ data: Category[] }>("/admin/categories");
+    setCategories(r.data.data);
+    return r.data.data;
+  };
+
+  const handleCreateCategory = async () => {
+    if (!catName.trim()) {
+      toast.error("ক্যাটাগরির নাম দিন");
+      return;
+    }
+    setCatSaving(true);
+    try {
+      const res = await api.post<{ data: Category }>("/admin/categories", {
+        name: catName.trim(),
+        parent_id: catParentId ? Number(catParentId) : null,
+        icon: catIcon.trim() || null,
+      });
+      const created = res.data.data;
+      await refetchCategories();
+      setCategoryId(String(created.id)); // auto-select the new category
+      setCatDialogOpen(false);
+      setCatName("");
+      setCatParentId("");
+      setCatIcon("");
+      toast.success("ক্যাটাগরি যোগ হয়েছে");
+    } catch (err) {
+      // Keep the dialog open on error (e.g. 422 duplicate name) so the user can fix it.
+      const e = err as {
+        response?: { data?: { errors?: Record<string, string[]>; message?: string } };
+      };
+      const errs = e?.response?.data?.errors;
+      toast.error(
+        errs
+          ? Object.values(errs).flat().join(" ")
+          : (e?.response?.data?.message ?? "ক্যাটাগরি যোগ ব্যর্থ হয়েছে"),
+      );
+    } finally {
+      setCatSaving(false);
+    }
+  };
+
   if (bootstrapping) return <LoadingSpinner fullHeight />;
 
   return (
@@ -193,7 +251,16 @@ export default function AdminProductFormPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category" lang="bn">ক্যাটাগরি</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="category" lang="bn">ক্যাটাগরি</Label>
+                  <button
+                    type="button"
+                    onClick={() => setCatDialogOpen(true)}
+                    className="text-xs font-medium text-[#f47920] hover:underline"
+                  >
+                    + নতুন
+                  </button>
+                </div>
                 <select
                   id="category"
                   value={categoryId}
@@ -266,6 +333,70 @@ export default function AdminProductFormPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Inline create-category dialog — essential fields only. */}
+      <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>নতুন ক্যাটাগরি</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                নাম <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+                placeholder="যেমন: ইলেকট্রনিক্স"
+                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">প্যারেন্ট ক্যাটাগরি</label>
+              <select
+                value={catParentId}
+                onChange={(e) => setCatParentId(e.target.value)}
+                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">— কোনোটি নয় (টপ-লেভেল) —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">আইকন (ইমোজি)</label>
+              <input
+                value={catIcon}
+                onChange={(e) => setCatIcon(e.target.value)}
+                placeholder="যেমন: 🛒"
+                maxLength={16}
+                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11"
+              disabled={catSaving}
+              onClick={() => setCatDialogOpen(false)}
+            >
+              বাতিল
+            </Button>
+            <Button
+              type="button"
+              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+              disabled={catSaving}
+              onClick={handleCreateCategory}
+            >
+              {catSaving ? "সংরক্ষণ হচ্ছে..." : "তৈরি করুন"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
