@@ -19,13 +19,23 @@ return [
 
     'allowed_methods' => ['*'],
 
-    // Restrict to the Next.js frontend dev origin for now. Add production
-    // origins here (or drive from env) before going live.
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:3000'),
-    ],
+    // Allowed cross-origin frontends. Driven by the CORS_ALLOWED_ORIGINS env
+    // (comma-separated) so Railway can control it without a code change; falls
+    // back to the known dev + production origins below.
+    'allowed_origins' => array_values(array_filter(array_map('trim', explode(
+        ',',
+        env('CORS_ALLOWED_ORIGINS', implode(',', [
+            'http://localhost:3000',                  // local dev
+            'https://future-shop-omega.vercel.app',   // current Vercel deploy
+            'https://shop.fuminds.com',               // future custom domain
+        ]))
+    )))),
 
-    'allowed_origins_patterns' => [],
+    // Allow Vercel preview deploys (a fresh URL per redeploy) that start with
+    // "future-shop-" — scoped to this project's apps, not any vercel.app site.
+    'allowed_origins_patterns' => [
+        '#^https://future-shop-[a-z0-9-]+\.vercel\.app$#',
+    ],
 
     'allowed_headers' => ['*'],
 
