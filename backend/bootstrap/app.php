@@ -13,6 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Railway (and most PaaS) terminate TLS at a reverse proxy and forward
+        // the original scheme via X-Forwarded-Proto. Trust it so generated URLs
+        // (pagination, assets, redirects) use https instead of http.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
         ]);
