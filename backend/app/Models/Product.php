@@ -28,6 +28,7 @@ class Product extends Model
         'sku',
         'stock_quantity',
         'images',
+        'attributes',
         'weight',
         'is_featured',
         'status',
@@ -47,6 +48,7 @@ class Product extends Model
             'weight'         => 'decimal:2',
             'stock_quantity' => 'integer',
             'images'         => 'array',
+            'attributes'     => 'array',
             'is_featured'    => 'boolean',
             'views'          => 'integer',
         ];

@@ -38,6 +38,44 @@ class UpdateProductRequest extends FormRequest
             'status' => ['sometimes', Rule::in(['draft', 'published', 'out_of_stock'])],
             'images' => ['nullable', 'array', 'max:8'],
             'images.*' => ['file', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            // Display-only extra details (not variants). Capped at 20 pairs.
+            'attributes' => ['nullable', 'array', 'max:20'],
+            'attributes.*.title' => ['required_with:attributes', 'string', 'max:60'],
+            'attributes.*.value' => ['required_with:attributes', 'string', 'max:255'],
         ];
+    }
+
+    /**
+     * Normalise free-form attributes before validation: keep only {title, value}
+     * (drop any extra keys), trim both, discard rows where either is blank, and
+     * collapse an all-empty set to null so nothing junk is persisted.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('attributes')) {
+            return;
+        }
+
+        $raw = $this->input('attributes');
+        if (! is_array($raw)) {
+            $this->merge(['attributes' => null]);
+
+            return;
+        }
+
+        $clean = [];
+        foreach ($raw as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $title = trim((string) ($row['title'] ?? ''));
+            $value = trim((string) ($row['value'] ?? ''));
+            if ($title === '' || $value === '') {
+                continue;
+            }
+            $clean[] = ['title' => $title, 'value' => $value];
+        }
+
+        $this->merge(['attributes' => $clean === [] ? null : $clean]);
     }
 }

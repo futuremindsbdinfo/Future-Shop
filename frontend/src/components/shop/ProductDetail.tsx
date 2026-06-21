@@ -183,6 +183,23 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
         )}
 
+        {product.attributes && product.attributes.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-2 text-sm font-semibold" lang="bn">আরও তথ্য</h2>
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+              {product.attributes.map((attr, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between gap-3 border-b border-dashed py-1 text-sm"
+                >
+                  <dt className="text-muted-foreground">{attr.title}</dt>
+                  <dd className="text-right font-medium">{attr.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
         {!outOfStock && (
           <div className="mt-6 flex items-center gap-3">
             <span className="text-sm font-medium" lang="bn">পরিমাণ:</span>

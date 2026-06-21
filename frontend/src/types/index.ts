@@ -206,6 +206,7 @@ export interface Product {
   weight: string | null;
   is_featured: boolean;
   status: ProductStatus;
+  attributes: { title: string; value: string }[] | null;
   views: number;
   created_at: string;
   updated_at: string;

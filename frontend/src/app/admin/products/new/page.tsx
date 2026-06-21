@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,8 @@ export default function AdminProductFormPage() {
   const [brandId, setBrandId] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [images, setImages] = useState<File[]>([]);
+  // Display-only Title:Value detail pairs (capped at 20 to match the server).
+  const [attributes, setAttributes] = useState<{ title: string; value: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Inline "+ নতুন category" mini-dialog.
@@ -81,6 +84,7 @@ export default function AdminProductFormPage() {
           setVendorId(String(p.vendor_id));
           setBrandId(p.brand_id ? String(p.brand_id) : "");
           setStatus(p.status === "published" ? "published" : "draft");
+          setAttributes(p.attributes ?? []);
         }),
       );
     }
@@ -97,6 +101,19 @@ export default function AdminProductFormPage() {
       return;
     }
     setImages(files);
+  };
+
+  const addAttribute = () => {
+    if (attributes.length >= 20) return;
+    setAttributes((prev) => [...prev, { title: "", value: "" }]);
+  };
+
+  const updateAttribute = (index: number, field: "title" | "value", val: string) => {
+    setAttributes((prev) => prev.map((a, i) => (i === index ? { ...a, [field]: val } : a)));
+  };
+
+  const removeAttribute = (index: number) => {
+    setAttributes((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validate = (): string | null => {
@@ -129,6 +146,14 @@ export default function AdminProductFormPage() {
     if (brandId) form.append("brand_id", brandId);
     form.append("status", status);
     images.forEach((file) => form.append("images[]", file));
+    // Only send rows where both title and value are filled; re-index sequentially.
+    attributes
+      .map((a) => ({ title: a.title.trim(), value: a.value.trim() }))
+      .filter((a) => a.title !== "" && a.value !== "")
+      .forEach((a, i) => {
+        form.append(`attributes[${i}][title]`, a.title);
+        form.append(`attributes[${i}][value]`, a.value);
+      });
 
     setSaving(true);
     try {
@@ -302,6 +327,61 @@ export default function AdminProductFormPage() {
                   <option key={b.id} value={String(b.id)}>{b.name}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Extra display-only details (Title:Value). Not variants. */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label lang="bn">আরও তথ্য (Attributes)</Label>
+                <span className="text-xs text-muted-foreground">{attributes.length}/20</span>
+              </div>
+
+              {attributes.length === 0 && (
+                <p className="text-xs text-muted-foreground" lang="bn">
+                  যেমন: Flavour → Lemon, Size → 1kg। শুধু দেখানোর জন্য, দামে প্রভাব নেই।
+                </p>
+              )}
+
+              {attributes.map((attr, index) => (
+                <div key={index} className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    aria-label={`Title ${index + 1}`}
+                    placeholder="Flavour"
+                    value={attr.title}
+                    maxLength={60}
+                    onChange={(e) => updateAttribute(index, "title", e.target.value)}
+                    className="sm:flex-1"
+                  />
+                  <Input
+                    aria-label={`Value ${index + 1}`}
+                    placeholder="Lemon"
+                    value={attr.value}
+                    maxLength={255}
+                    onChange={(e) => updateAttribute(index, "value", e.target.value)}
+                    className="sm:flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => removeAttribute(index)}
+                    aria-label={`Remove detail ${index + 1}`}
+                    className="h-11 w-11 shrink-0 self-end p-0 text-red-500 hover:text-red-700 sm:self-auto"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addAttribute}
+                disabled={attributes.length >= 20}
+                className="h-11 w-full"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span lang="bn">আরও তথ্য যোগ করুন</span>
+              </Button>
             </div>
 
             <div className="space-y-2">
