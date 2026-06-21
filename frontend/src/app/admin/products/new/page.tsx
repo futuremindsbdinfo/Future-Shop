@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
-import type { Brand, Category, PaginatedResponse, Product, Vendor } from "@/types";
+import type { Brand, Category, PaginatedResponse, Product, ProductImage, Vendor } from "@/types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -49,6 +49,12 @@ export default function AdminProductFormPage() {
   const [brandId, setBrandId] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [images, setImages] = useState<File[]>([]);
+  // Already-saved images (edit mode) — shown read-only; new uploads/URLs append.
+  const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
+  // New external https image URLs to attach (option ক).
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  // Two-step inline confirm for removing an already-saved image (edit mode).
+  const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   // Display-only Title:Value detail pairs (capped at 20 to match the server).
   const [attributes, setAttributes] = useState<{ title: string; value: string }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -85,6 +91,7 @@ export default function AdminProductFormPage() {
           setBrandId(p.brand_id ? String(p.brand_id) : "");
           setStatus(p.status === "published" ? "published" : "draft");
           setAttributes(p.attributes ?? []);
+          setExistingImages(p.images ?? []);
         }),
       );
     }
@@ -92,15 +99,88 @@ export default function AdminProductFormPage() {
     Promise.allSettled(tasks).finally(() => setBootstrapping(false));
   }, []);
 
-  const handleFiles = (fileList: FileList | null) => {
-    if (!fileList) return;
-    const files = Array.from(fileList);
-    const tooLarge = files.find((f) => f.size > MAX_BYTES);
-    if (tooLarge) {
+  // Images already counted toward the 5-image cap (existing + new files + filled URLs).
+  const usedImageCount = () =>
+    existingImages.length + images.length + imageUrls.filter((u) => u.trim() !== "").length;
+
+  // Append new files (browse or paste): per-file size guard + 5-image cap.
+  const appendFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return;
+    if (incoming.some((f) => f.size > MAX_BYTES)) {
       toast.error("প্রতিটি ছবি সর্বোচ্চ ৫MB হতে পারে");
       return;
     }
-    setImages(files);
+    const slots = 5 - usedImageCount();
+    if (slots <= 0) {
+      toast.error("সর্বোচ্চ ৫টি ছবি যোগ করা যাবে");
+      return;
+    }
+    const accepted = incoming.slice(0, slots);
+    if (accepted.length < incoming.length) {
+      toast.warning("সর্বোচ্চ ৫টি ছবি — কিছু বাদ পড়েছে");
+    }
+    setImages((prev) => [...prev, ...accepted]);
+  };
+
+  const removeNewFile = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addUrl = () => {
+    if (usedImageCount() >= 5) {
+      toast.error("সর্বোচ্চ ৫টি ছবি যোগ করা যাবে");
+      return;
+    }
+    setImageUrls((prev) => [...prev, ""]);
+  };
+
+  const updateUrl = (index: number, val: string) => {
+    setImageUrls((prev) => prev.map((u, i) => (i === index ? val : u)));
+  };
+
+  const removeUrl = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove an already-saved image from the keep-set. It is only actually deleted
+  // (DB + storage file) when the form is saved — the two-step confirm guards that.
+  const removeExistingImage = (index: number) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+    setConfirmRemoveIndex(null);
+  };
+
+  // Paste on the form: image files → upload list; a bare https image URL → URL list.
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const pastedFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) pastedFiles.push(file);
+      }
+    }
+    if (pastedFiles.length > 0) {
+      e.preventDefault();
+      appendFiles(pastedFiles);
+      toast.success(`${pastedFiles.length}টি ছবি পেস্ট হয়েছে`);
+      return;
+    }
+
+    // Text URL: only auto-add when not pasting into a text field (let inputs keep their own paste).
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+    const text = e.clipboardData.getData("text").trim();
+    if (text.startsWith("https://")) {
+      if (usedImageCount() >= 5) {
+        toast.error("সর্বোচ্চ ৫টি ছবি যোগ করা যাবে");
+        return;
+      }
+      setImageUrls((prev) => [...prev, text]);
+      toast.success("URL পেস্ট হয়েছে");
+    }
   };
 
   const addAttribute = () => {
@@ -154,12 +234,24 @@ export default function AdminProductFormPage() {
         form.append(`attributes[${i}][title]`, a.title);
         form.append(`attributes[${i}][value]`, a.value);
       });
+    // External image URLs — https only; server caps file+url to 5 total.
+    imageUrls
+      .map((u) => u.trim())
+      .filter((u) => u.startsWith("https://"))
+      .forEach((u) => form.append("image_urls[]", u));
 
     setSaving(true);
     try {
       if (editId) {
         // Method spoofing so multipart works with PUT semantics.
         form.append("_method", "PUT");
+        // Declare which existing images to keep — others are removed and their
+        // files deleted server-side. Empty marker = remove all existing images.
+        if (existingImages.length > 0) {
+          existingImages.forEach((img) => form.append("kept_image_urls[]", img.url));
+        } else {
+          form.append("kept_image_urls", "");
+        }
         await api.post(`/admin/products/${editId}`, form);
         toast.success("পণ্য আপডেট হয়েছে");
       } else {
@@ -225,7 +317,7 @@ export default function AdminProductFormPage() {
       <h1 className="mb-6 text-2xl font-bold">{editId ? "Edit Product" : "Add Product"}</h1>
       <Card>
         <CardContent className="p-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" lang="bn">পণ্যের নাম</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -384,18 +476,150 @@ export default function AdminProductFormPage() {
               </Button>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="images" lang="bn">ছবি (একাধিক, প্রতিটি সর্বোচ্চ ৫MB)</Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label lang="bn">ছবি (সর্বোচ্চ ৫টি, প্রতিটি ৫MB)</Label>
+                <span className="text-xs text-muted-foreground">{usedImageCount()}/5</span>
+              </div>
+
+              {/* Existing images (edit mode) — each can be removed (applied on save). */}
+              {existingImages.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap gap-2">
+                    {existingImages.map((img, index) => (
+                      <div
+                        key={index}
+                        className="relative h-16 w-16 overflow-hidden rounded-md border bg-muted"
+                      >
+                        {/* admin preview — plain img avoids next/image remotePattern limits */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.url}
+                          alt={`ছবি ${index + 1}`}
+                          className="h-full w-full object-contain"
+                        />
+                        {img.disk === "external" && (
+                          <span className="absolute inset-x-0 bottom-0 bg-black/60 text-center text-[9px] text-white">
+                            URL
+                          </span>
+                        )}
+
+                        {confirmRemoveIndex === index ? (
+                          // Two-step confirm overlay
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/70 p-1">
+                            <span className="text-[9px] font-medium text-white" lang="bn">
+                              মুছবেন?
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => removeExistingImage(index)}
+                                aria-label="Confirm remove"
+                                className="rounded bg-red-600 px-1.5 text-[10px] text-white hover:bg-red-700"
+                              >
+                                হ্যাঁ
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmRemoveIndex(null)}
+                                aria-label="Cancel remove"
+                                className="rounded bg-white/90 px-1.5 text-[10px] text-gray-800 hover:bg-white"
+                              >
+                                না
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemoveIndex(index)}
+                            aria-label={`Remove image ${index + 1}`}
+                            className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-amber-600" lang="bn">
+                    মুছে ফেলা ছবি <strong>সেভ করলে</strong> স্থায়ীভাবে চলে যাবে।
+                  </p>
+                </div>
+              )}
+
+              {/* New file uploads (browse) — paste also adds here */}
               <Input
                 id="images"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
-                onChange={(e) => handleFiles(e.target.files)}
+                onChange={(e) => {
+                  appendFiles(Array.from(e.target.files ?? []));
+                  e.target.value = "";
+                }}
               />
               {images.length > 0 && (
-                <p className="text-xs text-muted-foreground">{images.length} টি ছবি নির্বাচিত</p>
+                <div className="flex flex-wrap gap-2">
+                  {images.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs"
+                    >
+                      <span className="max-w-[120px] truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(index)}
+                        aria-label={`Remove file ${index + 1}`}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
+
+              <p className="text-xs text-muted-foreground" lang="bn">
+                স্ক্রিনশট/কপি করা ছবি এই ফর্মে <strong>পেস্ট</strong> (Ctrl+V) করেও যোগ করা যায়।
+              </p>
+
+              {/* URL-based images (https only) */}
+              <div className="space-y-2">
+                <Label lang="bn">URL দিয়ে image যোগ করুন (শুধু https)</Label>
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      type="url"
+                      inputMode="url"
+                      placeholder="https://yoursite.com/image.jpg"
+                      value={url}
+                      maxLength={2048}
+                      onChange={(e) => updateUrl(index, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => removeUrl(index)}
+                      aria-label={`Remove URL ${index + 1}`}
+                      className="h-11 w-11 shrink-0 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addUrl}
+                  disabled={usedImageCount() >= 5}
+                  className="h-11 w-full"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span lang="bn">URL যোগ করুন</span>
+                </Button>
+              </div>
             </div>
 
             <label className="flex items-center gap-2 text-sm">

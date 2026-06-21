@@ -16,12 +16,20 @@ const nextConfig: NextConfig = {
         port: "8000",
         pathname: "/storage/**",
       },
-      // Cloudflare R2 (when images move there later)
+      // Cloudflare R2 (kept for flexibility; not in active use)
       {
         protocol: "https",
         hostname: "*.r2.cloudflarestorage.com",
         pathname: "/**",
       },
+      // Production self-hosted images (VPS) — uncomment and set the real domain
+      // once live. https-only. External URL images are rendered via the next/image
+      // `unoptimized` prop instead, so no broad wildcard host is needed here.
+      // {
+      //   protocol: "https",
+      //   hostname: "YOUR_VPS_DOMAIN",
+      //   pathname: "/storage/**",
+      // },
     ],
     // Allow SVG (be careful: only enable if you trust your image sources)
     dangerouslyAllowSVG: true,

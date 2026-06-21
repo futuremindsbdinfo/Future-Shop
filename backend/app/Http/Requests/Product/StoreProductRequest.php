@@ -34,8 +34,12 @@ class StoreProductRequest extends FormRequest
             'weight' => ['nullable', 'numeric', 'min:0'],
             'is_featured' => ['sometimes', 'boolean'],
             'status' => ['required', Rule::in(['draft', 'published', 'out_of_stock'])],
-            'images' => ['nullable', 'array', 'max:8'],
+            'images' => ['nullable', 'array', 'max:5'],
             'images.*' => ['file', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // 5120 KB = 5 MB
+            // External image URLs (https only). Combined with uploaded files and
+            // capped to 5 total in the controller.
+            'image_urls' => ['nullable', 'array', 'max:5'],
+            'image_urls.*' => ['string', 'url', 'starts_with:https://', 'max:2048'],
             // Display-only extra details (not variants). Capped at 20 pairs.
             'attributes' => ['nullable', 'array', 'max:20'],
             'attributes.*.title' => ['required_with:attributes', 'string', 'max:60'],
@@ -43,12 +47,17 @@ class StoreProductRequest extends FormRequest
         ];
     }
 
-    /**
-     * Normalise free-form attributes before validation: keep only {title, value}
-     * (drop any extra keys), trim both, discard rows where either is blank, and
-     * collapse an all-empty set to null so nothing junk is persisted.
-     */
     protected function prepareForValidation(): void
+    {
+        $this->normalizeAttributes();
+        $this->normalizeImageUrls();
+    }
+
+    /**
+     * Keep only {title, value} (drop extra keys), trim both, discard rows where
+     * either is blank, and collapse an all-empty set to null.
+     */
+    private function normalizeAttributes(): void
     {
         if (! $this->has('attributes')) {
             return;
@@ -75,5 +84,37 @@ class StoreProductRequest extends FormRequest
         }
 
         $this->merge(['attributes' => $clean === [] ? null : $clean]);
+    }
+
+    /**
+     * Trim URL strings, drop blanks / non-strings, collapse an empty set to null.
+     * Scheme/format (https-only) is enforced by the validation rules.
+     */
+    private function normalizeImageUrls(): void
+    {
+        if (! $this->has('image_urls')) {
+            return;
+        }
+
+        $raw = $this->input('image_urls');
+        if (! is_array($raw)) {
+            $this->merge(['image_urls' => null]);
+
+            return;
+        }
+
+        $clean = [];
+        foreach ($raw as $url) {
+            if (! is_string($url)) {
+                continue;
+            }
+            $url = trim($url);
+            if ($url === '') {
+                continue;
+            }
+            $clean[] = $url;
+        }
+
+        $this->merge(['image_urls' => $clean === [] ? null : $clean]);
     }
 }

@@ -76,6 +76,35 @@ class ImageUploadService
         return array_map(fn (UploadedFile $file) => $this->store($file, $directory), $files);
     }
 
+    /**
+     * Delete a stored image's underlying file. No-op for external URL refs (no
+     * local file) and for anything outside the products/ prefix — a path-
+     * traversal guard so we never touch files this service did not create.
+     *
+     * @param  array{path?: string|null, url?: string|null, disk?: string|null}  $image
+     */
+    public function delete(array $image): void
+    {
+        $path = $image['path'] ?? null;
+        $disk = $image['disk'] ?? null;
+
+        // External references and malformed/empty paths have no local file.
+        if ($disk === 'external' || ! is_string($path) || $path === '') {
+            return;
+        }
+
+        // Path-traversal guard: only ever delete inside the products/ directory.
+        if (str_contains($path, '..') || ! str_starts_with($path, 'products/')) {
+            return;
+        }
+
+        $targetDisk = is_string($disk) && $disk !== ''
+            ? $disk
+            : config('filesystems.image_disk', env('IMAGE_DISK', 'public'));
+
+        Storage::disk($targetDisk)->delete($path);
+    }
+
     private function guardSize(UploadedFile $file, ?string $field): void
     {
         if ($file->getSize() > self::MAX_BYTES) {

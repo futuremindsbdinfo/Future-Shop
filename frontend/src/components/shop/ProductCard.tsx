@@ -8,7 +8,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { formatTaka } from "@/lib/utils";
 import api from "@/lib/api";
-import type { Product } from "@/types";
+import type { Product, ProductImage } from "@/types";
 
 interface Props {
   product: Product;
@@ -38,7 +38,11 @@ export function ProductCard({ product }: Props) {
     ? Math.round((1 - Number(sale_price) / originalPrice) * 100)
     : 0;
   const outOfStock = status !== "published" || stock_quantity <= 0;
-  const imageUrl = images && images.length > 0 ? images[0].url : null;
+  // Skip external SVGs (XSS risk); show the first renderable image.
+  const isExternalSvg = (img: ProductImage) =>
+    img.disk === "external" && /\.svg(\?|#|$)/i.test(img.url);
+  const displayImage = (images ?? []).find((img) => img?.url && !isExternalSvg(img)) ?? null;
+  const imageUrl = displayImage?.url ?? null;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -83,6 +87,7 @@ export function ProductCard({ product }: Props) {
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
+              unoptimized={displayImage?.disk === "external"}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

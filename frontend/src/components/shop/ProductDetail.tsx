@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cartStore";
-import type { Product } from "@/types";
+import type { Product, ProductImage } from "@/types";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -33,8 +33,11 @@ export function ProductDetail({ product }: { product: Product }) {
     hasSale && salePrice !== null ? Math.round(((price - salePrice) / price) * 100) : 0;
 
   const outOfStock = product.status === "out_of_stock" || product.stock_quantity <= 0;
-  // Treat null / undefined / empty as "no images"
-  const images = (product.images ?? []).filter((img) => img && img.url);
+  // Treat null / undefined / empty as "no images". Also drop external SVGs
+  // (XSS risk) — our own uploads are only jpg/png/webp anyway.
+  const isExternalSvg = (img: ProductImage) =>
+    img.disk === "external" && /\.svg(\?|#|$)/i.test(img.url);
+  const images = (product.images ?? []).filter((img) => img && img.url && !isExternalSvg(img));
   const hasImages = images.length > 0;
   const isGallery = images.length > 1;
 
@@ -80,8 +83,9 @@ export function ProductDetail({ product }: { product: Product }) {
                 alt={product.name}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
+                className="object-contain"
                 priority
+                unoptimized={images[0].disk === "external"}
               />
             </div>
           ) : (
@@ -95,15 +99,16 @@ export function ProductDetail({ product }: { product: Product }) {
               className="aspect-square w-full"
             >
               {images.map((image, index) => (
-                <SwiperSlide key={image.path}>
+                <SwiperSlide key={image.path ?? image.url}>
                   <div className="relative aspect-square w-full">
                     <Image
                       src={image.url}
                       alt={`${product.name} ${index + 1}`}
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
-                      className="object-cover"
+                      className="object-contain"
                       priority={index === 0}
+                      unoptimized={image.disk === "external"}
                     />
                   </div>
                 </SwiperSlide>
@@ -128,7 +133,7 @@ export function ProductDetail({ product }: { product: Product }) {
             className="w-full"
           >
             {images.map((image, index) => (
-              <SwiperSlide key={image.path} className="cursor-pointer">
+              <SwiperSlide key={image.path ?? image.url} className="cursor-pointer">
                 <div className="relative aspect-square overflow-hidden rounded-md border-2 border-transparent ring-offset-2 [.swiper-slide-thumb-active_&]:border-[#f47920]">
                   <Image
                     src={image.url}
@@ -136,6 +141,7 @@ export function ProductDetail({ product }: { product: Product }) {
                     fill
                     sizes="80px"
                     className="object-cover"
+                    unoptimized={image.disk === "external"}
                   />
                 </div>
               </SwiperSlide>

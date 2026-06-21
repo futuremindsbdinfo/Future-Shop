@@ -18,6 +18,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
+    /**
+     * Max images per product (uploaded files + external URLs combined).
+     */
+    private const MAX_IMAGES = 5;
+
     public function __construct(private readonly ImageUploadService $images)
     {
     }
@@ -113,9 +118,15 @@ class ProductController extends Controller
         $data = $request->validated();
         $data['slug'] = $this->uniqueSlug($data['name']);
 
-        if ($request->hasFile('images')) {
-            $data['images'] = $this->images->storeMany($request->file('images'));
+        $uploaded = $request->hasFile('images')
+            ? $this->images->storeMany($request->file('images'))
+            : [];
+        $urls = $this->mapUrlImages($request->validated('image_urls') ?? []);
+        $merged = array_merge($uploaded, $urls);
+        if ($merged !== []) {
+            $data['images'] = array_slice($merged, 0, self::MAX_IMAGES);
         }
+        unset($data['image_urls']);
 
         $product = Product::create($data);
 
@@ -135,11 +146,36 @@ class ProductController extends Controller
             $data['slug'] = $this->uniqueSlug($data['name'], $product->id);
         }
 
-        if ($request->hasFile('images')) {
-            // Append newly uploaded images to the existing set.
-            $existing = $product->images ?? [];
-            $data['images'] = array_merge($existing, $this->images->storeMany($request->file('images')));
+        $existing = $product->images ?? [];
+
+        // Keep-list (edit form): drop existing images not in the kept set and
+        // delete their underlying files. The deleted path always comes from the
+        // product's OWN stored metadata — kept_image_urls is only used for set
+        // membership, never as a filesystem path. Absent = leave existing as-is
+        // (backward-compatible append-only behaviour).
+        if ($request->has('kept_image_urls')) {
+            $keptSet = array_flip($request->validated('kept_image_urls') ?? []);
+            foreach ($existing as $img) {
+                if (! isset($keptSet[$img['url']])) {
+                    $this->images->delete($img);
+                }
+            }
+            $existing = array_values(array_filter(
+                $existing,
+                fn (array $img) => isset($keptSet[$img['url']]),
+            ));
         }
+
+        // Append newly uploaded files and/or external URLs, capped at MAX_IMAGES.
+        $uploaded = $request->hasFile('images')
+            ? $this->images->storeMany($request->file('images'))
+            : [];
+        $urls = $this->mapUrlImages($request->validated('image_urls') ?? []);
+
+        if ($request->has('kept_image_urls') || $uploaded !== [] || $urls !== []) {
+            $data['images'] = array_slice(array_merge($existing, $uploaded, $urls), 0, self::MAX_IMAGES);
+        }
+        unset($data['image_urls'], $data['kept_image_urls']);
 
         $product->update($data);
 
@@ -315,6 +351,22 @@ class ProductController extends Controller
     /**
      * Build a slug that is unique across the products table.
      */
+    /**
+     * Map admin-supplied https image URLs to external image entries. The URL is
+     * stored as a reference only — never downloaded — mirroring the shape of
+     * ImageUploadService output so the frontend can treat them uniformly.
+     *
+     * @param  array<int, string>  $urls
+     * @return array<int, array{path: null, url: string, disk: string}>
+     */
+    private function mapUrlImages(array $urls): array
+    {
+        return array_map(
+            fn (string $url) => ['path' => null, 'url' => $url, 'disk' => 'external'],
+            array_values($urls),
+        );
+    }
+
     private function uniqueSlug(string $name, ?int $ignoreId = null): string
     {
         $base = Str::slug($name);
