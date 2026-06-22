@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, ShoppingBag } from "lucide-react";
+import { Heart, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
@@ -122,6 +122,20 @@ export function ProductCard({ product }: Props) {
         >
           <Heart className="h-3.5 w-3.5 text-gray-500" />
         </button>
+
+        {/* Floating add-to-cart (icon only) — sits in the image's bottom-right
+            corner. Sibling of the cover Link, so it doesn't trigger navigation;
+            handleAddToCart also preventDefaults. Hidden when out of stock. */}
+        {!outOfStock && (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            aria-label="কার্টে যোগ করুন"
+            className="absolute bottom-2 right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[#f47920] text-white shadow-md transition-colors hover:bg-orange-600 sm:h-10 sm:w-10"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Body */}
@@ -144,15 +158,6 @@ export function ProductCard({ product }: Props) {
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          disabled={outOfStock}
-          lang="bn"
-          className="mt-1 h-11 w-full rounded-lg bg-[#f47920] text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10"
-        >
-          {outOfStock ? "স্টক নেই" : "কার্টে যোগ করুন"}
-        </button>
       </div>
     </div>
   );
