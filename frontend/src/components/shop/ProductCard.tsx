@@ -149,7 +149,7 @@ export function ProductCard({ product }: Props) {
           onClick={handleAddToCart}
           disabled={outOfStock}
           lang="bn"
-          className="mt-1 h-9 w-full rounded-lg bg-[#f47920] text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-1 h-11 w-full rounded-lg bg-[#f47920] text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10"
         >
           {outOfStock ? "স্টক নেই" : "কার্টে যোগ করুন"}
         </button>

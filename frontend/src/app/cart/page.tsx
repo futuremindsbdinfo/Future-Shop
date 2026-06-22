@@ -64,7 +64,7 @@ export default function CartPage() {
                   </Link>
                   <p className="mt-1 text-sm text-[#f47920]">{formatTk(item.price)}</p>
 
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-3">
                     <div className="flex items-center rounded-md border">
                       <Button
                         variant="ghost"
@@ -73,7 +73,7 @@ export default function CartPage() {
                         onClick={() => updateQty(item.productId, item.quantity - 1)}
                         aria-label="Decrease"
                       >
-                        <Minus className="h-3.5 w-3.5" />
+                        <Minus className="h-5 w-5" />
                       </Button>
                       <span className="w-8 text-center text-sm">{item.quantity}</span>
                       <Button
@@ -84,17 +84,17 @@ export default function CartPage() {
                         onClick={() => updateQty(item.productId, item.quantity + 1)}
                         aria-label="Increase"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-5 w-5" />
                       </Button>
                     </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
-                      className="h-11 w-11 text-red-600 hover:text-red-700"
+                      className="h-11 w-11 text-red-600 hover:bg-red-50 hover:text-red-700"
                       onClick={() => removeItem(item.productId)}
                       aria-label="Remove"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
