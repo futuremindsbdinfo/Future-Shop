@@ -255,11 +255,18 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
         {/* Cart — opens the slide-out drawer (wrapper is a div so we don't nest
             a button inside a button). */}
         <div className="relative shrink-0">
-          <Button variant="ghost" size="icon" onClick={openCart} aria-label="কার্ট খুলুন">
-            <ShoppingCart className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openCart}
+            aria-label="কার্ট খুলুন"
+            className="h-11 w-11 sm:h-10 sm:w-10"
+          >
+            {/* size-6 (not h-6 w-6) so the Button's base svg→size-4 rule leaves it alone. */}
+            <ShoppingCart className="size-6" />
           </Button>
           {mounted && totalItems > 0 && (
-            <Badge className="pointer-events-none absolute -right-1 -top-1 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
+            <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
               {totalItems}
             </Badge>
           )}
