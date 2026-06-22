@@ -1,10 +1,17 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CartItem } from '@/types';
 
 /**
  * Client-side cart mirror. The server cart (Redis/cache) remains the source of
  * truth at checkout; this store drives the UI. totalPrice includes the current
  * delivery charge.
+ *
+ * Persisted to localStorage ("futureshop-cart") so the cart survives a refresh
+ * or a new tab. SECURITY: the persisted cart is UNTRUSTED — prices/stock here
+ * are display-only. The server recomputes every amount from the database at
+ * checkout/order time (it only receives product_id + quantity), so tampering
+ * with localStorage has no effect on what the customer is actually charged.
  */
 interface CartState {
   items: CartItem[];
@@ -32,40 +39,63 @@ function computeTotals(
   return { totalItems, totalPrice };
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
-  totalItems: 0,
-  totalPrice: 0,
-  deliveryCharge: 0,
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      totalItems: 0,
+      totalPrice: 0,
+      deliveryCharge: 0,
 
-  addItem: (item) => {
-    const items = [...get().items];
-    const index = items.findIndex((existing) => existing.productId === item.productId);
+      addItem: (item) => {
+        const items = [...get().items];
+        const index = items.findIndex((existing) => existing.productId === item.productId);
 
-    if (index >= 0) {
-      items[index] = { ...items[index], quantity: items[index].quantity + item.quantity };
-    } else {
-      items.push({ ...item });
-    }
+        if (index >= 0) {
+          items[index] = { ...items[index], quantity: items[index].quantity + item.quantity };
+        } else {
+          items.push({ ...item });
+        }
 
-    set({ items, ...computeTotals(items, get().deliveryCharge) });
-  },
+        set({ items, ...computeTotals(items, get().deliveryCharge) });
+      },
 
-  removeItem: (productId) => {
-    const items = get().items.filter((item) => item.productId !== productId);
-    set({ items, ...computeTotals(items, get().deliveryCharge) });
-  },
+      removeItem: (productId) => {
+        const items = get().items.filter((item) => item.productId !== productId);
+        set({ items, ...computeTotals(items, get().deliveryCharge) });
+      },
 
-  updateQty: (productId, quantity) => {
-    const items = get()
-      .items.map((item) => (item.productId === productId ? { ...item, quantity } : item))
-      .filter((item) => item.quantity > 0);
+      updateQty: (productId, quantity) => {
+        const items = get()
+          .items.map((item) => (item.productId === productId ? { ...item, quantity } : item))
+          .filter((item) => item.quantity > 0);
 
-    set({ items, ...computeTotals(items, get().deliveryCharge) });
-  },
+        set({ items, ...computeTotals(items, get().deliveryCharge) });
+      },
 
-  clearCart: () => set({ items: [], totalItems: 0, totalPrice: 0 }),
+      clearCart: () => set({ items: [], totalItems: 0, totalPrice: 0 }),
 
-  setDeliveryCharge: (deliveryCharge) =>
-    set({ deliveryCharge, ...computeTotals(get().items, deliveryCharge) }),
-}));
+      setDeliveryCharge: (deliveryCharge) =>
+        set({ deliveryCharge, ...computeTotals(get().items, deliveryCharge) }),
+    }),
+    {
+      name: 'futureshop-cart',
+      version: 1,
+      storage: createJSONStorage(() => localStorage),
+      // Only the line items are persisted; totals are derived and deliveryCharge
+      // is session-specific (set from the chosen zone at checkout).
+      partialize: (state) => ({ items: state.items }),
+      // Rehydrate manually (see <CartHydrator/>) so server and first client
+      // render both start empty — avoids a hydration mismatch on the cart badge.
+      skipHydration: true,
+      // Recompute derived totals once the persisted items are restored.
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const totals = computeTotals(state.items, state.deliveryCharge);
+          state.totalItems = totals.totalItems;
+          state.totalPrice = totals.totalPrice;
+        }
+      },
+    },
+  ),
+);

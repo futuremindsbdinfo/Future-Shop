@@ -49,6 +49,10 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Cart count comes from a localStorage-persisted store that only rehydrates
+  // after mount, so gate the badge on `mounted` to avoid an SSR/client mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Open the auth modal automatically when the proxy redirected here (?auth=login).
   useEffect(() => {
@@ -252,7 +256,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
           <Button variant="ghost" size="icon">
             <ShoppingCart className="h-5 w-5" />
           </Button>
-          {totalItems > 0 && (
+          {mounted && totalItems > 0 && (
             <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
               {totalItems}
             </Badge>
