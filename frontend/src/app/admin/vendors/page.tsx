@@ -100,8 +100,16 @@ export default function AdminVendorsPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
-  const [userId, setUserId] = useState("");
+  // Add Vendor form (dealer details — a user account is auto-created server-side).
   const [shopName, setShopName] = useState("");
+  const [proprietorName, setProprietorName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [division, setDivision] = useState("");
+  const [district, setDistrict] = useState("");
+  const [srName, setSrName] = useState("");
+  const [srMobile, setSrMobile] = useState("");
   const [commission, setCommission] = useState("10");
   const [status, setStatus] = useState("approved");
   const [creating, setCreating] = useState(false);
@@ -109,6 +117,13 @@ export default function AdminVendorsPage() {
   // Edit dialog (Batch E-2).
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [editShopName, setEditShopName] = useState("");
+  const [editProprietorName, setEditProprietorName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editDivision, setEditDivision] = useState("");
+  const [editDistrict, setEditDistrict] = useState("");
+  const [editSrName, setEditSrName] = useState("");
+  const [editSrMobile, setEditSrMobile] = useState("");
   const [editCommission, setEditCommission] = useState("10");
   const [editStatus, setEditStatus] = useState("approved");
   const [editSaving, setEditSaving] = useState(false);
@@ -129,6 +144,13 @@ export default function AdminVendorsPage() {
   const openEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
     setEditShopName(vendor.shop_name);
+    setEditProprietorName(vendor.proprietor_name ?? "");
+    setEditPhone(vendor.phone ?? "");
+    setEditAddress(vendor.address ?? "");
+    setEditDivision(vendor.division ?? "");
+    setEditDistrict(vendor.district ?? "");
+    setEditSrName(vendor.sr_name ?? "");
+    setEditSrMobile(vendor.sr_mobile ?? "");
     setEditCommission(String(vendor.commission_rate));
     setEditStatus(vendor.status);
   };
@@ -141,8 +163,17 @@ export default function AdminVendorsPage() {
     }
     setEditSaving(true);
     try {
+      // Updates the vendor record's dealer fields. Note: editing the vendor's
+      // phone here does NOT change the linked user account's login phone.
       await api.patch(`/admin/vendors/${editingVendor.id}`, {
         shop_name: editShopName.trim(),
+        proprietor_name: editProprietorName.trim() || null,
+        phone: editPhone.trim() || null,
+        address: editAddress.trim() || null,
+        division: editDivision.trim() || null,
+        district: editDistrict.trim() || null,
+        sr_name: editSrName.trim() || null,
+        sr_mobile: editSrMobile.trim() || null,
         commission_rate: Number(editCommission),
         status: editStatus,
       });
@@ -157,25 +188,51 @@ export default function AdminVendorsPage() {
   };
 
   const createVendor = async () => {
-    if (!userId || !shopName.trim()) {
-      toast.error("User ID এবং দোকানের নাম দিন");
+    if (!shopName.trim() || !phone.trim()) {
+      toast.error("দোকানের নাম ও ফোন দিন");
       return;
     }
     setCreating(true);
     try {
       await api.post("/admin/vendors", {
-        user_id: Number(userId),
-        shop_name: shopName,
+        shop_name: shopName.trim(),
+        proprietor_name: proprietorName.trim() || null,
+        phone: phone.trim(),
+        email: email.trim() || null,
+        address: address.trim() || null,
+        division: division.trim() || null,
+        district: district.trim() || null,
+        sr_name: srName.trim() || null,
+        sr_mobile: srMobile.trim() || null,
         commission_rate: Number(commission),
         status,
       });
       toast.success("বিক্রেতা যোগ হয়েছে");
       setOpen(false);
-      setUserId("");
+      // Reset the form.
       setShopName("");
+      setProprietorName("");
+      setPhone("");
+      setEmail("");
+      setAddress("");
+      setDivision("");
+      setDistrict("");
+      setSrName("");
+      setSrMobile("");
       load();
     } catch (error) {
-      toast.error(getErrorMessage(error, "বিক্রেতা যোগ ব্যর্থ হয়েছে"));
+      // Surface duplicate phone/email (422) with a clear Bengali message.
+      const resp = (
+        error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }
+      ).response;
+      const errs = resp?.data?.errors;
+      if (errs?.phone) {
+        toast.error("এই ফোন নম্বরে already একজন user আছে।");
+      } else if (errs?.email) {
+        toast.error("এই ইমেইলে already একজন user আছে।");
+      } else {
+        toast.error(getErrorMessage(error, "বিক্রেতা যোগ ব্যর্থ হয়েছে"));
+      }
     } finally {
       setCreating(false);
     }
@@ -220,29 +277,61 @@ export default function AdminVendorsPage() {
 
       {/* Add Vendor modal */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Vendor</DialogTitle>
+            <DialogTitle>নতুন বিক্রেতা (Vendor)</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="user_id">Existing User ID</Label>
-              <Input id="user_id" type="number" value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="e.g. 5" />
-              <p className="text-xs text-muted-foreground">
-                The user must already exist; they will be promoted to the vendor role.
-              </p>
+              <Label htmlFor="shop_name">দোকান/ডিলার নাম <span className="text-red-500">*</span></Label>
+              <Input id="shop_name" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="যেমন: Abdullah Traders" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="shop_name">Shop Name</Label>
-              <Input id="shop_name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
+              <Label htmlFor="proprietor_name">প্রোপাইটর (Proprietor)</Label>
+              <Input id="proprietor_name" value={proprietorName} onChange={(e) => setProprietorName(e.target.value)} placeholder="যেমন: Rezaul Karim" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="commission">Commission %</Label>
+                <Label htmlFor="phone">ফোন <span className="text-red-500">*</span></Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" />
+                <p className="text-xs text-muted-foreground">ডিলার মোবাইল — এটা দিয়ে user account auto-তৈরি হবে।</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">ইমেইল (optional)</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">ঠিকানা</Label>
+              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="division">বিভাগ (Division)</Label>
+                <Input id="division" value={division} onChange={(e) => setDivision(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="district">জেলা (District)</Label>
+                <Input id="district" value={district} onChange={(e) => setDistrict(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="sr_name">SR নাম</Label>
+                <Input id="sr_name" value={srName} onChange={(e) => setSrName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sr_mobile">SR মোবাইল</Label>
+                <Input id="sr_mobile" value={srMobile} onChange={(e) => setSrMobile(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="commission">কমিশন % <span className="text-red-500">*</span></Label>
                 <Input id="commission" type="number" min="0" max="100" value={commission} onChange={(e) => setCommission(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">স্ট্যাটাস</Label>
                 <select
                   id="status"
                   value={status}
@@ -257,9 +346,9 @@ export default function AdminVendorsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="h-11" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="h-11" onClick={() => setOpen(false)}>বাতিল</Button>
             <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" disabled={creating} onClick={createVendor}>
-              Add Vendor
+              {creating ? "যোগ হচ্ছে..." : "বিক্রেতা যোগ করুন"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -267,22 +356,61 @@ export default function AdminVendorsPage() {
 
       {/* Edit Vendor modal */}
       <Dialog open={!!editingVendor} onOpenChange={(o) => !o && setEditingVendor(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Vendor</DialogTitle>
+            <DialogTitle>বিক্রেতা সম্পাদনা</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit_shop_name">Shop Name</Label>
+              <Label htmlFor="edit_shop_name">দোকান/ডিলার নাম</Label>
               <Input
                 id="edit_shop_name"
                 value={editShopName}
                 onChange={(e) => setEditShopName(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_proprietor_name">প্রোপাইটর (Proprietor)</Label>
+              <Input
+                id="edit_proprietor_name"
+                value={editProprietorName}
+                onChange={(e) => setEditProprietorName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_phone">ফোন</Label>
+              <Input id="edit_phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+              <p className="text-xs text-muted-foreground">
+                এটি vendor record-এর ফোন; linked user account-এর login ফোন বদলায় না।
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_address">ঠিকানা</Label>
+              <Input id="edit_address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit_commission">Commission %</Label>
+                <Label htmlFor="edit_division">বিভাগ (Division)</Label>
+                <Input id="edit_division" value={editDivision} onChange={(e) => setEditDivision(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_district">জেলা (District)</Label>
+                <Input id="edit_district" value={editDistrict} onChange={(e) => setEditDistrict(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit_sr_name">SR নাম</Label>
+                <Input id="edit_sr_name" value={editSrName} onChange={(e) => setEditSrName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_sr_mobile">SR মোবাইল</Label>
+                <Input id="edit_sr_mobile" value={editSrMobile} onChange={(e) => setEditSrMobile(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit_commission">কমিশন %</Label>
                 <Input
                   id="edit_commission"
                   type="number"
@@ -293,7 +421,7 @@ export default function AdminVendorsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit_status">Status</Label>
+                <Label htmlFor="edit_status">স্ট্যাটাস</Label>
                 <select
                   id="edit_status"
                   value={editStatus}

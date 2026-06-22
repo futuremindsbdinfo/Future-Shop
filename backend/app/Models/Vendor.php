@@ -17,6 +17,7 @@ class Vendor extends Model
     protected $fillable = [
         'user_id',
         'shop_name',
+        'proprietor_name',
         'slug',
         'description',
         'logo',
@@ -25,6 +26,8 @@ class Vendor extends Model
         'address',
         'division',
         'district',
+        'sr_name',
+        'sr_mobile',
         'delivery_zone_id',
         'commission_rate',
         'status',

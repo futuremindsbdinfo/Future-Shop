@@ -79,6 +79,7 @@ export interface Vendor {
   id: number;
   user_id: number;
   shop_name: string;
+  proprietor_name: string | null;
   slug: string;
   description: string | null;
   logo: string | null;
@@ -87,6 +88,8 @@ export interface Vendor {
   address: string | null;
   division: string | null;
   district: string | null;
+  sr_name: string | null;
+  sr_mobile: string | null;
   delivery_zone_id: number | null;
   commission_rate: string;
   status: VendorStatus;

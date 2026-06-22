@@ -1,6 +1,10 @@
 .env
 node_modules/
-vendor/
+# Root-anchored so this only ignores a top-level Composer vendor/ dir, NOT app
+# folders that happen to be named "Vendor" (e.g. Http/Requests/Vendor/), which
+# git on case-insensitive filesystems would otherwise wrongly ignore.
+# (backend/vendor Composer deps stay ignored via backend/.gitignore.)
+/vendor/
 .next/
 storage/logs/*.log
 CLAUDE.md

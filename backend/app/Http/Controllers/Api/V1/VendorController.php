@@ -44,31 +44,42 @@ class VendorController extends Controller
     }
 
     /**
-     * Admin: create a vendor profile linked to an existing user.
-     * Also promotes that user's role to "vendor".
+     * Admin: create a vendor. A new user account (role "vendor") is auto-created
+     * from the dealer details and linked to the vendor — no existing user id is
+     * supplied. No password is set: there is no vendor portal yet, and access
+     * (OTP / reset) can be granted later via the phone. User + vendor are created
+     * in one transaction so a failure leaves no orphan user.
      */
     public function store(StoreVendorRequest $request): JsonResponse
     {
         $data = $request->validated();
 
-        // Security: never demote a privileged account to vendor.
-        $userToPromote = User::findOrFail($data['user_id']);
-        if (in_array($userToPromote->role, ['admin', 'staff'], true)) {
-            return response()->json([
-                'message' => 'Cannot convert an admin or staff account to a vendor.',
-            ], 422);
-        }
-
         $vendor = DB::transaction(function () use ($data) {
-            $data['slug'] = $this->uniqueSlug($data['shop_name']);
-            $data['is_active'] = $data['is_active'] ?? true;
+            $user = User::create([
+                'name' => $data['proprietor_name'] ?? $data['shop_name'],
+                'phone' => $data['phone'],
+                'email' => $data['email'] ?? null,
+                'role' => 'vendor',
+                'is_active' => true,
+            ]);
 
-            $vendor = Vendor::create($data);
-
-            // Promote the linked user to the vendor role.
-            User::whereKey($data['user_id'])->update(['role' => 'vendor']);
-
-            return $vendor;
+            return Vendor::create([
+                'user_id' => $user->id,
+                'shop_name' => $data['shop_name'],
+                'proprietor_name' => $data['proprietor_name'] ?? null,
+                'slug' => $this->uniqueSlug($data['shop_name']),
+                'description' => $data['description'] ?? null,
+                'phone' => $data['phone'],
+                'address' => $data['address'] ?? null,
+                'division' => $data['division'] ?? null,
+                'district' => $data['district'] ?? null,
+                'sr_name' => $data['sr_name'] ?? null,
+                'sr_mobile' => $data['sr_mobile'] ?? null,
+                'delivery_zone_id' => $data['delivery_zone_id'] ?? null,
+                'commission_rate' => $data['commission_rate'],
+                'status' => $data['status'],
+                'is_active' => $data['is_active'] ?? true,
+            ]);
         });
 
         return response()->json([
