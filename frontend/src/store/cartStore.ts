@@ -23,6 +23,11 @@ interface CartState {
   updateQty: (productId: number, quantity: number) => void;
   clearCart: () => void;
   setDeliveryCharge: (charge: number) => void;
+  // Drawer open/close state (NOT persisted — see partialize below).
+  isOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+  setCartOpen: (open: boolean) => void;
 }
 
 function round2(value: number): number {
@@ -46,6 +51,7 @@ export const useCartStore = create<CartState>()(
       totalItems: 0,
       totalPrice: 0,
       deliveryCharge: 0,
+      isOpen: false,
 
       addItem: (item) => {
         const items = [...get().items];
@@ -57,6 +63,8 @@ export const useCartStore = create<CartState>()(
           items.push({ ...item });
         }
 
+        // Add only — the drawer does NOT auto-open, so the customer can keep
+        // browsing and adding (a toast gives feedback; the navbar badge updates).
         set({ items, ...computeTotals(items, get().deliveryCharge) });
       },
 
@@ -77,6 +85,10 @@ export const useCartStore = create<CartState>()(
 
       setDeliveryCharge: (deliveryCharge) =>
         set({ deliveryCharge, ...computeTotals(get().items, deliveryCharge) }),
+
+      openCart: () => set({ isOpen: true }),
+      closeCart: () => set({ isOpen: false }),
+      setCartOpen: (isOpen) => set({ isOpen }),
     }),
     {
       name: 'futureshop-cart',

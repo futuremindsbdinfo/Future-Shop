@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
+import { CartDrawer } from "@/components/shop/CartDrawer";
 import { FALLBACK_SETTINGS } from "@/lib/settings";
 import type { SiteSettings } from "@/types";
 
@@ -34,6 +35,7 @@ export function Chrome({
       <Navbar siteName={settings.site_name ?? FALLBACK_SETTINGS.site_name ?? "Future Shop"} />
       <main className="flex-1">{children}</main>
       <Footer settings={settings} />
+      <CartDrawer />
     </>
   );
 }

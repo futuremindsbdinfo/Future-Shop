@@ -45,6 +45,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const totalItems = useCartStore((state) => state.totalItems);
+  const openCart = useCartStore((state) => state.openCart);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -251,17 +252,18 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
           </Button>
         </form>
 
-        {/* Cart */}
-        <Link href="/cart" className="relative shrink-0" aria-label="Cart">
-          <Button variant="ghost" size="icon">
+        {/* Cart — opens the slide-out drawer (wrapper is a div so we don't nest
+            a button inside a button). */}
+        <div className="relative shrink-0">
+          <Button variant="ghost" size="icon" onClick={openCart} aria-label="কার্ট খুলুন">
             <ShoppingCart className="h-5 w-5" />
           </Button>
           {mounted && totalItems > 0 && (
-            <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
+            <Badge className="pointer-events-none absolute -right-1 -top-1 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
               {totalItems}
             </Badge>
           )}
-        </Link>
+        </div>
 
         {/* Auth */}
         {user ? (
