@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Menu,
   Search,
@@ -32,10 +33,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
 import { AuthModal } from "@/components/shared/AuthModal";
-import type { Category } from "@/types";
+import type { Category, PaginatedResponse, Product } from "@/types";
 
 export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const router = useRouter();
@@ -54,6 +57,58 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   // after mount, so gate the badge on `mounted` to avoid an SSR/client mismatch.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // --- Type-ahead product search ---------------------------------------------
+  const searchRef = useRef<HTMLFormElement>(null);
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchClosed, setSearchClosed] = useState(false);
+  const debouncedQuery = useDebounce(query, 300);
+
+  // Fetch up to 6 published product suggestions for the debounced query (>=2 chars).
+  useEffect(() => {
+    const q = debouncedQuery.trim();
+    if (q.length < 2) return;
+    let active = true;
+    setSearchLoading(true);
+    api
+      .get<PaginatedResponse<Product>>(`/products?search=${encodeURIComponent(q)}&per_page=6`)
+      .then((r) => {
+        if (active) setSuggestions(r.data.data);
+      })
+      .catch(() => {
+        if (active) setSuggestions([]);
+      })
+      .finally(() => {
+        if (active) setSearchLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [debouncedQuery]);
+
+  // Dropdown visible when there's a 2+ char query and it hasn't been dismissed.
+  const showSuggest = !searchClosed && query.trim().length >= 2;
+  // While the debounce hasn't caught up yet, show the loading state (no empty flash).
+  const searchPending = query.trim().length >= 2 && debouncedQuery.trim() !== query.trim();
+
+  // Close the suggestions on an outside click.
+  useEffect(() => {
+    if (!showSuggest) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchClosed(true);
+      }
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [showSuggest]);
+
+  const selectSuggestion = (slug: string) => {
+    setQuery("");
+    setSearchClosed(true);
+    router.push(`/products/${slug}`);
+  };
 
   // Open the auth modal automatically when the proxy redirected here (?auth=login).
   useEffect(() => {
@@ -93,7 +148,10 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
     const q = query.trim();
-    if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+    if (q) {
+      setSearchClosed(true);
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    }
   };
 
   const handleLogout = async () => {
@@ -238,18 +296,73 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
         </Button>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="flex flex-1 items-center gap-2">
+        <form
+          onSubmit={handleSearch}
+          ref={searchRef}
+          className="relative flex flex-1 items-center gap-2"
+        >
           <Input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSearchClosed(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setSearchClosed(true);
+            }}
             placeholder="Search products..."
             className="max-w-md"
             aria-label="Search products"
+            autoComplete="off"
           />
           <Button type="submit" size="icon" className="bg-[#f47920] hover:bg-[#e56910]" aria-label="Search">
             <Search className="h-4 w-4" />
           </Button>
+
+          {showSuggest && (
+            // Mobile: full-width panel pinned below the navbar (the search form
+            // itself is too narrow). Desktop: anchored under the wide form.
+            <div className="fixed inset-x-2 top-16 z-50 max-h-[70vh] overflow-y-auto rounded-lg border bg-popover shadow-lg sm:absolute sm:inset-x-0 sm:top-full sm:mt-1">
+              {searchLoading || searchPending ? (
+                <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span lang="bn">খুঁজছি...</span>
+                </div>
+              ) : suggestions.length === 0 ? (
+                <p className="p-4 text-center text-sm text-muted-foreground" lang="bn">
+                  কোনো পণ্য পাওয়া যায়নি
+                </p>
+              ) : (
+                <ul className="py-1">
+                  {suggestions.map((p) => {
+                    const price = p.sale_price ? Number(p.sale_price) : Number(p.price);
+                    const img = (p.images ?? []).find((i) => i?.url)?.url ?? null;
+                    return (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          onClick={() => selectSuggestion(p.slug)}
+                          className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted"
+                        >
+                          <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
+                            {img && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={img} alt={p.name} className="h-full w-full object-cover" />
+                            )}
+                          </span>
+                          <span className="line-clamp-1 min-w-0 flex-1 text-sm">{p.name}</span>
+                          <span className="shrink-0 text-sm font-semibold text-[#f47920]">
+                            {formatTaka(price)}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
         </form>
 
         {/* Cart — opens the slide-out drawer (wrapper is a div so we don't nest
