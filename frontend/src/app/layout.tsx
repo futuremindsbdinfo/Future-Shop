@@ -5,6 +5,7 @@ import "@/lib/fontawesome";
 import { Chrome } from "@/components/shared/Chrome";
 import { AuthHydrator } from "@/components/shared/AuthHydrator";
 import { CartHydrator } from "@/components/shared/CartHydrator";
+import { WishlistHydrator } from "@/components/shared/WishlistHydrator";
 import { Toaster } from "@/components/ui/sonner";
 import { getSiteSettings } from "@/lib/settings";
 
@@ -46,6 +47,7 @@ export default async function RootLayout({
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <AuthHydrator />
         <CartHydrator />
+        <WishlistHydrator />
         <Chrome settings={settings}>{children}</Chrome>
         <Toaster richColors position="top-center" />
       </body>

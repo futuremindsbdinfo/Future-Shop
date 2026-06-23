@@ -304,6 +304,16 @@ export interface CartItem {
   stock?: number;
 }
 
+export interface WishlistItem {
+  productId: number;
+  name: string;
+  slug: string;
+  price: number;
+  sale_price?: number | null;
+  image?: string;
+  stock?: number;
+}
+
 /** A row in `dashboard.product_profits`. */
 export interface ProductProfitRow {
   id: number;
