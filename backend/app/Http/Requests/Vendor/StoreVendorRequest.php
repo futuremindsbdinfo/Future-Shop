@@ -35,6 +35,9 @@ class StoreVendorRequest extends FormRequest
             'commission_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'status' => ['required', Rule::in(['pending', 'approved', 'suspended'])],
             'is_active' => ['sometimes', 'boolean'],
+            // Brands this vendor sells (many-to-many).
+            'brand_ids' => ['nullable', 'array'],
+            'brand_ids.*' => ['integer', Rule::exists('brands', 'id')],
         ];
     }
 }

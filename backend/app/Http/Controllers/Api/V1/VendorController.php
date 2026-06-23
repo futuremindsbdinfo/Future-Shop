@@ -23,7 +23,7 @@ class VendorController extends Controller
     public function index(): JsonResponse
     {
         $vendors = Vendor::query()
-            ->with(['user:id,name,email,phone,role', 'deliveryZone:id,name'])
+            ->with(['user:id,name,email,phone,role', 'deliveryZone:id,name', 'brands:id,name'])
             ->withCount('products')
             ->withSum('orderItems as gross_sales', 'subtotal')
             ->withSum('orderItems as total_commission', 'commission')
@@ -63,7 +63,7 @@ class VendorController extends Controller
                 'is_active' => true,
             ]);
 
-            return Vendor::create([
+            $vendor = Vendor::create([
                 'user_id' => $user->id,
                 'shop_name' => $data['shop_name'],
                 'proprietor_name' => $data['proprietor_name'] ?? null,
@@ -80,10 +80,14 @@ class VendorController extends Controller
                 'status' => $data['status'],
                 'is_active' => $data['is_active'] ?? true,
             ]);
+
+            $vendor->brands()->sync($data['brand_ids'] ?? []);
+
+            return $vendor;
         });
 
         return response()->json([
-            'data' => $vendor->load(['user:id,name,email,phone,role', 'deliveryZone:id,name']),
+            'data' => $vendor->load(['user:id,name,email,phone,role', 'deliveryZone:id,name', 'brands:id,name']),
         ], 201);
     }
 
@@ -95,6 +99,7 @@ class VendorController extends Controller
         $vendor->load([
             'user:id,name,email,phone,role',
             'deliveryZone:id,name,delivery_charge',
+            'brands:id,name',
             'products' => fn ($q) => $q->select('id', 'vendor_id', 'category_id', 'name', 'slug', 'price', 'sale_price', 'stock_quantity', 'status')->latest(),
         ]);
 
@@ -106,10 +111,18 @@ class VendorController extends Controller
      */
     public function update(UpdateVendorRequest $request, Vendor $vendor): JsonResponse
     {
-        $vendor->update($request->validated());
+        DB::transaction(function () use ($request, $vendor) {
+            $vendor->update($request->validated());
+
+            // Only touch brands when the field is present, so a partial update
+            // does not detach the vendor's existing brands.
+            if ($request->has('brand_ids')) {
+                $vendor->brands()->sync($request->validated('brand_ids') ?? []);
+            }
+        });
 
         return response()->json([
-            'data' => $vendor->fresh(['user:id,name,email,phone,role', 'deliveryZone:id,name']),
+            'data' => $vendor->fresh(['user:id,name,email,phone,role', 'deliveryZone:id,name', 'brands:id,name']),
         ]);
     }
 

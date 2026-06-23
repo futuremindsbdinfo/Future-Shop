@@ -99,6 +99,7 @@ export interface Vendor {
   user?: User;
   deliveryZone?: DeliveryZone;
   products?: Product[];
+  brands?: { id: number; name: string }[];
   // Earnings summary (admin list)
   products_count?: number;
   gross_sales?: number;

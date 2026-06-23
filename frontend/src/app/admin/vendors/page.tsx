@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
-import type { PaginatedResponse, Vendor } from "@/types";
+import type { Brand, PaginatedResponse, Vendor } from "@/types";
 
 const TK = "৳";
 
@@ -35,6 +35,60 @@ function getErrorMessage(error: unknown, fallback: string): string {
     return resp?.data?.message ?? fallback;
   }
   return fallback;
+}
+
+/**
+ * Searchable checkbox list of brands. `selected` + `onToggle` are owned by the
+ * parent form; the search filter is local. Each row is a ≥44px tap target.
+ */
+function BrandSelector({
+  brands,
+  selected,
+  onToggle,
+}: {
+  brands: Brand[];
+  selected: number[];
+  onToggle: (id: number) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = brands.filter((b) =>
+    b.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>ব্র্যান্ড (Brands)</Label>
+        <span className="text-xs text-muted-foreground">{selected.length}টি নির্বাচিত</span>
+      </div>
+      <Input
+        placeholder="ব্র্যান্ড খুঁজুন..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="h-10"
+      />
+      <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+        {filtered.length === 0 ? (
+          <p className="py-2 text-center text-xs text-muted-foreground">কোনো ব্র্যান্ড নেই</p>
+        ) : (
+          filtered.map((b) => (
+            <label
+              key={b.id}
+              className="flex min-h-11 cursor-pointer items-center gap-2 rounded px-2 hover:bg-muted"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(b.id)}
+                onChange={() => onToggle(b.id)}
+                className="h-4 w-4 shrink-0"
+              />
+              <span className="text-sm">{b.name}</span>
+            </label>
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
 
 function VendorRow({
@@ -112,7 +166,15 @@ export default function AdminVendorsPage() {
   const [srMobile, setSrMobile] = useState("");
   const [commission, setCommission] = useState("10");
   const [status, setStatus] = useState("approved");
+  const [brandIds, setBrandIds] = useState<number[]>([]);
   const [creating, setCreating] = useState(false);
+
+  // All brands (for the multi-select) + the selected ids per form.
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const toggleBrand = (id: number) =>
+    setBrandIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleEditBrand = (id: number) =>
+    setEditBrandIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   // Edit dialog (Batch E-2).
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
@@ -126,6 +188,7 @@ export default function AdminVendorsPage() {
   const [editSrMobile, setEditSrMobile] = useState("");
   const [editCommission, setEditCommission] = useState("10");
   const [editStatus, setEditStatus] = useState("approved");
+  const [editBrandIds, setEditBrandIds] = useState<number[]>([]);
   const [editSaving, setEditSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -141,6 +204,16 @@ export default function AdminVendorsPage() {
     load();
   }, [load]);
 
+  // Load all brands once for the multi-select (same endpoint the product form uses).
+  useEffect(() => {
+    api
+      .get<PaginatedResponse<Brand>>("/admin/brands?per_page=100")
+      .then((r) => setBrands(r.data.data))
+      .catch(() => {
+        /* non-fatal — the brand list just stays empty */
+      });
+  }, []);
+
   const openEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
     setEditShopName(vendor.shop_name);
@@ -153,6 +226,7 @@ export default function AdminVendorsPage() {
     setEditSrMobile(vendor.sr_mobile ?? "");
     setEditCommission(String(vendor.commission_rate));
     setEditStatus(vendor.status);
+    setEditBrandIds(vendor.brands?.map((b) => b.id) ?? []);
   };
 
   const saveEdit = async () => {
@@ -176,6 +250,7 @@ export default function AdminVendorsPage() {
         sr_mobile: editSrMobile.trim() || null,
         commission_rate: Number(editCommission),
         status: editStatus,
+        brand_ids: editBrandIds,
       });
       toast.success("বিক্রেতা আপডেট হয়েছে");
       setEditingVendor(null);
@@ -206,6 +281,7 @@ export default function AdminVendorsPage() {
         sr_mobile: srMobile.trim() || null,
         commission_rate: Number(commission),
         status,
+        brand_ids: brandIds,
       });
       toast.success("বিক্রেতা যোগ হয়েছে");
       setOpen(false);
@@ -219,6 +295,7 @@ export default function AdminVendorsPage() {
       setDistrict("");
       setSrName("");
       setSrMobile("");
+      setBrandIds([]);
       load();
     } catch (error) {
       // Surface duplicate phone/email (422) with a clear Bengali message.
@@ -344,6 +421,8 @@ export default function AdminVendorsPage() {
                 </select>
               </div>
             </div>
+
+            <BrandSelector brands={brands} selected={brandIds} onToggle={toggleBrand} />
           </div>
           <DialogFooter>
             <Button variant="outline" className="h-11" onClick={() => setOpen(false)}>বাতিল</Button>
@@ -434,6 +513,8 @@ export default function AdminVendorsPage() {
                 </select>
               </div>
             </div>
+
+            <BrandSelector brands={brands} selected={editBrandIds} onToggle={toggleEditBrand} />
           </div>
           <DialogFooter>
             <Button
