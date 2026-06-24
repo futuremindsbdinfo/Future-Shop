@@ -5,9 +5,8 @@ import Image from "next/image";
 import { Heart, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/cartStore";
-import { useAuthStore } from "@/store/authStore";
+import { useWishlistStore } from "@/store/wishlistStore";
 import { formatTaka } from "@/lib/utils";
-import api from "@/lib/api";
 import type { Product, ProductImage } from "@/types";
 
 interface Props {
@@ -16,7 +15,12 @@ interface Props {
 
 export function ProductCard({ product }: Props) {
   const addItem = useCartStore((state) => state.addItem);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const toggleWishlist = useWishlistStore((state) => state.toggle);
+  // Reactive: re-renders when the wishlist changes. Hydration-safe without a
+  // `mounted` guard — the store uses skipHydration and <WishlistHydrator/>
+  // rehydrates in an effect, so the first client render matches the SSR output
+  // (both empty); the heart flips to filled after the post-hydration rehydrate.
+  const isWishlisted = useWishlistStore((state) => state.has(product.id));
 
   const {
     id,
@@ -59,18 +63,23 @@ export function ProductCard({ product }: Props) {
     toast.success("কার্টে যোগ হয়েছে");
   };
 
-  const handleWishlist = async (e: React.MouseEvent) => {
+  const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      toast.info("উইশলিস্টে যোগ করতে লগইন করুন");
-      return;
-    }
-    try {
-      await api.post("/account/wishlists", { product_id: id });
-      toast.success("উইশলিস্টে যোগ হয়েছে");
-    } catch {
-      toast.error("উইশলিস্টে যোগ করা যায়নি");
-    }
+    // Guest-friendly: toggle the client-side wishlist (localStorage). Capture
+    // the state before toggling so the toast describes what just happened.
+    const wasWishlisted = isWishlisted;
+    toggleWishlist({
+      productId: id,
+      name,
+      slug,
+      price: originalPrice,
+      sale_price: sale_price ? Number(sale_price) : null,
+      image: imageUrl ?? undefined,
+      stock: stock_quantity,
+    });
+    toast.success(
+      wasWishlisted ? "উইশলিস্ট থেকে সরানো হয়েছে" : "উইশলিস্টে যোগ হয়েছে",
+    );
   };
 
   const subline = [brand?.name, vendor?.shop_name].filter(Boolean).join(" · ");
@@ -113,14 +122,22 @@ export function ProductCard({ product }: Props) {
           </span>
         )}
 
-        {/* Wishlist button */}
+        {/* Wishlist button — toggles the client-side (guest) wishlist. Sits
+            top-right, opposite the floating add-to-cart at bottom-right. */}
         <button
           type="button"
           onClick={handleWishlist}
-          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/80 backdrop-blur-sm transition-colors hover:bg-white hover:text-red-500"
-          aria-label="উইশলিস্টে যোগ করুন"
+          className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/80 text-gray-600 backdrop-blur-sm transition-colors hover:bg-white hover:text-red-500 sm:h-10 sm:w-10"
+          aria-label={
+            isWishlisted ? "উইশলিস্ট থেকে সরান" : "উইশলিস্টে যোগ করুন"
+          }
+          aria-pressed={isWishlisted}
         >
-          <Heart className="h-3.5 w-3.5 text-gray-500" />
+          <Heart
+            className={`h-5 w-5 ${
+              isWishlisted ? "fill-red-500 text-red-500" : ""
+            }`}
+          />
         </button>
 
         {/* Floating add-to-cart (icon only) — sits in the image's bottom-right
