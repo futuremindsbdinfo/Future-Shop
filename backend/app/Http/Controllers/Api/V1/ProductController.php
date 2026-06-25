@@ -56,7 +56,11 @@ class ProductController extends Controller
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
             )
-            ->latest()
+            // created_at has second-level precision (timestamps precision 0), so
+            // bulk/CSV-imported rows tie; add id as a stable tiebreaker so the
+            // order does not reshuffle after a delete (arbitrary heap order).
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -81,7 +85,11 @@ class ProductController extends Controller
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
             )
-            ->latest()
+            // created_at has second-level precision (timestamps precision 0), so
+            // bulk/CSV-imported rows tie; add id as a stable tiebreaker so the
+            // order does not reshuffle after a delete (arbitrary heap order).
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
 
