@@ -43,7 +43,19 @@ return [
         'success_url' => env('SSLCZ_SUCCESS_URL', env('APP_URL').'/api/v1/payments/sslcommerz/success'),
         'fail_url' => env('SSLCZ_FAIL_URL', env('APP_URL').'/api/v1/payments/sslcommerz/fail'),
         'cancel_url' => env('SSLCZ_CANCEL_URL', env('APP_URL').'/api/v1/payments/sslcommerz/fail'),
-        'ipn_url' => env('SSLCZ_IPN_URL', env('APP_URL').'/api/v1/payments/sslcommerz/success'),
+        'ipn_url' => env('SSLCZ_IPN_URL', env('APP_URL').'/api/v1/payments/sslcommerz/ipn'),
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => env('FACEBOOK_REDIRECT_URI'),
     ],
 
     'frontend' => [

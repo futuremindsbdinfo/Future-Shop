@@ -137,6 +137,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Social accounts linked to this user (Google, Facebook).
+     */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /**
      * Generate a unique alphanumeric referral code (8 chars, ambiguity-resistant alphabet).
      */
     public static function generateReferralCode(): string
