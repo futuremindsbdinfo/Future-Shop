@@ -38,7 +38,7 @@ export default function FumindsAdminLoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await api.post<AuthSuccess>("/auth/login", { email, password });
+      const res = await api.post<AuthSuccess>("/auth/login", { identifier: email, password });
       const u = res.data.user;
       if (u.role !== "admin") {
         // Reject non-admins. Do NOT save token / cookies.

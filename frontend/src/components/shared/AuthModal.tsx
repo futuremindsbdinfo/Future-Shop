@@ -128,7 +128,9 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
     }
   };
 
-  const googlePlaceholder = () => toast.info("Google সাইন-ইন শীঘ্রই আসছে");
+  const handleGoogleLogin = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/auth/google/redirect`;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,7 +188,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
               <Separator className="flex-1" />
             </div>
 
-            <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={googlePlaceholder}>
+            <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={handleGoogleLogin}>
               <GoogleIcon />
               <span className="ml-2" lang="bn">Google দিয়ে লগইন</span>
             </Button>
@@ -238,7 +240,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
               <Separator className="flex-1" />
             </div>
 
-            <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={googlePlaceholder}>
+            <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={handleGoogleLogin}>
               <GoogleIcon />
               <span className="ml-2" lang="bn">Google দিয়ে রেজিস্ট্রেশন</span>
             </Button>

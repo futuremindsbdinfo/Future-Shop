@@ -46,6 +46,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
         // Route::post('auth/send-otp', [AuthController::class, 'sendOtp'])->name('auth.send-otp');
         // Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp'])->name('auth.verify-otp');
+        
+        // Socialite Auth Routes
+        Route::get('auth/{provider}/redirect', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
+        Route::get('auth/{provider}/callback', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'callback'])->name('auth.social.callback');
     });
 
     /*
