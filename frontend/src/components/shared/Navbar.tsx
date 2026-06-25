@@ -11,6 +11,7 @@ import {
   Menu,
   Search,
   ShoppingCart,
+  Heart,
   User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import { formatTaka } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
+import { useWishlistStore } from "@/store/wishlistStore";
 import { AuthModal } from "@/components/shared/AuthModal";
 import type { Category, PaginatedResponse, Product } from "@/types";
 
@@ -49,6 +51,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const logout = useAuthStore((state) => state.logout);
   const totalItems = useCartStore((state) => state.totalItems);
   const openCart = useCartStore((state) => state.openCart);
+  const wishlistItemsCount = useWishlistStore((state) => state.items.length);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -191,6 +194,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Home</Link>
               <Link href="/categories" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Categories</Link>
               <Link href="/brands" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Brands</Link>
+              <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted" lang="bn">আমার উইশলিস্ট</Link>
               <div className="mt-2 px-2 text-xs font-semibold uppercase text-muted-foreground">
                 Shop by category
               </div>
@@ -365,24 +369,43 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
           )}
         </form>
 
-        {/* Cart — opens the slide-out drawer (wrapper is a div so we don't nest
-            a button inside a button). */}
-        <div className="relative shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={openCart}
-            aria-label="কার্ট খুলুন"
-            className="h-11 w-11 sm:h-10 sm:w-10"
-          >
-            {/* size-6 (not h-6 w-6) so the Button's base svg→size-4 rule leaves it alone. */}
-            <ShoppingCart className="size-6" />
-          </Button>
-          {mounted && totalItems > 0 && (
-            <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
-              {totalItems}
-            </Badge>
-          )}
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Wishlist */}
+          <div className="relative shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              nativeButton={false}
+              render={<Link href="/wishlist" />}
+              aria-label="উইশলিস্ট"
+              className="h-11 w-11 sm:h-10 sm:w-10"
+            >
+              <Heart className="size-6" />
+            </Button>
+            {mounted && wishlistItemsCount > 0 && (
+              <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
+                {wishlistItemsCount}
+              </Badge>
+            )}
+          </div>
+
+          {/* Cart */}
+          <div className="relative shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openCart}
+              aria-label="কার্ট খুলুন"
+              className="h-11 w-11 sm:h-10 sm:w-10"
+            >
+              <ShoppingCart className="size-6" />
+            </Button>
+            {mounted && totalItems > 0 && (
+              <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-5 min-w-5 justify-center rounded-full bg-red-600 px-1 text-xs text-white hover:bg-red-600">
+                {totalItems}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Auth */}
