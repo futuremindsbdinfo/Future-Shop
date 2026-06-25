@@ -31,7 +31,6 @@ export function ProductCard({ product }: Props) {
     status,
     stock_quantity,
     images,
-    vendor,
     brand,
   } = product;
 
@@ -82,7 +81,7 @@ export function ProductCard({ product }: Props) {
     );
   };
 
-  const subline = [brand?.name, vendor?.shop_name].filter(Boolean).join(" · ");
+  const subline = brand?.name;
 
   return (
     <div className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#f1f5f9] bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">

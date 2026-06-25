@@ -41,7 +41,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->where('status', 'published')
-            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
+            ->with(['category:id,name,slug', 'brand:id,name,slug'])
             ->when($request->filled('category'), fn ($q) => $q->whereHas(
                 'category', fn ($c) => $c->where('slug', $request->string('category'))
             ))
@@ -113,7 +113,7 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
+            ->with(['category:id,name,slug', 'brand:id,name,slug'])
             ->firstOrFail();
 
         return response()->json(['data' => $product]);

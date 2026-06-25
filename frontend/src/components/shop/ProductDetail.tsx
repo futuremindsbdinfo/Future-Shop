@@ -152,11 +152,9 @@ export function ProductDetail({ product }: { product: Product }) {
 
       {/* Info */}
       <div className="flex flex-col">
-        {product.vendor && (
-          <p className="text-sm text-muted-foreground">
-            <span lang="bn">বিক্রেতা:</span> {product.vendor.shop_name}
-          </p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          <span lang="bn">বিক্রেতা:</span> Future Shop
+        </p>
 
         <h1 className="mt-1 text-xl font-bold sm:text-2xl">{product.name}</h1>
 
