@@ -12,6 +12,7 @@ use App\Services\ImageUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -185,6 +186,25 @@ class ProductController extends Controller
     }
 
     /**
+     * Admin: toggle a product's published/draft status.
+     */
+    public function toggleStatus(Request $request, Product $product): JsonResponse
+    {
+        if ($product->status === 'out_of_stock') {
+            return response()->json([
+                'message' => 'স্টক আপডেট করে publish করুন'
+            ], 422);
+        }
+
+        $newStatus = $product->status === 'published' ? 'draft' : 'published';
+        $product->update(['status' => $newStatus]);
+
+        return response()->json([
+            'data' => $product->fresh(),
+        ]);
+    }
+
+    /**
      * Admin: soft delete a product.
      */
     public function destroy(Product $product): JsonResponse
@@ -192,6 +212,37 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(['message' => 'Product deleted.']);
+    }
+
+    /**
+     * Admin: bulk action on products.
+     */
+    public function bulkAction(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:products,id'],
+            'action' => ['required', 'string', 'in:delete,activate,deactivate'],
+        ]);
+
+        $ids = $data['ids'];
+        $action = $data['action'];
+
+        DB::transaction(function () use ($ids, $action) {
+            if ($action === 'delete') {
+                Product::whereIn('id', $ids)->delete();
+            } elseif ($action === 'activate') {
+                Product::whereIn('id', $ids)
+                    ->where('status', 'draft')
+                    ->update(['status' => 'published']);
+            } elseif ($action === 'deactivate') {
+                Product::whereIn('id', $ids)
+                    ->where('status', 'published')
+                    ->update(['status' => 'draft']);
+            }
+        });
+
+        return response()->json(['message' => 'Bulk action completed.']);
     }
 
     /**

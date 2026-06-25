@@ -152,7 +152,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
             Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
             Route::post('products/import-mapped', [AdminMappedImportController::class, 'import'])->name('products.import-mapped');
+            Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
+            Route::patch('products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
             Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
             Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 

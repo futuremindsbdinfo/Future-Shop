@@ -7,7 +7,6 @@ import { ImageOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -70,6 +69,11 @@ export default function AdminProductsPage() {
   const [brandFilter, setBrandFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Bulk Mode state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
+
   // CSV import wizard state.
   const [importOpen, setImportOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
@@ -107,6 +111,28 @@ export default function AdminProductsPage() {
     load();
   }, [load]);
 
+  const toggleBulkMode = () => {
+    setBulkMode((prev) => !prev);
+    setSelectedIds([]);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (!data) return;
+    if (checked) {
+      setSelectedIds(data.data.map((p) => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedIds((prev) => [...prev, id]);
+    } else {
+      setSelectedIds((prev) => prev.filter((i) => i !== id));
+    }
+  };
+
   const handleDelete = async (product: Product) => {
     if (!window.confirm(`Delete "${product.name}"?`)) return;
     try {
@@ -115,6 +141,67 @@ export default function AdminProductsPage() {
       load();
     } catch {
       toast.error("Delete failed");
+    }
+  };
+
+  const handleBulkAction = async (action: "delete" | "activate" | "deactivate") => {
+    if (action === "delete") {
+      if (!window.confirm(`আপনি কি নিশ্চিত? ${selectedIds.length}টি পণ্য মুছে যাবে`)) return;
+    }
+
+    setIsBulkActionLoading(true);
+    try {
+      await api.post("/admin/products/bulk-action", {
+        ids: selectedIds,
+        action,
+      });
+      toast.success(
+        action === "delete"
+          ? `${selectedIds.length}টি পণ্য মুছে ফেলা হয়েছে`
+          : `${selectedIds.length}টি পণ্য আপডেট হয়েছে`
+      );
+      setSelectedIds([]);
+      setBulkMode(false);
+      load();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message ?? "Bulk action failed");
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (product: Product) => {
+    if (product.status === "out_of_stock") return;
+
+    const prevStatus = product.status;
+    const nextStatus = prevStatus === "published" ? "draft" : "published";
+
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        data: prev.data.map((p) =>
+          p.id === product.id ? { ...p, status: nextStatus } : p
+        ),
+      };
+    });
+
+    try {
+      await api.patch(`/admin/products/${product.id}/toggle-status`);
+      toast.success("স্ট্যাটাস আপডেট হয়েছে");
+    } catch (e: unknown) {
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          data: prev.data.map((p) =>
+            p.id === product.id ? { ...p, status: prevStatus } : p
+          ),
+        };
+      });
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message ?? "Status update failed");
     }
   };
 
@@ -192,8 +279,22 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Products</h1>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold">Products</h1>
+          {data && (
+            <span className="text-sm font-medium text-muted-foreground" lang="bn">
+              মোট {data.total} টি পণ্য
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            className="h-11"
+            onClick={toggleBulkMode}
+          >
+            Bulk Mode
+          </Button>
           <Button
             variant="outline"
             className="h-11"
@@ -241,6 +342,40 @@ export default function AdminProductsPage() {
         </select>
       </div>
 
+      {bulkMode && selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
+          <span className="text-sm font-medium">
+            {selectedIds.length}টি নির্বাচিত
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => handleBulkAction("delete")}
+              disabled={isBulkActionLoading}
+            >
+              মুছুন
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 text-green-700 hover:bg-green-50"
+              onClick={() => handleBulkAction("activate")}
+              disabled={isBulkActionLoading}
+            >
+              Active করুন
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 text-muted-foreground hover:bg-muted/80"
+              onClick={() => handleBulkAction("deactivate")}
+              disabled={isBulkActionLoading}
+            >
+              Inactive করুন
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-0">
           {loading ? (
@@ -251,6 +386,20 @@ export default function AdminProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {bulkMode && (
+                    <TableHead className="w-[50px]">
+                      <div className="flex h-11 w-11 items-center justify-center">
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 cursor-pointer rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
+                          checked={data.data.length > 0 && selectedIds.length === data.data.length}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          aria-label="Select all"
+                        />
+                      </div>
+                    </TableHead>
+                  )}
+                  <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>Image</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Brand</TableHead>
@@ -264,10 +413,26 @@ export default function AdminProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.data.map((product) => {
+                {data.data.map((product, index) => {
                   const img = product.images?.[0]?.url ?? null;
                   return (
                     <TableRow key={product.id}>
+                      {bulkMode && (
+                        <TableCell>
+                          <div className="flex h-11 w-11 items-center justify-center">
+                            <input
+                              type="checkbox"
+                              className="h-5 w-5 cursor-pointer rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
+                              checked={selectedIds.includes(product.id)}
+                              onChange={(e) => handleSelectOne(product.id, e.target.checked)}
+                              aria-label={`Select ${product.name}`}
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                      <TableCell className="font-medium text-muted-foreground">
+                        {(data.from ?? 1) + index}
+                      </TableCell>
                       <TableCell>
                         <div className="relative h-10 w-10 overflow-hidden rounded bg-muted">
                           {img ? (
@@ -298,7 +463,23 @@ export default function AdminProductsPage() {
                       </TableCell>
                       <TableCell>{product.stock_quantity}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{product.status}</Badge>
+                        {product.status === "out_of_stock" ? (
+                          <div className="flex h-11 w-max items-center justify-center rounded-full bg-muted px-4 text-xs font-medium text-muted-foreground opacity-80 cursor-not-allowed">
+                            স্টক নেই
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(product)}
+                            className={`flex h-11 w-max min-w-[80px] items-center justify-center rounded-full px-4 text-xs font-medium transition-colors ${
+                              product.status === "published"
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            {product.status === "published" ? "Active" : "Inactive"}
+                          </button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">

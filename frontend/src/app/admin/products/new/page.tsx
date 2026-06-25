@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -314,7 +314,18 @@ export default function AdminProductFormPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold">{editId ? "Edit Product" : "Add Product"}</h1>
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push("/admin/products")}
+          className="h-11"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          <span lang="bn">ফিরে যান</span>
+        </Button>
+        <h1 className="text-2xl font-bold">{editId ? "Edit Product" : "Add Product"}</h1>
+      </div>
       <Card>
         <CardContent className="p-4">
           <form onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
