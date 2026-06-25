@@ -58,21 +58,25 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'email' => ['required', 'email'],
+            'identifier' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $data['email'])->first();
+        $identifier = $data['identifier'];
+        $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
 
-        if (! $user || ! Hash::check($data['password'], $user->password)) {
+        $user = User::where($field, $identifier)->first();
+
+        // Generic error message to prevent user enumeration
+        if (! $user || empty($user->password) || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'identifier' => ['ভুল তথ্য প্রদান করা হয়েছে।'],
             ]);
         }
 
         if (! $user->is_active) {
             throw ValidationException::withMessages([
-                'email' => ['This account is inactive.'],
+                'identifier' => ['This account is inactive.'],
             ]);
         }
 

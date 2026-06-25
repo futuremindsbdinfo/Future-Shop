@@ -66,10 +66,9 @@ function extractErrors(error: unknown): { message: string; fields: Record<string
 export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: AuthModalProps) {
   const login = useAuthStore((s) => s.login);
 
-  // login (OTP) state
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  // login state
+  const [identifier, setIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
   // register state
   const [name, setName] = useState("");
@@ -89,32 +88,14 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
     onSuccess?.();
   };
 
-  const sendOtp = async () => {
-    setErrors({});
-    if (!phone.trim()) {
-      setErrors({ phone: "ফোন নম্বর দিন" });
-      return;
-    }
-    setLoading(true);
-    try {
-      await api.post("/auth/send-otp", { phone });
-      setOtpSent(true);
-      toast.success("OTP পাঠানো হয়েছে");
-    } catch (error) {
-      const { message, fields } = extractErrors(error);
-      setErrors(fields);
-      if (Object.keys(fields).length === 0) toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async () => {
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setErrors({});
     setLoading(true);
     try {
-      const res = await api.post<AuthSuccess>("/auth/verify-otp", { phone, otp });
+      const res = await api.post<AuthSuccess>("/auth/login", { identifier, password: loginPassword });
       finishAuth(res.data);
+      toast.success("লগইন সফল হয়েছে");
     } catch (error) {
       const { message, fields } = extractErrors(error);
       setErrors(fields);
@@ -164,47 +145,40 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
 
           {/* LOGIN */}
           <TabsContent value="login" className="mt-4 space-y-4">
-            <p className="text-sm font-medium" lang="bn">ফোন নম্বর দিয়ে লগইন</p>
-            <div className="space-y-1">
-              <Label htmlFor="login-phone" lang="bn">ফোন নম্বর</Label>
-              <Input
-                id="login-phone"
-                className="h-11"
-                type="tel"
-                inputMode="tel"
-                placeholder="880XXXXXXXXXX"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={otpSent}
-              />
-              {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
-            </div>
+            <form onSubmit={handleLogin} className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="login-identifier" lang="bn">ফোন নম্বর বা ইমেইল</Label>
+                <Input
+                  id="login-identifier"
+                  className="h-11"
+                  type="text"
+                  placeholder="880XXXXXXXXXX বা email@example.com"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  required
+                />
+                {errors.identifier && <p className="text-xs text-red-600">{errors.identifier}</p>}
+              </div>
 
-            {!otpSent ? (
-              <Button type="button" onClick={sendOtp} disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
+              <div className="space-y-1">
+                <Label htmlFor="login-password" lang="bn">পাসওয়ার্ড</Label>
+                <Input
+                  id="login-password"
+                  className="h-11"
+                  type="password"
+                  placeholder="আপনার পাসওয়ার্ড"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+                {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
+              </div>
+
+              <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <span lang="bn">OTP পাঠান</span>
+                <span lang="bn">লগইন করুন</span>
               </Button>
-            ) : (
-              <>
-                <div className="space-y-1">
-                  <Label htmlFor="login-otp" lang="bn">OTP কোড</Label>
-                  <Input
-                    id="login-otp"
-                    className="h-11"
-                    inputMode="numeric"
-                    placeholder="৬ সংখ্যার কোড"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                  />
-                  {errors.otp && <p className="text-xs text-red-600">{errors.otp}</p>}
-                </div>
-                <Button type="button" onClick={verifyOtp} disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <span lang="bn">যাচাই করুন</span>
-                </Button>
-              </>
-            )}
+            </form>
 
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
