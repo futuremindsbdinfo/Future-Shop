@@ -5,6 +5,7 @@ import { HeroBanner } from "@/components/home/HeroBanner";
 import { BannerSlider } from "@/components/home/BannerSlider";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { FeaturedProducts } from "@/components/home/FeaturedProducts";
+import { CategoryProductSection } from "@/components/home/CategoryProductSection";
 import { apiFetchSafe } from "@/lib/server-api";
 import type {
   Banner,
@@ -51,7 +52,7 @@ export default async function HomePage() {
   // Resilient: if the backend is unreachable (e.g. at build time), fall back to empty.
   const [categoriesRes, productsRes, bannersRes, brandsRes] = await Promise.all([
     apiFetchSafe<{ data: Category[] }>("/categories", { data: [] }, { next: { revalidate: 60 } }),
-    apiFetchSafe<PaginatedResponse<Product>>("/products?per_page=8", EMPTY_PRODUCT_PAGE, {
+    apiFetchSafe<PaginatedResponse<Product>>("/products?per_page=10", EMPTY_PRODUCT_PAGE, {
       next: { revalidate: 60 },
     }),
     apiFetchSafe<{ data: Banner[] }>("/banners", { data: [] }, {
@@ -63,9 +64,21 @@ export default async function HomePage() {
   ]);
 
   const categories = categoriesRes.data;
-  // Backend currently returns a fixed page size (15); cap to 8 for the homepage.
-  const featured = productsRes.data.slice(0, 8);
+  // Backend currently returns a fixed page size (15); cap to 10 for the homepage.
+  const featured = productsRes.data.slice(0, 10);
   const brands = brandsRes.data ?? [];
+
+  // Fetch products for the top 4 categories in parallel
+  const topCategories = categories.slice(0, 4);
+  const categoryProductsRes = await Promise.all(
+    topCategories.map((cat) =>
+      apiFetchSafe<PaginatedResponse<Product>>(
+        `/products?category=${cat.slug}&per_page=8`,
+        EMPTY_PRODUCT_PAGE,
+        { next: { revalidate: 60 } }
+      )
+    )
+  );
 
   return (
     <>
@@ -73,6 +86,19 @@ export default async function HomePage() {
       <HeroBanner />
       <CategoryGrid categories={categories} />
       <FeaturedProducts products={featured} />
+
+      {/* Category-wise Product Sections */}
+      {topCategories.map((cat, index) => {
+        const catProducts = categoryProductsRes[index].data;
+        if (catProducts.length === 0) return null;
+        return (
+          <CategoryProductSection
+            key={cat.id}
+            category={cat}
+            products={catProducts}
+          />
+        );
+      })}
 
       {brands.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-8">
