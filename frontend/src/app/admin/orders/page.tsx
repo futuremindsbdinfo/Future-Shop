@@ -52,10 +52,15 @@ export default function AdminOrdersPage() {
 
   const submitVerify = async () => {
     if (!verifyingOrder) return;
+    const txId = txInput.trim();
+    if (!txId) {
+      toast.error("Transaction ID আবশ্যক");
+      return;
+    }
     setVerifying(true);
     try {
       await api.patch(`/admin/orders/${verifyingOrder.id}/verify-payment`, {
-        transaction_id: txInput.trim() || null,
+        transaction_id: txId,
       });
       toast.success("Payment verified");
       setVerifyingOrder(null);
@@ -250,9 +255,6 @@ export default function AdminOrdersPage() {
                   onChange={(e) => setTxInput(e.target.value)}
                   placeholder="Enter gateway transaction id"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Optional — leave blank to mark as verified without recording an id.
-                </p>
               </div>
             </div>
           )}

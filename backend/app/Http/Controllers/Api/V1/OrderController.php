@@ -388,13 +388,12 @@ class OrderController extends Controller
     }
 
     /**
-     * Admin: update an order's status (order_status and/or payment_status).
+     * Admin: update an order's status (order_status and delivery_user_id).
      */
     public function updateStatus(Request $request, Order $order): JsonResponse
     {
         $data = $request->validate([
             'order_status' => ['sometimes', Rule::in(['pending', 'processing', 'shipped', 'delivered', 'cancelled'])],
-            'payment_status' => ['sometimes', Rule::in(['pending', 'paid', 'failed', 'refunded'])],
             'delivery_user_id' => ['sometimes', 'nullable', Rule::exists('users', 'id')->where('role', 'delivery')],
         ]);
 

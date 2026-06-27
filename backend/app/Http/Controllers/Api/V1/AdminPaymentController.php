@@ -30,7 +30,9 @@ class AdminPaymentController extends Controller
         }
 
         $request->validate([
-            'transaction_id' => ['nullable', 'string', 'max:100'],
+            'transaction_id' => ['required', 'string', 'max:100'],
+        ], [
+            'transaction_id.required' => 'Transaction ID আবশ্যক।',
         ]);
 
         $order->update([
