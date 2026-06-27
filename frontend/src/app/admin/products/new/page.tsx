@@ -66,6 +66,11 @@ export default function AdminProductFormPage() {
   const [catIcon, setCatIcon] = useState("");
   const [catSaving, setCatSaving] = useState(false);
 
+  // Inline "+ নতুন brand" mini-dialog.
+  const [brandDialogOpen, setBrandDialogOpen] = useState(false);
+  const [brandName, setBrandName] = useState("");
+  const [brandSaving, setBrandSaving] = useState(false);
+
   // Load dropdowns + (optional) the product being edited.
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("id");
@@ -310,6 +315,43 @@ export default function AdminProductFormPage() {
     }
   };
 
+  const refetchBrands = async (): Promise<Brand[]> => {
+    const r = await api.get<PaginatedResponse<Brand>>("/admin/brands?per_page=100");
+    setBrands(r.data.data);
+    return r.data.data;
+  };
+
+  const handleCreateBrand = async () => {
+    if (!brandName.trim()) {
+      toast.error("ব্র্যান্ডের নাম দিন");
+      return;
+    }
+    setBrandSaving(true);
+    try {
+      const res = await api.post<{ data: Brand }>("/admin/brands", {
+        name: brandName.trim(),
+      });
+      const created = res.data.data;
+      await refetchBrands();
+      setBrandId(String(created.id)); // auto-select the new brand
+      setBrandDialogOpen(false);
+      setBrandName("");
+      toast.success("ব্র্যান্ড যোগ হয়েছে");
+    } catch (err) {
+      const e = err as {
+        response?: { data?: { errors?: Record<string, string[]>; message?: string } };
+      };
+      const errs = e?.response?.data?.errors;
+      toast.error(
+        errs
+          ? Object.values(errs).flat().join(" ")
+          : (e?.response?.data?.message ?? "ব্র্যান্ড যোগ ব্যর্থ হয়েছে"),
+      );
+    } finally {
+      setBrandSaving(false);
+    }
+  };
+
   if (bootstrapping) return <LoadingSpinner fullHeight />;
 
   return (
@@ -418,7 +460,16 @@ export default function AdminProductFormPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="brand">Brand</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="brand">Brand</Label>
+                <button
+                  type="button"
+                  onClick={() => setBrandDialogOpen(true)}
+                  className="text-xs font-medium text-[#f47920] hover:underline"
+                >
+                  + নতুন
+                </button>
+              </div>
               <select
                 id="brand"
                 value={brandId}
@@ -708,6 +759,47 @@ export default function AdminProductFormPage() {
               onClick={handleCreateCategory}
             >
               {catSaving ? "সংরক্ষণ হচ্ছে..." : "তৈরি করুন"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline create-brand dialog — essential fields only. */}
+      <Dialog open={brandDialogOpen} onOpenChange={setBrandDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>নতুন ব্র্যান্ড</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                নাম <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="যেমন: Samsung"
+                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11"
+              disabled={brandSaving}
+              onClick={() => setBrandDialogOpen(false)}
+            >
+              বাতিল
+            </Button>
+            <Button
+              type="button"
+              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+              disabled={brandSaving}
+              onClick={handleCreateBrand}
+            >
+              {brandSaving ? "সংরক্ষণ হচ্ছে..." : "তৈরি করুন"}
             </Button>
           </DialogFooter>
         </DialogContent>
