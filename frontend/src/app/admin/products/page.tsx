@@ -93,6 +93,11 @@ function AdminProductsContent() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   // CSV import wizard state.
   const [importOpen, setImportOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
@@ -152,22 +157,26 @@ function AdminProductsContent() {
     }
   };
 
-  const handleDelete = async (product: Product) => {
-    if (!window.confirm(`Delete "${product.name}"?`)) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/admin/products/${product.id}`);
+      await api.delete(`/admin/products/${deleteTarget.id}`);
       toast.success("Product deleted");
+      setDeleteTarget(null);
       load();
     } catch {
       toast.error("Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleBulkAction = async (action: "delete" | "activate" | "deactivate") => {
-    if (action === "delete") {
-      if (!window.confirm(`আপনি কি নিশ্চিত? ${selectedIds.length}টি পণ্য মুছে যাবে`)) return;
-    }
+  const handleDelete = (product: Product) => {
+    setDeleteTarget(product);
+  };
 
+  const executeBulkAction = async (action: "delete" | "activate" | "deactivate") => {
     setIsBulkActionLoading(true);
     try {
       await api.post("/admin/products/bulk-action", {
@@ -181,6 +190,7 @@ function AdminProductsContent() {
       );
       setSelectedIds([]);
       setBulkMode(false);
+      if (action === "delete") setShowBulkDeleteConfirm(false);
       load();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
@@ -188,6 +198,14 @@ function AdminProductsContent() {
     } finally {
       setIsBulkActionLoading(false);
     }
+  };
+
+  const handleBulkAction = async (action: "delete" | "activate" | "deactivate") => {
+    if (action === "delete") {
+      setShowBulkDeleteConfirm(true);
+      return;
+    }
+    executeBulkAction(action);
   };
 
   const handleToggleStatus = async (product: Product) => {
@@ -764,6 +782,46 @@ function AdminProductsContent() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Delete Confirm Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Product?</DialogTitle>
+          </DialogHeader>
+          <p className="py-2 text-sm text-muted-foreground">
+            Delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button onClick={() => setDeleteTarget(null)} variant="ghost" className="h-11" disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button onClick={confirmDelete} className="h-11 bg-red-600 text-white hover:bg-red-700" disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirm Dialog */}
+      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>মুছে ফেলবেন?</DialogTitle>
+          </DialogHeader>
+          <p className="py-2 text-sm text-muted-foreground">
+            আপনি কি নিশ্চিত? <strong>{selectedIds.length}</strong>টি পণ্য মুছে যাবে।
+          </p>
+          <DialogFooter className="gap-2">
+            <Button onClick={() => setShowBulkDeleteConfirm(false)} variant="ghost" className="h-11" disabled={isBulkActionLoading}>
+              বাতিল
+            </Button>
+            <Button onClick={() => executeBulkAction("delete")} className="h-11 bg-red-600 text-white hover:bg-red-700" disabled={isBulkActionLoading}>
+              {isBulkActionLoading ? "মুছছে..." : "মুছুন"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
