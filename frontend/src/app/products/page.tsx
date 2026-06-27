@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { PackageOpen } from "lucide-react";
-import { ProductCard } from "@/components/shop/ProductCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { apiFetchSafe } from "@/lib/server-api";
+import { InfiniteProductGrid } from "@/components/shop/InfiniteProductGrid";
 import type { PaginatedResponse, Product } from "@/types";
 
 // SSR — render per request (query-param driven).
@@ -52,12 +52,11 @@ export default async function ProductsPage({
     { cache: "no-store" },
   );
 
-  // Preserve filter params across pagination links.
-  const buildPageHref = (target: number) => {
-    const next = new URLSearchParams(query);
-    next.set("page", String(target));
-    return `/products?${next.toString()}`;
-  };
+  // Pass active filters to Client Component so infinite scroll uses the same filters
+  const queryParams: Record<string, string> = {};
+  if (sp.category) queryParams.category = sp.category;
+  if (sp.brand_id) queryParams.brand_id = sp.brand_id;
+  if (sp.search) queryParams.search = sp.search;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -86,47 +85,10 @@ export default async function ProductsPage({
           }
         />
       ) : (
-        <>
-          <div className="product-grid grid gap-3 sm:gap-4">
-            {products.data.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-
-          {products.last_page > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                className="h-11"
-                nativeButton={false}
-                disabled={pageNum <= 1}
-                render={
-                  pageNum > 1 ? (
-                    <Link href={buildPageHref(pageNum - 1)} />
-                  ) : undefined
-                }
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {products.current_page} of {products.last_page}
-              </span>
-              <Button
-                variant="outline"
-                className="h-11"
-                nativeButton={false}
-                disabled={pageNum >= products.last_page}
-                render={
-                  pageNum < products.last_page ? (
-                    <Link href={buildPageHref(pageNum + 1)} />
-                  ) : undefined
-                }
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </>
+        <InfiniteProductGrid
+          initialData={products}
+          queryParams={queryParams}
+        />
       )}
     </div>
   );
