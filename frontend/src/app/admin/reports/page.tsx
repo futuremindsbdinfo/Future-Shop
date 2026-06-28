@@ -30,9 +30,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyChart } from "@/components/shared/EmptyChart";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
 import { formatTaka } from "@/lib/utils";
 import type { ProductsReportRow, SalesReport, VendorsReportRow } from "@/types";
+
+interface DeliveryReportRow {
+  id: number;
+  name: string;
+  phone: string | null;
+  delivered_count: number;
+  collected_cash: number;
+}
 
 const TK = "৳";
 const fmtNum = (n: number) => n.toLocaleString("en-US");
@@ -51,7 +67,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "#dc2626",
 };
 
-type TabKey = "sales" | "products" | "vendors";
+type TabKey = "sales" | "products" | "vendors" | "delivery";
 
 function MarginBar({ pct }: { pct: number }) {
   const clamped = Math.max(-100, Math.min(100, pct));
@@ -95,6 +111,7 @@ export default function AdminReportsPage() {
   const [sales, setSales] = useState<SalesReport | null>(null);
   const [products, setProducts] = useState<ProductsReportRow[] | null>(null);
   const [vendors, setVendors] = useState<VendorsReportRow[] | null>(null);
+  const [delivery, setDelivery] = useState<DeliveryReportRow[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -107,16 +124,22 @@ export default function AdminReportsPage() {
       } else if (tab === "products") {
         const r = await api.get<{ data: { rows: ProductsReportRow[] } }>(`/admin/reports/products?${sp}`);
         setProducts(r.data.data.rows);
-      } else {
+      } else if (tab === "vendors") {
         const r = await api.get<{ data: { rows: VendorsReportRow[] } }>(`/admin/reports/vendors?${sp}`);
         setVendors(r.data.data.rows);
+      } else {
+        const r = await api.get<{ data: { rows: DeliveryReportRow[] } }>(`/admin/reports/delivery?${sp}`);
+        setDelivery(r.data.data.rows);
       }
     } finally {
       setLoading(false);
     }
   }, [from, to, tab]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const exportCsv = async () => {
     try {
@@ -145,16 +168,18 @@ export default function AdminReportsPage() {
             <label className="block text-[11px] text-[#6b7280]">To</label>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-11 w-40" />
           </div>
-          <Button onClick={exportCsv} className="h-11 bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
-            <FontAwesomeIcon icon={faDownload} className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
+          {tab !== "delivery" && (
+            <Button onClick={exportCsv} className="h-11 bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
+              <FontAwesomeIcon icon={faDownload} className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2">
-        {(["sales", "products", "vendors"] as const).map((t) => (
+        {(["sales", "products", "vendors", "delivery"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -179,6 +204,8 @@ export default function AdminReportsPage() {
         <ProductsTab rows={products} />
       ) : tab === "vendors" && vendors ? (
         <VendorsTab rows={vendors} />
+      ) : tab === "delivery" && delivery ? (
+        <DeliveryTab rows={delivery} />
       ) : (
         <p className="text-sm text-muted-foreground">No data.</p>
       )}
@@ -377,6 +404,45 @@ function VendorsTab({ rows }: { rows: VendorsReportRow[] }) {
             </table>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeliveryTab({ rows }: { rows: DeliveryReportRow[] }) {
+  return (
+    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Delivery Agent</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead className="text-center">Delivered Orders</TableHead>
+              <TableHead className="text-right">Collected Cash</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  No delivery data found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>{r.phone ?? "—"}</TableCell>
+                  <TableCell className="text-center">{r.delivered_count}</TableCell>
+                  <TableCell className="text-right font-bold text-green-600">
+                    {formatTaka(r.collected_cash)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );

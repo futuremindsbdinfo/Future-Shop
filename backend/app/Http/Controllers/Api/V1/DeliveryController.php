@@ -73,4 +73,64 @@ class DeliveryController extends Controller
 
         return response()->json(['data' => $order->fresh(['user:id,name', 'items'])]);
     }
+
+    /**
+     * Report for the logged-in delivery agent.
+     */
+    public function report(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $period = $request->string('period', 'today');
+
+        $startDate = now('Asia/Dhaka');
+        $endDate = now('Asia/Dhaka');
+
+        if ($period === 'today') {
+            $startDate = $startDate->startOfDay();
+            $endDate = $endDate->endOfDay();
+        } elseif ($period === 'week') {
+            $startDate = $startDate->startOfWeek();
+            $endDate = $endDate->endOfWeek();
+        } elseif ($period === 'month') {
+            $startDate = $startDate->startOfMonth();
+            $endDate = $endDate->endOfMonth();
+        } else {
+            $startDate = $startDate->startOfDay();
+            $endDate = $endDate->endOfDay();
+        }
+
+        // delivered_at is stored in UTC, so convert the Dhaka-local boundaries to
+        // UTC before querying — otherwise the day/week/month window is skewed by
+        // ~6 hours and collected cash lands in the wrong day at the boundaries.
+        $startDate = $startDate->utc();
+        $endDate = $endDate->utc();
+
+        // Delivered count within period
+        $deliveredCount = Order::where('delivery_user_id', $userId)
+            ->where('order_status', 'delivered')
+            ->whereBetween('delivered_at', [$startDate, $endDate])
+            ->count();
+
+        // Collected cash (COD only)
+        $collectedCash = Order::where('delivery_user_id', $userId)
+            ->where('order_status', 'delivered')
+            ->where('payment_status', 'paid')
+            ->where('payment_method', 'cod')
+            ->whereBetween('delivered_at', [$startDate, $endDate])
+            ->sum('total');
+
+        // Order list
+        $orders = Order::where('delivery_user_id', $userId)
+            ->where('order_status', 'delivered')
+            ->whereBetween('delivered_at', [$startDate, $endDate])
+            ->with('user:id,name')
+            ->orderBy('delivered_at', 'desc')
+            ->get(['id', 'order_number', 'user_id', 'total', 'payment_method', 'payment_status', 'delivered_at']);
+
+        return response()->json([
+            'delivered_count' => $deliveredCount,
+            'collected_cash' => (float) $collectedCash,
+            'orders' => $orders
+        ]);
+    }
 }

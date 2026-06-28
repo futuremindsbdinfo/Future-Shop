@@ -274,4 +274,67 @@ class ReportController extends Controller
             'Cache-Control' => 'no-store',
         ]);
     }
+
+    /**
+     * Delivery report for admin.
+     */
+    public function deliveryReport(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from' => ['sometimes', 'nullable', 'date'],
+            'to' => ['sometimes', 'nullable', 'date'],
+        ]);
+
+        // Dhaka-local day boundaries, converted to UTC for the query. delivered_at
+        // is stored in UTC, so cash must be bucketed against the UTC instants of
+        // the Dhaka day (otherwise it skews ~6 hours into the wrong day). The
+        // shared range() helper is intentionally NOT used here — it returns
+        // UTC-day bounds (fine for the created_at sales reports, wrong for this
+        // COD cash report). Display uses the Dhaka dates the admin requested.
+        $toDhaka = $request->filled('to')
+            ? CarbonImmutable::parse($request->get('to'), 'Asia/Dhaka')->endOfDay()
+            : CarbonImmutable::now('Asia/Dhaka')->endOfDay();
+        $fromDhaka = $request->filled('from')
+            ? CarbonImmutable::parse($request->get('from'), 'Asia/Dhaka')->startOfDay()
+            : $toDhaka->subDays(29)->startOfDay();
+
+        $from = $fromDhaka->utc();
+        $to = $toDhaka->utc();
+
+        // Fetch all active delivery agents
+        $deliveryUsers = \App\Models\User::where('role', 'delivery')
+            ->where('is_active', true)
+            ->get(['id', 'name', 'phone']);
+
+        $rows = [];
+        foreach ($deliveryUsers as $user) {
+            $deliveredCount = Order::where('delivery_user_id', $user->id)
+                ->where('order_status', 'delivered')
+                ->whereBetween('delivered_at', [$from, $to])
+                ->count();
+
+            $collectedCash = Order::where('delivery_user_id', $user->id)
+                ->where('order_status', 'delivered')
+                ->where('payment_status', 'paid')
+                ->where('payment_method', 'cod')
+                ->whereBetween('delivered_at', [$from, $to])
+                ->sum('total');
+
+            $rows[] = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'delivered_count' => $deliveredCount,
+                'collected_cash' => (float) $collectedCash,
+            ];
+        }
+
+        return response()->json([
+            'data' => [
+                'from' => $fromDhaka->toDateString(),
+                'to' => $toDhaka->toDateString(),
+                'rows' => $rows,
+            ],
+        ]);
+    }
 }

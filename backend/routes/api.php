@@ -136,6 +136,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             // Reports.
             Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
+            Route::get('reports/delivery', [ReportController::class, 'deliveryReport'])->name('reports.delivery');
             Route::get('reports/products', [ReportController::class, 'products'])->name('reports.products');
             Route::get('reports/vendors', [ReportController::class, 'vendors'])->name('reports.vendors');
             Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
@@ -237,6 +238,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
 
         Route::middleware('role:delivery')->prefix('delivery')->name('delivery.')->group(function () {
+            Route::get('report', [DeliveryController::class, 'report'])->name('report');
             Route::get('orders', [DeliveryController::class, 'myOrders'])->name('orders.index');
             Route::get('orders/{order}', [DeliveryController::class, 'show'])->name('orders.show');
             Route::match(['put', 'patch'], 'orders/{order}', [DeliveryController::class, 'updateStatus'])->name('orders.update');

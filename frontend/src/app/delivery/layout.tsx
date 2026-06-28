@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
@@ -45,7 +46,10 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
-        <span className="font-bold text-[#f47920]" lang="bn">Future Shop ডেলিভারি</span>
+        <div className="flex items-center gap-4">
+          <Link href="/delivery" className="font-bold text-[#f47920]" lang="bn">Future Shop  ডেলিভারি</Link>
+          <Link href="/delivery/report" className="text-sm font-medium text-slate-600 hover:text-[#f47920]" lang="bn">রিপোর্ট</Link>
+        </div>
         <Button variant="outline" className="h-11" onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span lang="bn">লগআউট</span>

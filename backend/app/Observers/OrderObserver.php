@@ -28,6 +28,8 @@ class OrderObserver
             return;
         }
 
+        $order->updateQuietly(['delivered_at' => now()]);
+
         // Single source of truth for "what happens when an order becomes delivered":
         // COD payment confirmation, referral credit, coupon cashback.
         // updateQuietly + Transaction unique-reference guard prevents observer loops

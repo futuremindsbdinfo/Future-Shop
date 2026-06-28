@@ -39,6 +39,7 @@ class Order extends Model
         'shipping_district',
         'delivery_address',
         'notes',
+        'delivered_at',
     ];
 
     /**
@@ -53,6 +54,7 @@ class Order extends Model
             'wallet_used' => 'decimal:2',
             'total' => 'decimal:2',
             'delivery_address' => 'array',
+            'delivered_at' => 'datetime',
         ];
     }
 
