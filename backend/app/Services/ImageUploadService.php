@@ -53,7 +53,7 @@ class ImageUploadService
         $image->scaleDown(width: self::MAX_WIDTH);
         $binary = (string) $image->encodeByExtension($extension, quality: 85);
 
-        $disk = config('filesystems.image_disk', env('IMAGE_DISK', 'public'));
+        $disk = config('filesystems.image_disk', 'public');
         $path = trim($directory, '/').'/'.Str::uuid()->toString().'.'.$extension;
 
         Storage::disk($disk)->put($path, $binary, 'public');
