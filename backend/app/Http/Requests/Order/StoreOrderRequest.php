@@ -27,7 +27,7 @@ class StoreOrderRequest extends FormRequest
             'shipping_division' => ['nullable', 'string', 'max:100'],
             'shipping_district' => ['nullable', 'string', 'max:100'],
             'delivery_zone_id' => ['required', 'integer', Rule::exists('delivery_zones', 'id')->where('is_active', true)],
-            'payment_method' => ['required', Rule::in(['cod', 'bkash', 'nagad', 'rocket', 'card'])],
+            'payment_method' => ['required', Rule::in(['cod'])], // SSLCommerz live হলে ফেরাও: 'bkash','nagad','rocket','card'
             'notes' => ['nullable', 'string', 'max:1000'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
             'use_wallet' => ['nullable', 'boolean'],

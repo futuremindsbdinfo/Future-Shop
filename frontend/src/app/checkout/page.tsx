@@ -19,8 +19,9 @@ const formatTk = (value: number) => `${TK}${value.toLocaleString("en-US")}`;
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: "cod", label: "ক্যাশ অন ডেলিভারি" },
-  { value: "bkash", label: "বিকাশ" },
-  { value: "nagad", label: "নগদ" },
+  // SSLCommerz live হলে uncomment।
+  // { value: "bkash", label: "বিকাশ" },
+  // { value: "nagad", label: "নগদ" },
 ];
 
 function getErrorMessage(error: unknown, fallback: string): string {
