@@ -214,7 +214,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
               </div>
               <div className="space-y-1">
                 <Label htmlFor="reg-password" lang="bn">পাসওয়ার্ড</Label>
-                <Input id="reg-password" className="h-11" type="password" placeholder="কমপক্ষে ৮ অক্ষর" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Input id="reg-password" className="h-11" type="password" placeholder="কমপক্ষে ৬ অক্ষর" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
               </div>
               <div className="space-y-1">

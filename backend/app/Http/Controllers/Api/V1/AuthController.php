@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -25,7 +24,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
-            'password' => ['required', Password::min(8)->mixedCase()->numbers()],
+            'password' => ['required', 'string', 'min:6'],
             'referral_code' => ['nullable', 'string', 'max:12'],
         ]);
 
@@ -250,7 +249,7 @@ class AuthController extends Controller
 
         $data = $request->validate([
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+            'password' => ['required', 'confirmed', 'string', 'min:6'],
         ]);
 
         // Users created via OTP may have no password yet — allow setting one then.
