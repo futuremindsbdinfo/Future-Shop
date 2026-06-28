@@ -11,7 +11,7 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
 
   return (
     <footer className="mt-16 border-t bg-muted/40">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {/* Brand + tagline */}
         <div className="space-y-3">
           <span className="text-xl font-bold text-[#f47920]">{siteName}</span>
@@ -46,6 +46,40 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
             <li>
               <Link href="/dashboard" lang="bn" className="hover:text-[#f47920]">
                 আমার অ্যাকাউন্ট
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        {/* Useful links */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold" lang="bn">
+            প্রয়োজনীয় তথ্য
+          </h4>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li>
+              <Link href="/about" lang="bn" className="hover:text-[#f47920]">
+                আমাদের সম্পর্কে
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" lang="bn" className="hover:text-[#f47920]">
+                যোগাযোগ
+              </Link>
+            </li>
+            <li>
+              <Link href="/privacy" lang="bn" className="hover:text-[#f47920]">
+                গোপনীয়তা নীতি
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" lang="bn" className="hover:text-[#f47920]">
+                শর্তাবলী
+              </Link>
+            </li>
+            <li>
+              <Link href="/returns" lang="bn" className="hover:text-[#f47920]">
+                রিটার্ন পলিসি
               </Link>
             </li>
           </ul>

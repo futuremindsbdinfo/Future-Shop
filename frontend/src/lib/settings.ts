@@ -4,9 +4,9 @@ import type { SiteSettings } from "@/types";
 export const FALLBACK_SETTINGS: SiteSettings = {
   site_name: "Future Shop",
   site_tagline: "বাজারে নয়, বাজার আসবে আপনার ঘরে।",
-  contact_phone: null,
-  contact_email: null,
-  contact_address: null,
+  contact_phone: "01813354648",
+  contact_email: "futuremindsbd.info@gmail.com",
+  contact_address: "সান্যালপাড়া, সোনালী ব্যাংকর পেছনে, শেরপুর বাসস্ট্যান্ড, শেরপুর, বগুড়া",
 };
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
