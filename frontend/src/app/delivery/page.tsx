@@ -87,9 +87,21 @@ export default function DeliveryHomePage() {
                 <Button variant="outline" className="h-11" onClick={() => updateStatus(order, "processing")}>
                   <span lang="bn">পিকআপ করেছি</span>
                 </Button>
-                <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => updateStatus(order, "delivered")}>
-                  <span lang="bn">ডেলিভারি দিয়েছি</span>
-                </Button>
+                {/* COD + unpaid must settle via the 6-digit code flow — no codeless
+                    "delivered" here (the backend also blocks it). Mirrors /delivery/[id]. */}
+                {isCod && unpaid ? (
+                  <Button
+                    nativeButton={false}
+                    render={<Link href="/delivery/payment-confirm" />}
+                    className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+                  >
+                    <span lang="bn">কোড দিয়ে কনফার্ম করুন →</span>
+                  </Button>
+                ) : (
+                  <Button className="h-11 bg-[#f47920] hover:bg-[#e56910]" onClick={() => updateStatus(order, "delivered")}>
+                    <span lang="bn">ডেলিভারি দিয়েছি</span>
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

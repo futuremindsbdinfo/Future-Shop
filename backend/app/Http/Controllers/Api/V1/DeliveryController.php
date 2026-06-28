@@ -54,6 +54,21 @@ class DeliveryController extends Controller
             'order_status' => ['required', Rule::in(['processing', 'shipped', 'delivered'])],
         ]);
 
+        // Money guard: a COD order must be settled through the 6-digit
+        // code-confirmation flow (DeliveryPaymentController), which is what marks
+        // it delivered AND lets the OrderObserver mark payment paid. Block the
+        // codeless path here so an agent cannot mark a COD order delivered (and
+        // therefore paid) without collecting the customer's confirmation code.
+        if (
+            $data['order_status'] === 'delivered'
+            && $order->payment_method === 'cod'
+            && $order->payment_status !== 'paid'
+        ) {
+            return response()->json([
+                'message' => 'COD অর্ডার কোড দিয়ে কনফার্ম করুন।',
+            ], 422);
+        }
+
         $order->update(['order_status' => $data['order_status']]);
 
         return response()->json(['data' => $order->fresh(['user:id,name', 'items'])]);
