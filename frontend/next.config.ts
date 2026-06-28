@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
         hostname: "*.r2.cloudflarestorage.com",
         pathname: "/**",
       },
+      // Cloudflare R2 Public Domain
+      {
+        protocol: "https",
+        hostname: "*.r2.dev",
+        pathname: "/**",
+      },
       // Production self-hosted images (VPS) — uncomment and set the real domain
       // once live. https-only. External URL images are rendered via the next/image
       // `unoptimized` prop instead, so no broad wildcard host is needed here.
