@@ -233,6 +233,7 @@ export interface OrderItem {
   commission: string;
   created_at: string;
   updated_at: string;
+  product?: Product;
 }
 
 export interface DeliveryAddressSnapshot {

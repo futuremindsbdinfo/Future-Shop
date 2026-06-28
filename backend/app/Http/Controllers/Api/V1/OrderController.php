@@ -384,7 +384,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Order not found.'], 404);
         }
 
-        return response()->json(['data' => $order->load('items', 'deliveryZone:id,name')]);
+        return response()->json(['data' => $order->load('items.product:id,name,images', 'deliveryZone:id,name')]);
     }
 
     /**

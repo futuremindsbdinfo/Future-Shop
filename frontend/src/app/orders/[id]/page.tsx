@@ -111,10 +111,29 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <div className="space-y-3">
             {order.items?.map((item) => (
               <div key={item.id} className="flex items-center gap-3">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
-                  {/* order_items store only a name snapshot, no image */}
-                  <ImageOff className="h-5 w-5" />
-                </div>
+                {(() => {
+                  const displayImage = item.product?.images?.[0];
+                  const imageUrl = displayImage?.url;
+                  const isExternal = displayImage?.disk === "external";
+                  return (
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded bg-muted">
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt={item.product_name}
+                          fill
+                          sizes="56px"
+                          className="object-cover"
+                          unoptimized={isExternal}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <ImageOff className="h-5 w-5" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.product_name}</p>
                   <p className="text-xs text-muted-foreground">
