@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -39,6 +40,13 @@ export default function AdminOrdersPage() {
   const [deliveryUsers, setDeliveryUsers] = useState<DeliveryUser[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Collapsible items state
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const toggleExpand = (id: number) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
 
   // Verify online payment dialog (Batch E-2).
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
@@ -152,8 +160,26 @@ export default function AdminOrdersPage() {
               </TableHeader>
               <TableBody>
                 {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono">{order.order_number}</TableCell>
+                  <Fragment key={order.id}>
+                    <TableRow className={expandedId === order.id ? "bg-slate-50/50" : ""}>
+                      <TableCell className="font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 hover:bg-slate-200"
+                            onClick={() => toggleExpand(order.id)}
+                            aria-label="Toggle details"
+                          >
+                            {expandedId === order.id ? (
+                              <ChevronDown className="h-4 w-4 text-slate-500" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-slate-500" />
+                            )}
+                          </Button>
+                          <span>{order.order_number}</span>
+                        </div>
+                      </TableCell>
                     <TableCell>{order.user?.name ?? "—"}</TableCell>
                     <TableCell>{TK}{Number(order.total).toLocaleString("en-US")}</TableCell>
                     <TableCell>
@@ -216,8 +242,40 @@ export default function AdminOrdersPage() {
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
+                  {expandedId === order.id && (
+                    <TableRow className="bg-slate-50/30 hover:bg-slate-50/30">
+                      <TableCell colSpan={7} className="p-4">
+                        <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm space-y-3">
+                          <h4 className="font-semibold text-sm text-slate-800" lang="bn">অর্ডারকৃত পণ্যসমূহ:</h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr className="border-b border-slate-100 text-slate-500 font-medium">
+                                  <th className="py-2 pr-4 text-slate-500" lang="bn">পণ্য</th>
+                                  <th className="py-2 px-4 text-center text-slate-500" lang="bn">পরিমাণ</th>
+                                  <th className="py-2 px-4 text-right text-slate-500" lang="bn">মূল্য</th>
+                                  <th className="py-2 pl-4 text-right text-slate-500" lang="bn">উপমোট</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {order.items?.map((item) => (
+                                  <tr key={item.id}>
+                                    <td className="py-2 pr-4 font-medium text-slate-700">{item.product_name}</td>
+                                    <td className="py-2 px-4 text-center text-slate-600">{item.quantity}</td>
+                                    <td className="py-2 px-4 text-right text-slate-600">{TK}{Number(item.price).toLocaleString("en-US")}</td>
+                                    <td className="py-2 pl-4 text-right font-semibold text-slate-800">{TK}{Number(item.subtotal).toLocaleString("en-US")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              ))}
+            </TableBody>
             </Table>
           )}
         </CardContent>
