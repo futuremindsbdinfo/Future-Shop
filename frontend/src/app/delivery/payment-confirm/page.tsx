@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,27 +51,32 @@ export default function DeliveryPaymentConfirmPage() {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
+  // QR Scanning States
+  const [scanning, setScanning] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scannerRef = useRef<any>(null);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    if (hydrated && !preview && !confirmed) {
+    if (hydrated && !preview && !confirmed && !scanning) {
       inputRef.current?.focus();
     }
-  }, [hydrated, preview, confirmed]);
+  }, [hydrated, preview, confirmed, scanning]);
 
   const onCodeChange = (val: string) => {
     const digits = val.replace(/\D/g, "").slice(0, 6);
     setCode(digits);
   };
 
-  const fetchPreview = async () => {
-    if (code.length !== 6) {
+  const getPreview = async (codeVal: string) => {
+    if (codeVal.length !== 6) {
       toast.error("ছয় সংখ্যার কোড দিন");
       return;
     }
     setChecking(true);
     try {
       const res = await api.get<PreviewData>(
-        `/delivery/payment-confirm?code=${encodeURIComponent(code)}`,
+        `/delivery/payment-confirm?code=${encodeURIComponent(codeVal)}`,
       );
       setPreview(res.data);
     } catch (e: unknown) {
@@ -81,6 +86,68 @@ export default function DeliveryPaymentConfirmPage() {
       setChecking(false);
     }
   };
+
+  const fetchPreview = () => getPreview(code);
+
+  const startScan = () => {
+    setScanning(true);
+    setTimeout(async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { Html5Qrcode } = require("html5-qrcode");
+        const html5Qrcode = new Html5Qrcode("qr-reader");
+        scannerRef.current = html5Qrcode;
+
+        await html5Qrcode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText: string) => {
+            const cleaned = decodedText.trim();
+            if (/^\d{6}$/.test(cleaned)) {
+              setCode(cleaned);
+              stopScan();
+              getPreview(cleaned);
+            } else {
+              toast.error("ভুল কিউআর কোড স্ক্যান করা হয়েছে!");
+            }
+          },
+          () => {
+            // Ignore scan failures
+          }
+        );
+      } catch (err) {
+        console.error("Camera error:", err);
+        toast.error("ক্যামেরা অ্যাক্সেস নেই, কোড টাইপ করুন");
+        setScanning(false);
+      }
+    }, 100);
+  };
+
+  const stopScan = async () => {
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
+      } catch (err) {
+        console.error("Stop error:", err);
+      }
+      scannerRef.current = null;
+    }
+    setScanning(false);
+  };
+
+  // Cleanup scanner on component unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+      }
+    };
+  }, []);
 
   const submitConfirm = async () => {
     if (!preview) return;
@@ -232,29 +299,52 @@ export default function DeliveryPaymentConfirmPage() {
         </p>
       </div>
 
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardContent className="space-y-4 p-4">
-          <input
-            ref={inputRef}
-            type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            value={code}
-            onChange={(e) => onCodeChange(e.target.value)}
-            placeholder="000000"
-            className="h-16 w-full rounded-md border border-input bg-transparent text-center font-mono text-4xl tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-[#f47920]"
-            aria-label="6-digit payment code"
-          />
+      {scanning ? (
+        <div className="space-y-4">
+          <div id="qr-reader" className="overflow-hidden rounded-lg border bg-black aspect-square max-w-sm mx-auto" />
           <Button
-            onClick={fetchPreview}
-            disabled={code.length !== 6 || checking}
-            className="h-12 w-full bg-[#f47920] hover:bg-[#e56910]"
+            type="button"
+            onClick={stopScan}
+            variant="outline"
+            className="h-12 w-full"
           >
-            {checking ? "..." : <span lang="bn">অর্ডার খুঁজুন</span>}
+            <span lang="bn">স্ক্যান বন্ধ করুন</span>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+          <CardContent className="space-y-4 p-4">
+            <input
+              ref={inputRef}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={code}
+              onChange={(e) => onCodeChange(e.target.value)}
+              placeholder="000000"
+              className="h-16 w-full rounded-md border border-input bg-transparent text-center font-mono text-4xl tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-[#f47920]"
+              aria-label="6-digit payment code"
+            />
+            <Button
+              onClick={fetchPreview}
+              disabled={code.length !== 6 || checking}
+              className="h-12 w-full bg-[#f47920] hover:bg-[#e56910]"
+            >
+              {checking ? "..." : <span lang="bn">অর্ডার খুঁজুন</span>}
+            </Button>
+            <Button
+              type="button"
+              onClick={startScan}
+              variant="outline"
+              className="h-12 w-full border-[#f47920] text-[#f47920] hover:bg-[#f47920]/10 flex items-center justify-center gap-2"
+            >
+              <Camera className="h-5 w-5" />
+              <span lang="bn">QR স্ক্যান করুন</span>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <p className="text-center text-xs text-muted-foreground" lang="bn">
         কোডটি গ্রাহকের অর্ডার পেজে দেখানো আছে। কোডটি QR থেকেও স্ক্যান করা যাবে।
