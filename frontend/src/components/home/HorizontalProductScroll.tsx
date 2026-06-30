@@ -62,6 +62,7 @@ export function HorizontalProductScroll({
                     alt={product.name}
                     fill
                     className="object-contain mix-blend-multiply"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200" />

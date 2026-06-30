@@ -25,6 +25,7 @@ export function CategoryQuadCard({
                   alt={product.name}
                   fill
                   className="object-cover"
+                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full bg-gray-200" />
