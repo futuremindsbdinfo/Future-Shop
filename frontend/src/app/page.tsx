@@ -1,21 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Tag } from "lucide-react";
-import { HeroBanner } from "@/components/home/HeroBanner";
-import { BannerSlider } from "@/components/home/BannerSlider";
-import { CategoryGrid } from "@/components/home/CategoryGrid";
-import { FeaturedProducts } from "@/components/home/FeaturedProducts";
-import { CategoryProductSection } from "@/components/home/CategoryProductSection";
+import { AmazonHeroSlider } from "@/components/home/AmazonHeroSlider";
+import { CategoryQuadCard } from "@/components/home/CategoryQuadCard";
+import { HorizontalProductScroll } from "@/components/home/HorizontalProductScroll";
 import { apiFetchSafe } from "@/lib/server-api";
-import type {
-  Banner,
-  Brand,
-  Category,
-  PaginatedResponse,
-  Product,
-} from "@/types";
+import type { Brand, Category, PaginatedResponse, Product } from "@/types";
 
-// SSG with ISR — regenerate at most once per 60 seconds.
 export const revalidate = 60;
 
 const EMPTY_PRODUCT_PAGE: PaginatedResponse<Product> = {
@@ -49,99 +40,134 @@ const EMPTY_BRAND_PAGE: PaginatedResponse<Brand> = {
 };
 
 export default async function HomePage() {
-  // Resilient: if the backend is unreachable (e.g. at build time), fall back to empty.
-  const [categoriesRes, productsRes, bannersRes, brandsRes] = await Promise.all([
+  const [categoriesRes, productsRes, brandsRes] = await Promise.all([
     apiFetchSafe<{ data: Category[] }>("/categories", { data: [] }, { next: { revalidate: 60 } }),
-    apiFetchSafe<PaginatedResponse<Product>>("/products?per_page=10", EMPTY_PRODUCT_PAGE, {
+    apiFetchSafe<PaginatedResponse<Product>>("/products?per_page=15", EMPTY_PRODUCT_PAGE, {
       next: { revalidate: 60 },
     }),
-    apiFetchSafe<{ data: Banner[] }>("/banners", { data: [] }, {
-      next: { revalidate: 3600, tags: ["banners"] },
-    }),
-    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=8", EMPTY_BRAND_PAGE, {
+    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=10", EMPTY_BRAND_PAGE, {
       cache: "no-store",
     }),
   ]);
 
   const categories = categoriesRes.data;
-  // Backend currently returns a fixed page size (15); cap to 10 for the homepage.
-  const featured = productsRes.data.slice(0, 10);
+  const featured = productsRes.data;
   const brands = brandsRes.data ?? [];
 
-  // Fetch products for the top 4 categories in parallel
-  const topCategories = categories.slice(0, 4);
+  // Fetch products for a larger batch to find active categories
+  const allTopCategories = categories.slice(0, 15);
   const categoryProductsRes = await Promise.all(
-    topCategories.map((cat) =>
+    allTopCategories.map((cat) =>
       apiFetchSafe<PaginatedResponse<Product>>(
-        `/products?category=${cat.slug}&per_page=8`,
+        `/products?category=${cat.slug}&per_page=10`,
         EMPTY_PRODUCT_PAGE,
         { next: { revalidate: 60 } }
       )
     )
   );
 
+  // Filter only categories that actually have products
+  const validCategories: Category[] = [];
+  const validProductsRes: Product[][] = [];
+  
+  for (let i = 0; i < allTopCategories.length; i++) {
+    if (categoryProductsRes[i].data.length > 0) {
+      validCategories.push(allTopCategories[i]);
+      validProductsRes.push(categoryProductsRes[i].data);
+    }
+  }
+
   return (
-    <>
-      <BannerSlider banners={bannersRes.data} />
-      <HeroBanner />
-      <CategoryGrid categories={categories} />
-      <FeaturedProducts products={featured} />
+    <div className="bg-[#e3e6e6] min-h-screen pb-10">
+      <AmazonHeroSlider />
+      
+      {/* Main Content Area - overlaps the hero banner */}
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 relative z-20 -mt-12 sm:-mt-16 md:-mt-24">
+        
+        {/* ROW 1: Quad Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+          {validCategories.slice(0, 4).map((cat, idx) => (
+            <CategoryQuadCard
+              key={cat.id}
+              title={cat.name}
+              categorySlug={cat.slug}
+              products={validProductsRes[idx]}
+            />
+          ))}
+        </div>
 
-      {/* Category-wise Product Sections */}
-      {topCategories.map((cat, index) => {
-        const catProducts = categoryProductsRes[index].data;
-        if (catProducts.length === 0) return null;
-        return (
-          <CategoryProductSection
-            key={cat.id}
-            category={cat}
-            products={catProducts}
+        {/* ROW 2: Horizontal Scroll */}
+        {validCategories.length > 4 && validProductsRes[4] && validProductsRes[4].length > 0 && (
+          <HorizontalProductScroll 
+            title={`Best Sellers in ${validCategories[4].name}`}
+            products={validProductsRes[4]}
+            viewAllLink={`/category/${validCategories[4].slug}`}
           />
-        );
-      })}
+        )}
 
-      {brands.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 lang="bn" className="text-lg font-bold">
-              শীর্ষ ব্র্যান্ড
-            </h2>
-            <Link
-              href="/brands"
-              lang="bn"
-              className="text-sm text-[#f47920] hover:underline"
-            >
-              সব ব্র্যান্ড →
-            </Link>
-          </div>
-          <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-2">
-            {brands.map((brand) => (
-              <Link
-                key={brand.id}
-                href={`/brands/${brand.slug}`}
-                className="flex w-24 flex-shrink-0 flex-col items-center gap-2 rounded-xl border border-[#f1f5f9] p-3 transition-all hover:border-[#f47920] hover:bg-orange-50"
-              >
-                {brand.logo?.url ? (
-                  <Image
-                    src={brand.logo.url}
-                    alt={brand.name}
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                    <Tag className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                )}
-                <span className="line-clamp-1 w-full text-center text-xs font-medium">
-                  {brand.name}
-                </span>
-              </Link>
+        {/* ROW 3: Quad Cards */}
+        {validCategories.length > 5 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+            {validCategories.slice(5, 9).map((cat, idx) => (
+              <CategoryQuadCard
+                key={cat.id}
+                title={cat.name}
+                categorySlug={cat.slug}
+                products={validProductsRes[idx + 5]}
+              />
             ))}
           </div>
-        </section>
-      )}
-    </>
+        )}
+
+        {/* ROW 4: Featured Horizontal Scroll */}
+        {featured.length > 0 && (
+          <HorizontalProductScroll 
+            title="Top picks for Bangladesh"
+            products={featured}
+            viewAllLink="/products"
+          />
+        )}
+
+        {/* Brands Section */}
+        {brands.length > 0 && (
+          <div className="bg-white p-4 relative z-20 w-full overflow-hidden mt-6">
+            <div className="flex items-center gap-4 mb-4">
+              <h2 className="text-[21px] font-bold text-[#0F1111]">Top Brands</h2>
+              <Link href="/brands" className="text-[14px] font-semibold text-[#007185] hover:text-[#C7511F] hover:underline">
+                See all brands
+              </Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+              {brands.map((brand) => (
+                <Link
+                  key={brand.id}
+                  href={`/brands/${brand.slug}`}
+                  className="flex flex-col items-center gap-2 flex-shrink-0 w-[120px] group"
+                >
+                  <div className="relative w-full aspect-square bg-[#F7F7F7] rounded-full overflow-hidden border border-gray-200 group-hover:border-[#f47920] p-2">
+                    {brand.logo?.url ? (
+                      <Image
+                        src={brand.logo.url}
+                        alt={brand.name}
+                        fill
+                        className="object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <Tag className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[14px] text-[#0F1111] font-medium text-center line-clamp-1 group-hover:text-[#c45500]">
+                    {brand.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
   );
 }
