@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Tag } from "lucide-react";
-import { AmazonHeroSlider } from "@/components/home/AmazonHeroSlider";
+import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryQuadCard } from "@/components/home/CategoryQuadCard";
 import { HorizontalProductScroll } from "@/components/home/HorizontalProductScroll";
 import { apiFetchSafe } from "@/lib/server-api";
@@ -79,10 +79,10 @@ export default async function HomePage() {
 
   return (
     <div className="bg-[#e3e6e6] min-h-screen pb-10">
-      <AmazonHeroSlider />
+      <HeroBanner />
       
-      {/* Main Content Area - overlaps the hero banner */}
-      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 relative z-20 -mt-12 sm:-mt-16 md:-mt-24">
+      {/* Main Content Area */}
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 relative z-20 mt-6 md:mt-8">
         
         {/* ROW 1: Quad Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
