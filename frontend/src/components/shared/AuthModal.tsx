@@ -141,15 +141,15 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
 
         <Tabs value={tab} onValueChange={(v) => onTabChange(v as AuthTab)}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login" lang="bn">লগইন</TabsTrigger>
-            <TabsTrigger value="register" lang="bn">রেজিস্ট্রেশন</TabsTrigger>
+            <TabsTrigger value="login">Log in</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
 
           {/* LOGIN */}
           <TabsContent value="login" className="mt-4 space-y-4">
             <form onSubmit={handleLogin} className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="login-identifier" lang="bn">ফোন নম্বর বা ইমেইল</Label>
+                <Label htmlFor="login-identifier">Phone number or Email</Label>
                 <Input
                   id="login-identifier"
                   className="h-11"
@@ -163,7 +163,7 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="login-password" lang="bn">পাসওয়ার্ড</Label>
+                <Label htmlFor="login-password">Password</Label>
                 <Input
                   id="login-password"
                   className="h-11"
@@ -178,19 +178,19 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
 
               <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <span lang="bn">লগইন করুন</span>
+                <span>Log in</span>
               </Button>
             </form>
 
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground" lang="bn">অথবা</span>
+              <span className="text-xs text-muted-foreground">OR</span>
               <Separator className="flex-1" />
             </div>
 
             <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={handleGoogleLogin}>
               <GoogleIcon />
-              <span className="ml-2" lang="bn">Google দিয়ে লগইন</span>
+              <span className="ml-2">Log in with Google</span>
             </Button>
           </TabsContent>
 
@@ -198,23 +198,23 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
           <TabsContent value="register" className="mt-4 space-y-4">
             <form onSubmit={register} className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="reg-name" lang="bn">নাম</Label>
-                <Input id="reg-name" className="h-11" placeholder="আপনার নাম" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Label htmlFor="reg-name">Name</Label>
+                <Input id="reg-name" className="h-11" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required />
                 {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="reg-phone" lang="bn">ফোন নম্বর</Label>
+                <Label htmlFor="reg-phone">Phone Number</Label>
                 <Input id="reg-phone" className="h-11" type="tel" placeholder="880XXXXXXXXXX" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} required />
                 {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="reg-email" lang="bn">ইমেইল <span className="text-muted-foreground">(ঐচ্ছিক)</span></Label>
+                <Label htmlFor="reg-email">Email <span className="text-muted-foreground">(optional)</span></Label>
                 <Input id="reg-email" className="h-11" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="reg-password" lang="bn">পাসওয়ার্ড</Label>
-                <Input id="reg-password" className="h-11" type="password" placeholder="কমপক্ষে ৬ অক্ষর" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Label htmlFor="reg-password">Password</Label>
+                <Input id="reg-password" className="h-11" type="password" placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
               </div>
               <div className="space-y-1">
@@ -230,19 +230,19 @@ export function AuthModal({ open, onOpenChange, tab, onTabChange, onSuccess }: A
               </div>
               <Button type="submit" disabled={loading} className="h-11 w-full bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <span lang="bn">রেজিস্ট্রেশন করুন</span>
+                <span>Register</span>
               </Button>
             </form>
 
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground" lang="bn">অথবা</span>
+              <span className="text-xs text-muted-foreground">OR</span>
               <Separator className="flex-1" />
             </div>
 
             <Button type="button" variant="outline" className="h-11 w-full bg-white" onClick={handleGoogleLogin}>
               <GoogleIcon />
-              <span className="ml-2" lang="bn">Google দিয়ে রেজিস্ট্রেশন</span>
+              <span className="ml-2">Register with Google</span>
             </Button>
           </TabsContent>
         </Tabs>

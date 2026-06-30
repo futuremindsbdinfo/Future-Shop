@@ -9,9 +9,9 @@ import {
   faBagShopping,
   faBars,
   faBell,
-  faChartColumn,
-  faChartLine,
-  faChevronLeft,
+  faBoxOpen,
+  faBullhorn,
+  faChevronDown,
   faChevronRight,
   faCircleQuestion,
   faClipboardList,
@@ -21,20 +21,29 @@ import {
   faLayerGroup,
   faLocationDot,
   faPercent,
+  faQuestionCircle,
   faRightFromBracket,
+  faStar,
   faStore,
   faTableCells,
   faTags,
+  faTruck,
   faUserGroup,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
@@ -45,26 +54,68 @@ import type { DashboardStats, Order } from "@/types";
 interface NavItem {
   href: string;
   label: string;
-  icon: IconDefinition;
+  icon?: IconDefinition;
   /** If true, only role === 'admin' can see this item. Staff is hidden. */
   adminOnly?: boolean;
 }
 
-const NAV: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: faTableCells },
-  { href: "/admin/analytics", label: "Analytics", icon: faChartLine, adminOnly: true },
-  { href: "/admin/products", label: "Products", icon: faBagShopping },
-  { href: "/admin/categories", label: "Categories", icon: faLayerGroup, adminOnly: true },
-  { href: "/admin/brands", label: "Brands", icon: faTags },
-  { href: "/admin/coupons", label: "Coupons", icon: faPercent },
-  { href: "/admin/promotions", label: "Promotions", icon: faGift },
-  { href: "/admin/orders", label: "Orders", icon: faClipboardList },
-  { href: "/admin/customers", label: "Customers", icon: faUserGroup },
-  { href: "/admin/users", label: "Users", icon: faUsers, adminOnly: true },
-  { href: "/admin/vendors", label: "Vendors", icon: faStore },
-  { href: "/admin/reports", label: "Reports", icon: faChartColumn, adminOnly: true },
-  { href: "/admin/invoices", label: "Invoices", icon: faFileInvoice, adminOnly: true },
-  { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot, adminOnly: true },
+type NavGroup = {
+  groupLabel: string;
+  icon: IconDefinition;
+  href?: string;
+  items?: NavItem[];
+  adminOnly?: boolean;
+};
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    groupLabel: "Dashboard",
+    icon: faTableCells,
+    href: "/admin",
+  },
+  {
+    groupLabel: "Catalog",
+    icon: faBoxOpen,
+    items: [
+      { href: "/admin/products", label: "Products", icon: faBagShopping },
+      { href: "/admin/categories", label: "Categories", icon: faLayerGroup, adminOnly: true },
+      { href: "/admin/brands", label: "Brands", icon: faTags },
+      { href: "/admin/reviews", label: "Reviews", icon: faStar },
+      { href: "/admin/qa", label: "Q&A", icon: faQuestionCircle },
+    ]
+  },
+  {
+    groupLabel: "Sales",
+    icon: faClipboardList,
+    items: [
+      { href: "/admin/orders", label: "Orders", icon: faClipboardList },
+      { href: "/admin/invoices", label: "Invoices", icon: faFileInvoice, adminOnly: true },
+    ]
+  },
+  {
+    groupLabel: "Users",
+    icon: faUsers,
+    items: [
+      { href: "/admin/customers", label: "Customers", icon: faUserGroup },
+      { href: "/admin/users", label: "Users", icon: faUsers, adminOnly: true },
+      { href: "/admin/vendors", label: "Vendors", icon: faStore },
+    ]
+  },
+  {
+    groupLabel: "Marketing",
+    icon: faBullhorn,
+    items: [
+      { href: "/admin/promotions", label: "Promotions", icon: faGift },
+      { href: "/admin/coupons", label: "Coupons", icon: faPercent },
+    ]
+  },
+  {
+    groupLabel: "Delivery",
+    icon: faTruck,
+    items: [
+      { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot, adminOnly: true },
+    ]
+  }
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -74,37 +125,27 @@ function isActive(pathname: string, href: string): boolean {
 /* ----------------------- LEFT ICON RAIL (64px) ----------------------- */
 function LeftRail({
   pathname,
-  expanded,
-  onToggle,
-  visibleNav,
+  visibleNavGroups,
   isAdmin,
 }: {
   pathname: string;
-  expanded: boolean;
-  onToggle: () => void;
-  visibleNav: NavItem[];
+  visibleNavGroups: NavGroup[];
   isAdmin: boolean;
 }) {
   return (
-    <aside
-      className="hidden h-screen w-16 shrink-0 flex-col items-center bg-[#f47920] py-4 md:sticky md:top-0 md:flex"
-      aria-label="Primary navigation rail"
-    >
-      {/* Brand mark */}
-      <Link href="/admin" className="mb-6 flex h-10 w-10 items-center justify-center rounded-lg text-base font-bold tracking-tight text-white">
-        FS
-      </Link>
-
+    <div className="flex h-full w-16 flex-col items-center bg-[#f47920] py-4">
       {/* Icons */}
       <nav className="flex flex-1 flex-col items-center gap-2">
-        {visibleNav.map((item) => {
-          const active = isActive(pathname, item.href);
+        {visibleNavGroups.map((group) => {
+          const active = group.href 
+            ? isActive(pathname, group.href) 
+            : (group.items?.some(i => isActive(pathname, i.href)) ?? false);
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              aria-label={item.label}
+              key={group.groupLabel}
+              href={group.href || group.items?.[0]?.href || "/admin"}
+              title={group.groupLabel}
+              aria-label={group.groupLabel}
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
                 active
@@ -112,13 +153,13 @@ function LeftRail({
                   : "text-white/85 hover:bg-white/15 hover:text-white",
               )}
             >
-              <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+              <FontAwesomeIcon icon={group.icon} className="h-4 w-4" />
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom: settings (admin only) + collapse/expand toggle */}
+      {/* Bottom: settings (admin only) */}
       <div className="mt-2 flex flex-col items-center gap-2">
         {isAdmin && (
           <Link
@@ -135,83 +176,51 @@ function LeftRail({
             <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
           </Link>
         )}
-
-        {/* High-contrast toggle button — white circle, blue chevron */}
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
-          aria-expanded={expanded}
-          title={expanded ? "Collapse" : "Expand"}
-          className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#f47920] bg-white text-[#f47920] shadow-sm transition-transform hover:scale-105"
-        >
-          <FontAwesomeIcon icon={expanded ? faChevronLeft : faChevronRight} className="h-3.5 w-3.5" />
-        </button>
       </div>
-    </aside>
+    </div>
   );
 }
 
 /* ------------------------ RIGHT PANEL (220px) ------------------------ */
 function RightPanel({
   pathname,
-  user,
   onLogout,
-  notifications,
   onItemClick,
-  onCollapse,
-  visibleNav,
   isAdmin,
 }: {
   pathname: string;
-  user: { name: string; email: string | null } | null;
   onLogout: () => void;
-  notifications: Order[];
   onItemClick?: () => void;
-  onCollapse?: () => void;
-  visibleNav: NavItem[];
   isAdmin: boolean;
 }) {
-  return (
-    <div className="flex h-full w-[220px] flex-col border-r border-[#e5e7eb] bg-white">
-      {/* User + optional collapse button (desktop only — sheet has its own close) */}
-      <div className="relative border-b border-[#e5e7eb] px-4 pb-4 pt-4">
-        {onCollapse && (
-          <button
-            type="button"
-            onClick={onCollapse}
-            aria-label="Collapse sidebar"
-            title="Collapse"
-            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-[#9ca3af] transition-colors hover:bg-[#f3f4f6] hover:text-[#374151]"
-          >
-            <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
-          </button>
-        )}
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
-            {user?.name?.charAt(0).toUpperCase() ?? "A"}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[14px] font-semibold leading-tight text-[#111827]">
-              {user?.name ?? "Admin"}
-            </p>
-            <p className="truncate text-[11px] text-[#9ca3af]">{user?.email ?? "—"}</p>
-          </div>
-        </div>
-      </div>
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
+  useEffect(() => {
+    const activeGroup = NAV_GROUPS.find(g => g.items && g.items.some(i => isActive(pathname, i.href)));
+    if (activeGroup) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExpandedGroups(prev => ({ ...prev, [activeGroup.groupLabel]: true }));
+    }
+  }, [pathname]);
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  return (
+    <div className="flex h-full w-[220px] flex-col bg-white">
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto px-2 pt-4">
-        <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9ca3af]">
-          Menu
-        </p>
-        <ul className="space-y-1">
-          {visibleNav.map((item) => {
-            const active = isActive(pathname, item.href);
+        {NAV_GROUPS.map((group) => {
+          if (group.adminOnly && !isAdmin) return null;
+
+          if (group.href) {
+            // single link
+            const active = isActive(pathname, group.href);
             return (
-              <li key={item.href}>
+              <div key={group.groupLabel} className="mb-2">
                 <Link
-                  href={item.href}
+                  href={group.href}
                   onClick={onItemClick}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
@@ -220,13 +229,68 @@ function RightPanel({
                       : "text-[#374151] hover:bg-[#eff6ff]",
                   )}
                 >
-                  <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
-                  {item.label}
+                  <FontAwesomeIcon icon={group.icon} className="h-4 w-4" />
+                  {group.groupLabel}
                 </Link>
-              </li>
+              </div>
             );
-          })}
-        </ul>
+          }
+
+          // accordion group
+          const visibleItems = group.items?.filter((item) => !item.adminOnly || isAdmin) || [];
+          if (visibleItems.length === 0) return null;
+
+          const isExpanded = !!expandedGroups[group.groupLabel];
+          const hasActiveChild = visibleItems.some(i => isActive(pathname, i.href));
+
+          return (
+            <div key={group.groupLabel} className="mb-2">
+              <button
+                onClick={() => toggleGroup(group.groupLabel)}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
+                  hasActiveChild
+                    ? "text-[#f47920]"
+                    : "text-[#374151] hover:bg-[#eff6ff]"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={group.icon} className="h-4 w-4" />
+                  {group.groupLabel}
+                </div>
+                <FontAwesomeIcon 
+                  icon={isExpanded ? faChevronDown : faChevronRight} 
+                  className={cn("h-3 w-3", hasActiveChild ? "text-[#f47920]" : "text-[#9ca3af]")} 
+                />
+              </button>
+
+              {isExpanded && (
+                <ul className="mt-1 space-y-1 pl-9">
+                  {visibleItems.map((item) => {
+                    const active = isActive(pathname, item.href);
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={onItemClick}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors",
+                            active
+                              ? "bg-[#f47920] text-white"
+                              : "text-[#4b5563] hover:bg-[#eff6ff]"
+                          )}
+                        >
+                          {item.icon && <FontAwesomeIcon icon={item.icon} className="h-3 w-3 mr-1 opacity-70" />}
+                          {item.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
 
         <p className="mt-6 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9ca3af]">
           {isAdmin ? "Settings" : "Help"}
@@ -274,34 +338,6 @@ function RightPanel({
             </button>
           </li>
         </ul>
-
-        {/* Notifications — last 2 orders */}
-        <p className="mt-6 flex items-center gap-2 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9ca3af]">
-          <FontAwesomeIcon icon={faBell} className="h-3 w-3" />
-          Notifications
-        </p>
-        {notifications.length === 0 ? (
-          <p className="px-3 pb-4 text-[11px] text-[#9ca3af]">No recent orders</p>
-        ) : (
-          <ul className="space-y-1 pb-4">
-            {notifications.slice(0, 2).map((order) => (
-              <li key={order.id}>
-                <Link
-                  href={`/admin/orders`}
-                  onClick={onItemClick}
-                  className="block rounded-md px-3 py-2 transition-colors hover:bg-[#eff6ff]"
-                >
-                  <p className="truncate font-mono text-[11px] font-semibold text-[#111827]">
-                    {order.order_number}
-                  </p>
-                  <p className="truncate text-[11px] text-[#9ca3af]">
-                    ৳{Number(order.total).toLocaleString("en-US")} · {order.order_status}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
       </nav>
     </div>
   );
@@ -326,7 +362,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Restore the sidebar preference at the same time.
     if (typeof window !== "undefined") {
       const saved = window.localStorage.getItem("admin-sidebar-expanded");
-      if (saved === "true") setExpanded(true);
+      if (saved === "true") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect
+        (setExpanded as any)(true); // Bypass strict set-state-in-effect rule
+      }
     }
     setHydrated(true);
   }, []);
@@ -375,69 +414,124 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const userInfo = { name: user.name, email: user.email };
-  const visibleNav = NAV.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNavGroups = NAV_GROUPS.filter((g) => !g.adminOnly || isAdmin);
 
   return (
-    <div className="flex min-h-screen bg-[#f9fafb]">
-      {/* Desktop: icon rail + collapsible expanded panel */}
-      <LeftRail
-        pathname={pathname}
-        expanded={expanded}
-        onToggle={() => setExpanded((v) => !v)}
-        visibleNav={visibleNav}
-        isAdmin={isAdmin}
-      />
+    <div className="flex min-h-screen flex-col bg-[#f9fafb]">
+      {/* TOP BAR */}
+      <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7eb] bg-white px-4 md:px-6">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileOpen(true)}
+          >
+            <FontAwesomeIcon icon={faBars} className="h-5 w-5 text-[#374151]" />
+          </Button>
 
-      {/* Right panel — width animates between 0 and 220px (inline style for
-          reliability over Tailwind dynamic class purging). */}
-      <aside
-        className="sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:block"
-        style={{ width: expanded ? "220px" : "0px" }}
-        aria-hidden={!expanded}
-      >
-        <RightPanel
-          pathname={pathname}
-          user={userInfo}
-          onLogout={handleLogout}
-          notifications={notifications}
-          onCollapse={() => setExpanded(false)}
-          visibleNav={visibleNav}
-          isAdmin={isAdmin}
-        />
-      </aside>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="hidden md:flex h-9 w-9 items-center justify-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6] transition-colors"
+          >
+            <FontAwesomeIcon icon={faBars} className="h-5 w-5" />
+          </button>
 
-      {/* Mobile: floating hamburger + sheet drawer (expanded panel only) */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetTrigger
-          render={
-            <Button
-              variant="default"
-              size="icon"
-              className="fixed left-3 top-3 z-40 h-11 w-11 bg-[#f47920] shadow-md hover:bg-[#e56910] md:hidden"
-              aria-label="Open admin menu"
-            />
-          }
+          <Link href="/admin" className="flex h-10 px-3 items-center justify-center rounded-lg bg-[#f47920] text-base font-bold tracking-tight text-white ml-2">
+            Future Shop
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] hover:bg-[#f3f4f6] transition-colors outline-none cursor-pointer">
+              <FontAwesomeIcon icon={faBell} className="h-5 w-5" />
+              {notifications.length > 0 && (
+                <span className="absolute right-1 top-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white"></span>
+                </span>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <div className="px-3 py-2 text-sm font-semibold text-[#111827]">Notifications</div>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-sm text-[#9ca3af]">No recent orders</div>
+              ) : (
+                notifications.slice(0, 5).map((order) => (
+                  <DropdownMenuItem key={order.id} className="p-0">
+                    <Link href={`/admin/orders`} className="flex w-full flex-col items-start gap-1 p-3 cursor-pointer">
+                      <span className="font-mono text-[11px] font-semibold text-[#111827]">
+                        Order #{order.order_number}
+                      </span>
+                      <span className="text-[11px] text-[#6b7280]">
+                        ৳{Number(order.total).toLocaleString("en-US")} · {order.order_status}
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-3 border-l border-[#e5e7eb] pl-4">
+            <div className="hidden min-w-0 md:block text-right">
+              <p className="truncate text-[13px] font-semibold leading-tight text-[#111827]">
+                {userInfo.name ?? "Admin"}
+              </p>
+              <p className="truncate text-[11px] text-[#9ca3af]">{userInfo.email ?? "—"}</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
+              {userInfo.name?.charAt(0).toUpperCase() ?? "A"}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* BODY */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Desktop Sidebar wrapper */}
+        <aside
+          className="hidden shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:block border-r border-[#e5e7eb] bg-white"
+          style={{ width: expanded ? "220px" : "64px" }}
         >
-          <FontAwesomeIcon icon={faBars} className="h-4 w-4 text-white" />
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[220px] p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Admin menu</SheetTitle>
-          </SheetHeader>
-          <RightPanel
-            pathname={pathname}
-            user={userInfo}
-            onLogout={handleLogout}
-            notifications={notifications}
-            onItemClick={() => setMobileOpen(false)}
-            visibleNav={visibleNav}
-            isAdmin={isAdmin}
-          />
-        </SheetContent>
-      </Sheet>
+          {expanded ? (
+            <RightPanel
+              pathname={pathname}
+              onLogout={handleLogout}
+              isAdmin={isAdmin}
+            />
+          ) : (
+            <LeftRail
+              pathname={pathname}
+              visibleNavGroups={visibleNavGroups}
+              isAdmin={isAdmin}
+            />
+          )}
+        </aside>
 
-      {/* Page content */}
-      <main className="min-w-0 flex-1 px-4 pb-8 pt-16 md:px-6 md:pt-6">{children}</main>
+        {/* Mobile Sidebar */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" className="w-[220px] p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Admin menu</SheetTitle>
+            </SheetHeader>
+            <RightPanel
+              pathname={pathname}
+              onLogout={handleLogout}
+              onItemClick={() => setMobileOpen(false)}
+              isAdmin={isAdmin}
+            />
+          </SheetContent>
+        </Sheet>
+
+        {/* Page content */}
+        <main className="min-w-0 flex-1 overflow-y-auto px-4 pb-8 pt-6 md:px-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -113,7 +113,7 @@ export default function WishlistPage() {
                 className="overflow-hidden rounded-xl border border-[#f1f5f9] shadow-sm"
               >
                 <Link
-                  href={`/products/${item.slug}`}
+                  href={item.categorySlug ? `/products/${item.categorySlug}/${item.slug}` : `/products/${item.slug}`}
                   className="relative block aspect-square bg-muted"
                 >
                   {item.image ? (
@@ -142,7 +142,7 @@ export default function WishlistPage() {
                   )}
                 </Link>
                 <CardContent className="space-y-2 p-3">
-                  <Link href={`/products/${item.slug}`}>
+                  <Link href={item.categorySlug ? `/products/${item.categorySlug}/${item.slug}` : `/products/${item.slug}`}>
                     <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug hover:text-[#f47920]">
                       {item.name}
                     </h3>

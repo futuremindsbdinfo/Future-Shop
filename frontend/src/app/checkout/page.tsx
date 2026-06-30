@@ -18,10 +18,7 @@ const TK = "৳";
 const formatTk = (value: number) => `${TK}${value.toLocaleString("en-US")}`;
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
-  { value: "cod", label: "ক্যাশ অন ডেলিভারি" },
-  // SSLCommerz live হলে uncomment।
-  // { value: "bkash", label: "বিকাশ" },
-  // { value: "nagad", label: "নগদ" },
+  { value: "cod", label: "Cash on Delivery" },
 ];
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -61,6 +58,7 @@ export default function CheckoutPage() {
   // deciding the user is unauthenticated (avoids a redirect race on refresh).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
   }, []);
 
@@ -139,14 +137,24 @@ export default function CheckoutPage() {
       : 0;
   const total = Math.max(0, amountAfterDiscount - walletApplied);
 
+  const hasGroceryItems = items.some((item) => item.isGrocery);
+  const isZoneSherpur = selectedZone
+    ? selectedZone.name.toLowerCase().includes("sherpur") || selectedZone.id === 1
+    : false;
+  const isShippingInvalid = hasGroceryItems && !isZoneSherpur;
+
   const handlePlaceOrder = async (event: React.FormEvent) => {
     event.preventDefault();
     if (items.length === 0) {
-      toast.error("আপনার কার্ট খালি");
+      toast.error("Your cart is empty");
       return;
     }
     if (!zoneId) {
-      toast.error("ডেলিভারি জোন নির্বাচন করুন");
+      toast.error("Please select a delivery zone");
+      return;
+    }
+    if (hasGroceryItems && !isZoneSherpur) {
+      toast.error("Grocery products can only be delivered to Sherpur.");
       return;
     }
 
@@ -171,7 +179,7 @@ export default function CheckoutPage() {
       clearCart();
       router.push(`/orders/success?order=${encodeURIComponent(res.data.data.order_number)}`);
     } catch (error) {
-      toast.error(getErrorMessage(error, "অর্ডার দেওয়া যায়নি"));
+      toast.error(getErrorMessage(error, "Failed to place order"));
     } finally {
       setLoading(false);
     }
@@ -179,7 +187,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold" lang="bn">চেকআউট</h1>
+      <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
 
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Form */}
@@ -187,15 +195,15 @@ export default function CheckoutPage() {
           <Card>
             <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
-                <Label htmlFor="name" lang="bn">পুরো নাম</Label>
+                <Label htmlFor="name">Full Name</Label>
                 <Input id="name" className="h-11" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" lang="bn">ফোন নম্বর</Label>
+                <Label htmlFor="phone">Phone Number</Label>
                 <Input id="phone" className="h-11" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address" lang="bn">সম্পূর্ণ ঠিকানা</Label>
+                <Label htmlFor="address">Full Address</Label>
                 <textarea
                   id="address"
                   value={address}
@@ -206,7 +214,7 @@ export default function CheckoutPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="zone" lang="bn">ডেলিভারি জোন</Label>
+                <Label htmlFor="zone">Delivery Zone</Label>
                 <select
                   id="zone"
                   value={zoneId ?? ""}
@@ -219,6 +227,11 @@ export default function CheckoutPage() {
                     </option>
                   ))}
                 </select>
+                {isShippingInvalid && (
+                  <p className="text-xs font-semibold text-red-600 mt-2">
+                    Your cart contains grocery products that are only deliverable to Sherpur. Please select &quot;Zone A — Sherpur&quot; or remove grocery items from your cart.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -289,7 +302,7 @@ export default function CheckoutPage() {
 
           <Card>
             <CardContent className="space-y-3 p-4">
-              <h2 className="font-semibold" lang="bn">পেমেন্ট পদ্ধতি</h2>
+              <h2 className="font-semibold">Payment Method</h2>
               {PAYMENT_OPTIONS.map((option) => (
                 <label
                   key={option.value}
@@ -302,7 +315,7 @@ export default function CheckoutPage() {
                     checked={paymentMethod === option.value}
                     onChange={() => setPaymentMethod(option.value)}
                   />
-                  <span lang="bn">{option.label}</span>
+                  <span>{option.label}</span>
                 </label>
               ))}
             </CardContent>
@@ -313,14 +326,14 @@ export default function CheckoutPage() {
         <div>
           <Card>
             <CardContent className="space-y-3 p-4">
-              <h2 className="font-semibold" lang="bn">অর্ডার সারসংক্ষেপ</h2>
+              <h2 className="font-semibold">Order Summary</h2>
               <Separator />
               <div className="flex justify-between text-sm">
-                <span lang="bn">সাবটোটাল</span>
+                <span>Subtotal</span>
                 <span>{formatTk(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span lang="bn">ডেলিভারি চার্জ</span>
+                <span>Delivery Charge</span>
                 <span>{formatTk(deliveryCharge)}</span>
               </div>
               {couponDiscount > 0 && (
@@ -337,15 +350,15 @@ export default function CheckoutPage() {
               )}
               <Separator />
               <div className="flex justify-between font-bold">
-                <span lang="bn">মোট</span>
+                <span>Total</span>
                 <span>{formatTk(total)}</span>
               </div>
               <Button
                 type="submit"
-                disabled={loading || items.length === 0}
+                disabled={loading || items.length === 0 || isShippingInvalid}
                 className="mt-2 h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
               >
-                <span lang="bn">অর্ডার দিন</span>
+                <span>Place Order</span>
               </Button>
             </CardContent>
           </Card>

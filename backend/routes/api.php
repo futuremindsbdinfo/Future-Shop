@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\VendorController;
+use App\Http\Controllers\Api\V1\ReviewController;
+use App\Http\Controllers\Api\V1\QAController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,6 +61,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('categories/{slug}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/{slug}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('products/{product}/reviews', [ReviewController::class, 'index'])->name('products.reviews.index');
+    Route::get('products/{product}/qa', [QAController::class, 'index'])->name('products.qa.index');
     Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::get('banners', [BannerController::class, 'publicIndex'])->name('banners.index');
@@ -111,6 +115,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Payments (authenticated customer actions).
         Route::post('payments/initiate', [PaymentController::class, 'initiate'])->name('payments.initiate');
         Route::post('payments/cod/{order}', [PaymentController::class, 'cod'])->name('payments.cod');
+
+        // Product Reviews & QA
+        Route::post('products/{product}/reviews', [ReviewController::class, 'store'])->name('products.reviews.store');
+        Route::post('products/{product}/qa', [QAController::class, 'store'])->name('products.qa.store');
 
         /*
         | Role-gated areas. RoleMiddleware ('role') checks the authenticated

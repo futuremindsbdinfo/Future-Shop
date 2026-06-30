@@ -17,8 +17,8 @@ class WishlistController extends Controller
             ->with([
                 'product' => fn ($q) => $q
                     ->select('id', 'name', 'slug', 'price', 'sale_price',
-                             'images', 'status', 'stock_quantity', 'brand_id')
-                    ->with('brand:id,name,slug'),
+                             'images', 'status', 'stock_quantity', 'brand_id', 'category_id')
+                    ->with(['brand:id,name,slug', 'category:id,name,slug']),
             ])
             ->latest()
             ->paginate(12);

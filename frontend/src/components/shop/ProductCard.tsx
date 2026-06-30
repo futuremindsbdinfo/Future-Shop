@@ -75,6 +75,7 @@ export function ProductCard({ product }: Props) {
       sale_price: sale_price ? Number(sale_price) : null,
       image: imageUrl ?? undefined,
       stock: stock_quantity,
+      categorySlug: product.category?.slug,
     });
     toast.success(
       wasWishlisted ? "উইশলিস্ট থেকে সরানো হয়েছে" : "উইশলিস্টে যোগ হয়েছে",
@@ -82,12 +83,13 @@ export function ProductCard({ product }: Props) {
   };
 
   const subline = brand?.name;
+  const productLink = product.category?.slug ? `/products/${product.category.slug}/${slug}` : `/products/${slug}`;
 
   return (
     <div className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#f1f5f9] bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       {/* Image block */}
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <Link href={`/products/${slug}`} className="absolute inset-0">
+        <Link href={productLink} className="absolute inset-0">
           {imageUrl ? (
             <Image
               src={imageUrl}
@@ -159,7 +161,7 @@ export function ProductCard({ product }: Props) {
         {subline && (
           <p className="truncate text-xs text-muted-foreground">{subline}</p>
         )}
-        <Link href={`/products/${slug}`} className="flex-1">
+        <Link href={productLink} className="flex-1">
           <h3 className="line-clamp-2 text-sm font-medium leading-snug transition-colors hover:text-[#f47920]">
             {name}
           </h3>

@@ -69,7 +69,7 @@ class OrderController extends Controller
 
                 $locked = Product::whereIn('id', $allProductIds)
                     ->lockForUpdate()
-                    ->with('vendor:id,commission_rate')
+                    ->with(['vendor:id,commission_rate', 'category:id,name,slug'])
                     ->get()
                     ->keyBy('id');
 
@@ -78,6 +78,7 @@ class OrderController extends Controller
                 // pass through the validation loop.
                 $subtotal = 0.0;
                 $lineData = [];
+                $hasGrocery = false;
 
                 foreach ($items as $productId => $qty) {
                     $product = $locked->get($productId);
@@ -92,6 +93,10 @@ class OrderController extends Controller
                         throw ValidationException::withMessages([
                             'cart' => ["Insufficient stock for \"{$product->name}\" (have {$product->stock_quantity}, need {$qty})."],
                         ]);
+                    }
+
+                    if ($this->isProductGrocery($product)) {
+                        $hasGrocery = true;
                     }
 
                     $unit = (float) ($product->sale_price ?? $product->price);
@@ -109,6 +114,16 @@ class OrderController extends Controller
                 }
 
                 $zone = DeliveryZone::where('is_active', true)->findOrFail($data['delivery_zone_id']);
+                
+                if ($hasGrocery) {
+                    $zoneName = strtolower($zone->name);
+                    if (!str_contains($zoneName, 'sherpur') && $zone->id !== 1) {
+                        throw ValidationException::withMessages([
+                            'delivery_zone_id' => ['Grocery products can only be delivered to Bogura, Sherpur. Please select the correct delivery zone.'],
+                        ]);
+                    }
+                }
+
                 $deliveryCharge = (float) $zone->delivery_charge;
                 $subtotal = round($subtotal, 2);
 
@@ -421,5 +436,33 @@ class OrderController extends Controller
             ->withQueryString();
 
         return response()->json($orders);
+    }
+
+    /**
+     * Helper to detect if a product belongs to the Grocery category.
+     */
+    private function isProductGrocery(Product $product): bool
+    {
+        $catName = strtolower($product->category->name ?? '');
+        $prodName = strtolower($product->name);
+        
+        return str_contains($catName, 'grocery') ||
+               str_contains($catName, 'food') ||
+               str_contains($catName, 'cooking') ||
+               str_contains($catName, 'তেল') ||
+               str_contains($catName, 'চাল') ||
+               str_contains($catName, 'ডাল') ||
+               str_contains($catName, 'মসলা') ||
+               str_contains($catName, 'কাঁচাবাজার') ||
+               str_contains($catName, 'মুদি') ||
+               str_contains($prodName, 'oil') ||
+               str_contains($prodName, 'তেল') ||
+               str_contains($prodName, 'mustard') ||
+               str_contains($prodName, 'rice') ||
+               str_contains($prodName, 'সরিষা') ||
+               str_contains($prodName, 'চাল') ||
+               str_contains($prodName, 'ডাল') ||
+               str_contains($prodName, 'মসলা') ||
+               str_contains($prodName, 'মুদি');
     }
 }

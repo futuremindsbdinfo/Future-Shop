@@ -107,10 +107,11 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [showSuggest]);
 
-  const selectSuggestion = (slug: string) => {
+  const selectSuggestion = (slug: string, categorySlug?: string) => {
     setQuery("");
     setSearchClosed(true);
-    router.push(`/products/${slug}`);
+    const link = categorySlug ? `/products/${categorySlug}/${slug}` : `/products/${slug}`;
+    router.push(link);
   };
 
   // Open the auth modal automatically when the proxy redirected here (?auth=login).
@@ -242,16 +243,16 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
                   </Button>
                 </div>
               ) : (
-                <Button
-                  className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    openAuth("login");
-                  }}
-                >
-                  <span lang="bn">লগইন / রেজিস্ট্রেশন</span>
-                </Button>
-              )}
+            <Button
+              className="h-11 w-full bg-[#f47920] hover:bg-[#e56910]"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openAuth("login");
+              }}
+            >
+              <span>Log in / Register</span>
+            </Button>
+          )}
             </div>
           </SheetContent>
         </Sheet>
@@ -346,7 +347,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
                       <li key={p.id}>
                         <button
                           type="button"
-                          onClick={() => selectSuggestion(p.slug)}
+                          onClick={() => selectSuggestion(p.slug, p.category?.slug)}
                           className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted"
                         >
                           <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
@@ -447,14 +448,14 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
               className="bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90"
               onClick={() => openAuth("login")}
             >
-              <span lang="bn">লগইন</span>
+              <span>Log in</span>
             </Button>
             <Button
               variant="outline"
               className="border-[#f47920] text-[#f47920] hover:bg-[#fff7ed]"
               onClick={() => openAuth("register")}
             >
-              <span lang="bn">রেজিস্ট্রেশন</span>
+              <span>Register</span>
             </Button>
           </div>
         )}

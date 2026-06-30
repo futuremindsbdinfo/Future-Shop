@@ -112,6 +112,7 @@ export default function WishlistPage() {
                 p.sale_price !== null ? Number(p.sale_price) : null;
               const hasSale = salePrice !== null && salePrice < price;
               const effectivePrice = hasSale && salePrice !== null ? salePrice : price;
+              const productLink = p.category?.slug ? `/products/${p.category.slug}/${p.slug}` : `/products/${p.slug}`;
 
               return (
                 <Card
@@ -119,7 +120,7 @@ export default function WishlistPage() {
                   className="overflow-hidden rounded-xl border border-[#f1f5f9] shadow-sm"
                 >
                   <Link
-                    href={`/products/${p.slug}`}
+                    href={productLink}
                     className="relative block aspect-square bg-muted"
                   >
                     {imageUrl ? (
@@ -149,7 +150,7 @@ export default function WishlistPage() {
                         {p.brand.name}
                       </p>
                     )}
-                    <Link href={`/products/${p.slug}`}>
+                    <Link href={productLink}>
                       <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium hover:text-[#f47920]">
                         {p.name}
                       </h3>

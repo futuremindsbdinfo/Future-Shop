@@ -303,6 +303,8 @@ export interface CartItem {
   quantity: number;
   image?: string;
   stock?: number;
+  isGrocery?: boolean;
+  categorySlug?: string;
 }
 
 export interface WishlistItem {
@@ -313,6 +315,7 @@ export interface WishlistItem {
   sale_price?: number | null;
   image?: string;
   stock?: number;
+  categorySlug?: string;
 }
 
 /** A row in `dashboard.product_profits`. */
@@ -476,8 +479,9 @@ export interface Wishlist {
   id: number;
   user_id: number;
   product_id: number;
-  product?: Pick<Product, 'id' | 'name' | 'slug' | 'price' | 'sale_price' | 'images' | 'status' | 'stock_quantity'> & {
+  product?: Pick<Product, 'id' | 'name' | 'slug' | 'price' | 'sale_price' | 'images' | 'status' | 'stock_quantity' | 'category_id'> & {
     brand?: Pick<Brand, 'id' | 'name' | 'slug'> | null;
+    category?: Pick<Category, 'id' | 'name' | 'slug'> | null;
   };
   created_at: string;
   updated_at: string;

@@ -21,7 +21,7 @@ function AuthCallbackContent() {
     const token = searchParams.get("token");
 
     if (!token) {
-      toast.error("লগইন ব্যর্থ হয়েছে। কোনো টোকেন পাওয়া যায়নি।");
+      toast.error("Login failed. No token found.");
       router.push("/?auth=login");
       return;
     }
@@ -39,11 +39,11 @@ function AuthCallbackContent() {
         });
 
         login(res.data.user, token);
-        toast.success("লগইন সফল হয়েছে");
+        toast.success("Login successful");
         router.push("/");
       } catch (error) {
-        console.error("Failed to fetch user:", error);
-        toast.error("লগইন সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।");
+        console.error("Google login callback error:", error);
+        toast.error("Could not complete login. Please try again.");
         router.push("/?auth=login");
       }
     };
@@ -55,8 +55,8 @@ function AuthCallbackContent() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50/50">
       <div className="flex flex-col items-center gap-4 text-center">
         <Loader2 className="h-10 w-10 animate-spin text-[#f47920]" />
-        <p className="text-sm text-muted-foreground" lang="bn">
-          লগইন হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...
+        <p className="mt-4 text-sm font-medium text-slate-600">
+          Logging in, please wait...
         </p>
       </div>
     </div>
