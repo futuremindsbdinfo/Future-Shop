@@ -4,6 +4,7 @@ import { Tag } from "lucide-react";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryQuadCard } from "@/components/home/CategoryQuadCard";
 import { HorizontalProductScroll } from "@/components/home/HorizontalProductScroll";
+import { HorizontalBrandScroll } from "@/components/home/HorizontalBrandScroll";
 import { apiFetchSafe } from "@/lib/server-api";
 import type { Brand, Category, PaginatedResponse, Product } from "@/types";
 
@@ -130,44 +131,8 @@ export default async function HomePage() {
 
         {/* Brands Section */}
         {brands.length > 0 && (
-          <div className="bg-white p-4 relative z-20 w-full overflow-hidden mt-6">
-            <div className="flex items-center gap-4 mb-4">
-              <h2 className="text-[21px] font-bold text-[#0F1111]">Top Brands</h2>
-              <Link href="/brands" className="text-[14px] font-semibold text-[#007185] hover:text-[#C7511F] hover:underline">
-                See all brands
-              </Link>
-            </div>
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-              {brands.map((brand) => (
-                <Link
-                  key={brand.id}
-                  href={`/brands/${brand.slug}`}
-                  className="flex flex-col items-center gap-2 flex-shrink-0 w-[120px] group"
-                >
-                  <div className="relative w-full aspect-square bg-[#F7F7F7] rounded-full overflow-hidden border border-gray-200 group-hover:border-[#f47920] p-2">
-                    {brand.logo?.url ? (
-                      <Image
-                        src={brand.logo.url}
-                        alt={brand.name}
-                        fill
-                        className="object-contain"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Tag className="h-6 w-6 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[14px] text-[#0F1111] font-medium text-center line-clamp-1 group-hover:text-[#c45500]">
-                    {brand.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <HorizontalBrandScroll brands={brands} />
         )}
-
       </div>
     </div>
   );
