@@ -46,12 +46,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware('throttle:6,1')->group(function () {
         Route::post('auth/register', [AuthController::class, 'register'])->name('auth.register');
         Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
-        // Route::post('auth/send-otp', [AuthController::class, 'sendOtp'])->name('auth.send-otp');
-        // Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp'])->name('auth.verify-otp');
-        
-        // Socialite Auth Routes
+
+        // Google OAuth — takeover-proof: verified-email enforced + one-time code exchange.
         Route::get('auth/{provider}/redirect', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
         Route::get('auth/{provider}/callback', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'callback'])->name('auth.social.callback');
+        Route::post('auth/social/exchange', [\App\Http\Controllers\Api\V1\SocialAuthController::class, 'exchange'])->name('auth.social.exchange');
     });
 
     /*

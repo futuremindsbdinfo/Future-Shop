@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -89,90 +88,6 @@ class AuthController extends Controller
     }
 
     /**
-     * Send a 6-digit OTP for phone login.
-     *
-     * Scaffold only: the code is cached for 5 minutes. SMS delivery is a later
-     * integration. In debug mode the code is echoed back to ease local testing.
-     */
-    public function sendOtp(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'phone' => ['required', 'string', 'max:20'],
-        ]);
-
-        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        Cache::put($this->otpKey($data['phone']), $otp, now()->addMinutes(5));
-
-        // TODO: dispatch SMS via provider here.
-
-        $response = ['message' => 'OTP পাঠানো হয়েছে।'];
-        if (config('app.debug')) {
-            $response['otp'] = $otp; // dev-only convenience
-        }
-
-        return response()->json($response);
-    }
-
-    /**
-     * Verify the OTP and log the user in (find-or-create by phone).
-     */
-    public function verifyOtp(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'phone' => ['required', 'string', 'max:20'],
-            'otp' => ['required', 'string'],
-            'referral_code' => ['nullable', 'string', 'max:12'],
-        ]);
-
-        $cached = Cache::get($this->otpKey($data['phone']));
-
-        if ($cached === null || ! hash_equals($cached, $data['otp'])) {
-            throw ValidationException::withMessages([
-                'otp' => ['OTP সঠিক নয় বা মেয়াদ শেষ হয়ে গেছে।'],
-            ]);
-        }
-
-        Cache::forget($this->otpKey($data['phone']));
-
-        // Referral applies to the FIRST signup only; ignored if the phone already exists.
-        $referrerId = $this->resolveReferrer($data['referral_code'] ?? null, $data['phone']);
-
-        $user = User::firstOrCreate(
-            ['phone' => $data['phone']],
-            [
-                'name' => 'Future Shop User',
-                'role' => 'customer',
-                'is_active' => true,
-                'referred_by_id' => $referrerId,
-                // referral_code auto-assigned via User::boot() creating hook.
-            ],
-        );
-
-        // Ensure all columns (e.g. null email/password) are hydrated for the response.
-        $user->refresh();
-
-        if (! $user->is_active) {
-            throw ValidationException::withMessages([
-                'phone' => ['এই অ্যাকাউন্টটি নিষ্ক্রিয়।'],
-            ]);
-        }
-
-        $token = $user->createToken('api')->plainTextToken;
-
-        return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'token_type' => 'Bearer',
-        ]);
-    }
-
-    private function otpKey(string $phone): string
-    {
-        return 'otp_'.$phone;
-    }
-
-    /**
      * Resolve a referral_code to a referrer user id.
      *
      * Returns null when the code is missing, invalid, points to an inactive user,
@@ -232,10 +147,14 @@ class AuthController extends Controller
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email,'.$user->id],
         ]);
 
-        $user->update([
-            'name' => $data['name'],
-            'email' => $data['email'] ?? null,
-        ]);
+        $updateData = ['name' => $data['name']];
+
+        if (array_key_exists('email', $data) && $user->email !== $data['email']) {
+            $updateData['email'] = $data['email'];
+            $updateData['email_verified_at'] = null;
+        }
+
+        $user->update($updateData);
 
         return response()->json(['user' => $user->fresh()]);
     }
@@ -260,6 +179,9 @@ class AuthController extends Controller
         }
 
         $user->update(['password' => $data['password']]);
+
+        // Security: Revoke all OTHER tokens so compromised sessions are terminated.
+        $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
 
         return response()->json(['message' => 'পাসওয়ার্ড পরিবর্তন হয়েছে।']);
     }

@@ -60,6 +60,11 @@ class UserManagementController extends Controller
 
         $user->update(['is_active' => ! $user->is_active]);
 
+        // Security: If deactivated, revoke all active tokens immediately to kick them out.
+        if (! $user->is_active) {
+            $user->tokens()->delete();
+        }
+
         return response()->json([
             'data' => $user->fresh(),
         ]);
@@ -147,19 +152,23 @@ class UserManagementController extends Controller
             return response()->json(['message' => 'Only admins can promote to admin role.'], 403);
         }
 
-        $data = array_filter([
-            'name'      => $validated['name'] ?? null,
-            'phone'     => $validated['phone'] ?? null,
-            'email'     => array_key_exists('email', $validated) ? $validated['email'] : null,
-            'role'      => $validated['role'] ?? null,
-            'is_active' => $validated['is_active'] ?? null,
-        ], fn ($v) => $v !== null);
+        $data = [];
+        if (array_key_exists('name', $validated)) $data['name'] = $validated['name'];
+        if (array_key_exists('phone', $validated)) $data['phone'] = $validated['phone'];
+        if (array_key_exists('email', $validated)) $data['email'] = $validated['email'];
+        if (array_key_exists('role', $validated)) $data['role'] = $validated['role'];
+        if (array_key_exists('is_active', $validated)) $data['is_active'] = $validated['is_active'];
 
         if (! empty($validated['password'])) {
             $data['password'] = Hash::make($validated['password']);
         }
 
         $user->update($data);
+
+        // Security: If deactivated OR if the password is changed, revoke all active tokens immediately to kick out attackers.
+        if ((isset($data['is_active']) && ! $data['is_active']) || ! empty($validated['password'])) {
+            $user->tokens()->delete();
+        }
 
         return response()->json($user->fresh());
     }

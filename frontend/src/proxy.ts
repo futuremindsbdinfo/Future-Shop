@@ -28,15 +28,36 @@ export function proxy(request: NextRequest) {
 
   const home = () => NextResponse.redirect(new URL('/', request.url));
 
-  // /admin/* → admin only. The dedicated admin login lives at /fuminds, so
-  // unauthenticated visitors are sent there (not to the public AuthModal).
+  // /admin/* → admin (full) and staff (fulfillment subset only). The dedicated
+  // admin login lives at /fuminds, so unauthenticated visitors are sent there
+  // (not to the public AuthModal).
   if (pathname.startsWith('/admin')) {
     if (!isAuthed) {
       const url = new URL('/fuminds', request.url);
       return NextResponse.redirect(url);
     }
-    if (role !== 'admin') return home();
-    return NextResponse.next();
+    if (role === 'admin') return NextResponse.next();
+    if (role === 'staff') {
+      // Least-privilege: staff may only reach the fulfillment area that the
+      // backend role:admin,staff group also grants. Admin-only pages (dashboard,
+      // users, customers, reports, analytics, settings, categories, zones,
+      // invoices) send staff to their landing instead — defence-in-depth; the
+      // backend still 403s those APIs regardless.
+      const STAFF_ALLOWED = [
+        '/admin/products',
+        '/admin/orders',
+        '/admin/vendors',
+        '/admin/brands',
+        '/admin/coupons',
+        '/admin/promotions',
+      ];
+      const allowed = STAFF_ALLOWED.some(
+        (p) => pathname === p || pathname.startsWith(p + '/'),
+      );
+      if (allowed) return NextResponse.next();
+      return NextResponse.redirect(new URL('/admin/orders', request.url));
+    }
+    return home();
   }
 
   // /delivery/* → delivery only

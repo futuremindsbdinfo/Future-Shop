@@ -72,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
     groupLabel: "Dashboard",
     icon: faTableCells,
     href: "/admin",
+    adminOnly: true,
   },
   {
     groupLabel: "Catalog",
@@ -80,8 +81,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: faBagShopping },
       { href: "/admin/categories", label: "Categories", icon: faLayerGroup, adminOnly: true },
       { href: "/admin/brands", label: "Brands", icon: faTags },
-      { href: "/admin/reviews", label: "Reviews", icon: faStar },
-      { href: "/admin/qa", label: "Q&A", icon: faQuestionCircle },
+      { href: "/admin/reviews", label: "Reviews", icon: faStar, adminOnly: true },
+      { href: "/admin/qa", label: "Q&A", icon: faQuestionCircle, adminOnly: true },
     ]
   },
   {
@@ -96,7 +97,7 @@ const NAV_GROUPS: NavGroup[] = [
     groupLabel: "Users",
     icon: faUsers,
     items: [
-      { href: "/admin/customers", label: "Customers", icon: faUserGroup },
+      { href: "/admin/customers", label: "Customers", icon: faUserGroup, adminOnly: true },
       { href: "/admin/users", label: "Users", icon: faUsers, adminOnly: true },
       { href: "/admin/vendors", label: "Vendors", icon: faStore },
     ]
