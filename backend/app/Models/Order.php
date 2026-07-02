@@ -40,6 +40,7 @@ class Order extends Model
         'delivery_address',
         'notes',
         'delivered_at',
+        'stock_restored_at',
     ];
 
     /**
@@ -55,6 +56,7 @@ class Order extends Model
             'total' => 'decimal:2',
             'delivery_address' => 'array',
             'delivered_at' => 'datetime',
+            'stock_restored_at' => 'datetime',
         ];
     }
 

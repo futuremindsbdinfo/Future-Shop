@@ -24,10 +24,19 @@ class OrderObserver
 
     public function updated(Order $order): void
     {
-        if (! $order->wasChanged('order_status') || $order->order_status !== 'delivered') {
+        if (! $order->wasChanged('order_status')) {
             return;
         }
 
+        if ($order->order_status === 'delivered') {
+            $this->handleDelivered($order);
+        } elseif ($order->order_status === 'cancelled') {
+            $this->handleCancelled($order);
+        }
+    }
+
+    private function handleDelivered(Order $order): void
+    {
         $order->updateQuietly(['delivered_at' => now()]);
 
         // Single source of truth for "what happens when an order becomes delivered":
@@ -54,6 +63,58 @@ class OrderObserver
 
         $this->awardReferralCredit($order);
         $this->awardCouponWalletCredit($order);
+    }
+
+    private function handleCancelled(Order $order): void
+    {
+        // At-most-once guard: if this order's stock was already restored, a
+        // repeat transition (cancelled → other → cancelled) must NOT restock
+        // again — that would silently inflate inventory (oversell risk). The
+        // wallet refund is reference-idempotent on its own, but COD orders have
+        // wallet_used = 0, so this flag is the only guard for the stock part.
+        if ($order->stock_restored_at) {
+            return;
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->loadMissing('items.product');
+
+            foreach ($order->items as $item) {
+                if ($item->product) {
+                    $item->product->increment('stock_quantity', $item->quantity);
+                }
+            }
+
+            if (bccomp((string) $order->wallet_used, '0.00', 2) > 0) {
+                $refundRef = 'REFUND-ORD-'.$order->order_number;
+                $this->walletService->credit(
+                    $order->user_id,
+                    (string) $order->wallet_used,
+                    'Refund for cancelled order #'.$order->order_number,
+                    $refundRef
+                );
+            }
+
+            if ($order->coupon_id) {
+                $usage = CouponUsage::where('order_id', $order->id)->first();
+                if ($usage) {
+                    $coupon = $usage->coupon;
+                    $usage->delete();
+                    if ($coupon) {
+                        $coupon->decrement('used_count');
+                    }
+                }
+            }
+
+            Transaction::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'failed']);
+
+            // Mark the restock done INSIDE the transaction so the flag and the
+            // stock increments commit (or roll back) together. updateQuietly —
+            // no observer re-trigger, same as delivered_at in handleDelivered.
+            $order->updateQuietly(['stock_restored_at' => now()]);
+        });
     }
 
     /**
