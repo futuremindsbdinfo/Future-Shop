@@ -176,9 +176,11 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const dashboardHref =
     user?.role === "admin"
       ? "/admin"
-      : user?.role === "delivery"
-        ? "/delivery"
-        : "/dashboard";
+      : user?.role === "staff"
+        ? "/admin/orders"
+        : user?.role === "delivery"
+          ? "/delivery"
+          : "/dashboard";
 
   return (
     <header className="sticky top-0 z-50 border-b bg-white">
