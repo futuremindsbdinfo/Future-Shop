@@ -42,7 +42,8 @@ export default function ProfilePage() {
   // Wait one tick for AuthHydrator to restore from sessionStorage.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setHydrated(true);
+    const t = setTimeout(() => setHydrated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -51,11 +52,14 @@ export default function ProfilePage() {
       router.replace("/?auth=login&next=/profile");
       return;
     }
-    if (user) {
-      setName(user.name);
-      setEmail(user.email ?? "");
-    }
-    api.get<{ data: Address[] }>("/addresses").then((r) => setAddresses(r.data.data)).catch(() => {});
+    const t = setTimeout(() => {
+      if (user) {
+        setName(user.name);
+        setEmail(user.email ?? "");
+      }
+      api.get<{ data: Address[] }>("/addresses").then((r) => setAddresses(r.data.data)).catch(() => {});
+    }, 0);
+    return () => clearTimeout(t);
   }, [hydrated, isAuthenticated, user, router]);
 
   if (!hydrated) return <LoadingSpinner fullHeight />;

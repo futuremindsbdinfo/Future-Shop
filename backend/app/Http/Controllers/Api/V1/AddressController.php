@@ -34,11 +34,12 @@ class AddressController extends Controller
         $data['user_id'] = $request->user()->id;
         $data['is_default'] = $request->boolean('is_default');
 
-        if ($data['is_default']) {
-            $request->user()->addresses()->update(['is_default' => false]);
-        }
-
-        $address = Address::create($data);
+        $address = DB::transaction(function () use ($request, $data) {
+            if ($data['is_default']) {
+                $request->user()->addresses()->update(['is_default' => false]);
+            }
+            return Address::create($data);
+        });
 
         return response()->json(['data' => $address], 201);
     }

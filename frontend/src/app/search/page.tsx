@@ -43,7 +43,8 @@ function SearchContent() {
   }, [q, activeCategory]);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(() => load(), 0);
+    return () => clearTimeout(t);
   }, [load]);
 
   return (

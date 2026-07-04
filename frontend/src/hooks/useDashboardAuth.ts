@@ -16,7 +16,8 @@ export function useDashboardAuth() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    setHydrated(true);
+    const t = setTimeout(() => setHydrated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {

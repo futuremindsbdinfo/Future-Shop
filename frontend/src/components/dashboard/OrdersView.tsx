@@ -57,7 +57,8 @@ export function OrdersView({ heading, defaultStatus = "all" }: Props) {
   }, [status, page]);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(() => load(), 0);
+    return () => clearTimeout(t);
   }, [load]);
 
   const handleStatusChange = (next: string) => {

@@ -38,10 +38,26 @@ This file serves as a central hub to track the progress of the E-commerce projec
 - [x] Created `HorizontalProductScroll` for tightly packed product carousels (e.g., Best Sellers).
 - [x] Added dynamic logic to filter out empty categories from the homepage.
 
+### 6. SQA Bug Audit & Fixes
+- [x] **Backend Security:** Fixed Fake Review Vulnerability by requiring a completed order before a user can submit a review. Reviews now default to `is_published = false`.
+- [x] **Payment Security Audit:** Verified that `PaymentController::webhookSuccess` robustly checks HMAC signatures and payment state to prevent fraud.
+- [x] **Module 1: Authentication & User Management Security:** 
+  - Verified brute-force protection (Rate limiting) on Login/Register routes.
+  - Verified strict IDOR checks on `AddressController`.
+  - Patched **Session Hijacking Vulnerability** (Now revokes all other tokens when password is changed).
+  - Patched **Deactivated User Bypass Vulnerability** (Now immediately revokes all tokens when an admin deactivates an account).
+  - Patched **OAuth Pre-Account Takeover Vulnerability** (Unverified accounts can no longer be linked to Google logins, preventing attackers from hijacking user accounts).
+  - Patched **Phone Pre-Account Takeover Vulnerability** (OTP logins now wipe passwords and revoke all existing sessions to kick out attackers who registered unverified phone numbers).
+  - Fixed **Frontend Authorization Bug** (Staff accounts were incorrectly blocked from the Admin dashboard by `proxy.ts` despite having backend permissions).
+  - Patched **Admin Password Reset Session Hijacking** (When an admin forcefully resets a hacked user's password, all active sessions of that user are now immediately revoked).
+
 ---
 
 ## 🚧 Current / In-Progress Tasks
-- [ ] Define next feature based on user requirement.
+- [ ] **Module 2: Product Catalog & Inventory**
+  - [ ] Audit Product creation/update for Mass Assignment & XSS.
+  - [ ] Audit Category & Brand management.
+  - [ ] Verify Vendor scoping (Vendors should only see/edit their own products).
 
 ---
 

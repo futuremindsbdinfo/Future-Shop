@@ -59,7 +59,10 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   // Cart count comes from a localStorage-persisted store that only rehydrates
   // after mount, so gate the badge on `mounted` to avoid an SSR/client mismatch.
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
+  }, []);
 
   // --- Type-ahead product search ---------------------------------------------
   const searchRef = useRef<HTMLFormElement>(null);
@@ -73,7 +76,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
     const q = debouncedQuery.trim();
     if (q.length < 2) return;
     let active = true;
-    setSearchLoading(true);
+    setTimeout(() => { if (active) setSearchLoading(true); }, 0);
     api
       .get<PaginatedResponse<Product>>(`/products?search=${encodeURIComponent(q)}&per_page=6`)
       .then((r) => {
@@ -118,8 +121,10 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("auth") === "login") {
-      setAuthTab("login");
-      setAuthOpen(true);
+      setTimeout(() => {
+        setAuthTab("login");
+        setAuthOpen(true);
+      }, 0);
     }
   }, []);
 
