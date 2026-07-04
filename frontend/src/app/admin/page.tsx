@@ -11,10 +11,10 @@ import {
   faCartShopping,
   faCircleInfo,
   faDownload,
-  faEnvelope,
-  faHeart,
-  faLink,
-  faShareNodes,
+  // faEnvelope, // Traffic Source widget disabled — restore when re-enabling
+  // faHeart, // Traffic Source widget disabled — restore when re-enabling
+  // faLink, // Traffic Source widget disabled — restore when re-enabling
+  // faShareNodes, // Traffic Source widget disabled — restore when re-enabling
   faShoppingBag,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
@@ -87,7 +87,9 @@ function StatCard({
   icon: typeof faCartShopping;
   iconBg: string;
   iconColor: string;
-  changePct: number;
+  // Optional: no real week-over-week comparison exists yet (see admin/page.tsx
+  // callers). When absent, the change badge + "vs last week" caption are hidden.
+  changePct?: number;
   positive?: boolean;
 }) {
   return (
@@ -97,17 +99,19 @@ function StatCard({
           <div className="min-w-0">
             <p className="text-[12px] font-medium text-[#6b7280]">{label}</p>
             <p className="mt-2 truncate text-[24px] font-bold text-[#111827]">{value}</p>
-            <div className="mt-2 flex items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  positive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                }`}
-              >
-                <FontAwesomeIcon icon={positive ? faArrowUp : faArrowDown} className="h-2.5 w-2.5" />
-                {Math.abs(changePct).toFixed(1)}%
-              </span>
-              <span className="text-[11px] text-[#9ca3af]">vs last week</span>
-            </div>
+            {changePct !== undefined && (
+              <div className="mt-2 flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    positive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  <FontAwesomeIcon icon={positive ? faArrowUp : faArrowDown} className="h-2.5 w-2.5" />
+                  {Math.abs(changePct).toFixed(1)}%
+                </span>
+                <span className="text-[11px] text-[#9ca3af]">vs last week</span>
+              </div>
+            )}
           </div>
           <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${iconBg}`}>
             <FontAwesomeIcon icon={icon} className={`h-4 w-4 ${iconColor}`} />
@@ -236,8 +240,6 @@ export default function AdminDashboardPage() {
           icon={faCartShopping}
           iconBg="bg-orange-100"
           iconColor="text-[#f47920]"
-          changePct={12.5}
-          positive
         />
         <StatCard
           label="Total Orders"
@@ -245,8 +247,6 @@ export default function AdminDashboardPage() {
           icon={faShoppingBag}
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
-          changePct={8.3}
-          positive
         />
         <StatCard
           label="Total Customers"
@@ -254,8 +254,6 @@ export default function AdminDashboardPage() {
           icon={faUsers}
           iconBg="bg-purple-100"
           iconColor="text-purple-600"
-          changePct={16.2}
-          positive
         />
         <StatCard
           label="Total Products"
@@ -263,8 +261,6 @@ export default function AdminDashboardPage() {
           icon={faBoxArchive}
           iconBg="bg-orange-100"
           iconColor="text-[#f47920]"
-          changePct={-2.4}
-          positive={false}
         />
       </div>
 
@@ -394,8 +390,10 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* BOTTOM ROW: Recent Orders (40%) + Customer Growth (35%) + Traffic Source (25%) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      {/* BOTTOM ROW: Recent Orders + Customer Growth. Traffic Source is hidden
+          below (no real tracking data yet) — grid-cols-9 = 5+4, matching the
+          two remaining cards' spans so there's no leftover empty column. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-9">
         {/* Recent Orders */}
         <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-5">
           <CardContent className="p-6">
@@ -492,7 +490,11 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Traffic Source */}
+        {/* Traffic Source — HIDDEN: backend still sends stats.traffic_sources,
+            but it's mock/hardcoded (no real analytics tracking exists yet).
+            Kept as real JSX (not deleted) behind `false &&` so it stays
+            type-checked and is a one-line flip to restore once real data lands. */}
+        {false && (
         <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-3">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between gap-2">
@@ -502,7 +504,7 @@ export default function AdminDashboardPage() {
               </button>
             </div>
             <ul className="space-y-4">
-              {(stats.traffic_sources || []).map((src) => (
+              {(stats?.traffic_sources || []).map((src) => (
                 <li key={src.name}>
                   <div className="flex items-center gap-3">
                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white ${src.iconBg}`}>
@@ -526,6 +528,7 @@ export default function AdminDashboardPage() {
             </ul>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
