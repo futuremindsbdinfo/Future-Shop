@@ -59,14 +59,14 @@ export default function AdminPromotionsPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated || user?.role !== "admin") {
+    if (!isAuthenticated || !(user?.role === "admin" || user?.role === "staff")) {
       router.replace("/fuminds");
     }
   }, [hydrated, isAuthenticated, user, router]);
 
   // Load published products for the dropdowns (used by both create and edit forms).
   useEffect(() => {
-    if (!hydrated || !isAuthenticated || user?.role !== "admin") return;
+    if (!hydrated || !isAuthenticated || !(user?.role === "admin" || user?.role === "staff")) return;
     api
       .get<PaginatedResponse<Product>>("/admin/products?per_page=100&status=published")
       .then((r) => setProducts(r.data.data))
@@ -88,7 +88,7 @@ export default function AdminPromotionsPage() {
   }, [page]);
 
   useEffect(() => {
-    if (hydrated && isAuthenticated && user?.role === "admin") load();
+    if (hydrated && isAuthenticated && (user?.role === "admin" || user?.role === "staff")) load();
   }, [load, hydrated, isAuthenticated, user]);
 
   const openCreate = () => {
@@ -181,7 +181,7 @@ export default function AdminPromotionsPage() {
     }
   };
 
-  if (!hydrated || !isAuthenticated || user?.role !== "admin") {
+  if (!hydrated || !isAuthenticated || !(user?.role === "admin" || user?.role === "staff")) {
     return <LoadingSpinner fullHeight />;
   }
 

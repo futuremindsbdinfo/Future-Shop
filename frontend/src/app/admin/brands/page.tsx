@@ -74,7 +74,7 @@ export default function AdminBrandsPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated || user?.role !== "admin") {
+    if (!isAuthenticated || !(user?.role === "admin" || user?.role === "staff")) {
       router.replace("/fuminds");
     }
   }, [hydrated, isAuthenticated, user, router]);
@@ -94,7 +94,7 @@ export default function AdminBrandsPage() {
   }, [page]);
 
   useEffect(() => {
-    if (hydrated && isAuthenticated && user?.role === "admin") load();
+    if (hydrated && isAuthenticated && (user?.role === "admin" || user?.role === "staff")) load();
   }, [load, hydrated, isAuthenticated, user]);
 
   const openCreate = () => {
@@ -194,7 +194,7 @@ export default function AdminBrandsPage() {
     }
   };
 
-  if (!hydrated || !isAuthenticated || user?.role !== "admin") {
+  if (!hydrated || !isAuthenticated || !(user?.role === "admin" || user?.role === "staff")) {
     return <LoadingSpinner fullHeight />;
   }
 
