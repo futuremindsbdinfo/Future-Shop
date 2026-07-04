@@ -473,6 +473,10 @@ export interface DashboardStats {
   product_profits: ProductProfitRow[];
   low_stock_products: LowStockProduct[];
   today_orders: TodayOrders;
+  sales_overview: { day: string; thisWeek: number; lastWeek: number }[];
+  top_products_sold: { id: number; name: string; sold: number; image?: string | null }[];
+  customer_growth: { name: string; value: number; color: string }[];
+  traffic_sources: { name: string; icon: string; iconBg: string; pct: number }[];
 }
 
 export interface Wishlist {

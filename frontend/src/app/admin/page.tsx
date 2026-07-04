@@ -43,25 +43,7 @@ import type { DashboardStats, Order, PaginatedResponse, Product } from "@/types"
 const TK = "৳";
 const fmtNum = (v: number) => v.toLocaleString("en-US");
 
-/* ------------------------------ Mock data ------------------------------ */
-const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const THIS_WEEK = [42000, 51000, 38000, 64000, 58000, 78000, 95000];
-const LAST_WEEK = [38000, 45000, 34000, 52000, 48000, 65000, 71000];
-const WEEKLY_DATA = WEEK_DAYS.map((d, i) => ({ day: d, thisWeek: THIS_WEEK[i], lastWeek: LAST_WEEK[i] }));
 
-const CUSTOMER_GROWTH = [
-  { name: "New Customers", value: 42, color: "#3b82f6" },
-  { name: "Returning Customers", value: 28, color: "#22c55e" },
-  { name: "Inactive", value: 15, color: "#f47920" },
-];
-
-const TRAFFIC_SOURCES = [
-  { name: "Google", icon: "G", iconBg: "bg-blue-500", pct: 45.2 },
-  { name: "Direct", icon: faLink, iconBg: "bg-purple-500", pct: 24.6 },
-  { name: "Referral", icon: faShareNodes, iconBg: "bg-orange-500", pct: 15.8 },
-  { name: "Social Media", icon: faHeart, iconBg: "bg-pink-500", pct: 9.7 },
-  { name: "Email", icon: faEnvelope, iconBg: "bg-cyan-500", pct: 4.7 },
-] as const;
 
 /* ----------------------- Order status configuration --------------------- */
 type StatusKey = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
@@ -206,14 +188,12 @@ export default function AdminDashboardPage() {
   if (!stats) return null;
 
   const recentFive = stats.recent_orders.slice(0, 5);
-  // Mock "sold" data for the top products list (real data needs a sales aggregate).
-  const productsSold = topProducts.map((p, i) => ({
-    product: p,
-    sold: [124, 87, 65, 52, 41][i] ?? 30,
-  }));
+  
+  const productsSold = stats.top_products_sold || [];
   const maxSold = Math.max(1, ...productsSold.map((p) => p.sold));
 
-  const growthTotal = CUSTOMER_GROWTH.reduce((a, b) => a + b.value, 0);
+  const customerGrowth = stats.customer_growth || [];
+  const growthTotal = customerGrowth.reduce((a, b) => a + b.value, 0);
 
   return (
     <div className="space-y-6">
@@ -327,7 +307,7 @@ export default function AdminDashboardPage() {
                 <EmptyChart message="No sales data yet" />
               ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={WEEKLY_DATA} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                <LineChart data={stats.sales_overview || []} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis
@@ -379,25 +359,25 @@ export default function AdminDashboardPage() {
               <p className="text-sm text-muted-foreground">No products yet</p>
             ) : (
               <ul className="space-y-4">
-                {productsSold.map(({ product, sold }) => {
-                  const img = product.images?.[0]?.url ?? null;
-                  const pct = (sold / maxSold) * 100;
+                {productsSold.map((productInfo) => {
+                  const img = productInfo.image ?? null;
+                  const pct = (productInfo.sold / maxSold) * 100;
                   return (
-                    <li key={product.id}>
+                    <li key={productInfo.id}>
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-orange-100">
                           {img ? (
-                            <Image src={img} alt={product.name} fill sizes="40px" className="object-cover" />
+                            <Image src={img} alt={productInfo.name} fill sizes="40px" className="object-cover" />
                           ) : (
                             <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#f47920]">
-                              {product.name.charAt(0).toUpperCase()}
+                              {productInfo.name.charAt(0).toUpperCase()}
                             </span>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[#111827]">{product.name}</p>
+                          <p className="truncate text-sm font-medium text-[#111827]">{productInfo.name}</p>
                         </div>
-                        <span className="shrink-0 text-xs font-semibold text-[#6b7280]">{sold} Sold</span>
+                        <span className="shrink-0 text-xs font-semibold text-[#6b7280]">{productInfo.sold} Sold</span>
                       </div>
                       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#f3f4f6]">
                         <div
@@ -481,8 +461,8 @@ export default function AdminDashboardPage() {
                 <>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={CUSTOMER_GROWTH} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={2} stroke="none">
-                        {CUSTOMER_GROWTH.map((entry, index) => (
+                      <Pie data={customerGrowth} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={2} stroke="none">
+                        {customerGrowth.map((entry, index) => (
                           <Cell key={index} fill={entry.color} />
                         ))}
                       </Pie>
@@ -497,7 +477,7 @@ export default function AdminDashboardPage() {
               )}
             </div>
             <ul className="mt-4 space-y-2 text-xs">
-              {CUSTOMER_GROWTH.map((seg) => {
+              {customerGrowth.map((seg) => {
                 const pct = growthTotal > 0 ? Math.round((seg.value / growthTotal) * 100) : 0;
                 return (
                   <li key={seg.name} className="flex items-center gap-2">
@@ -522,7 +502,7 @@ export default function AdminDashboardPage() {
               </button>
             </div>
             <ul className="space-y-4">
-              {TRAFFIC_SOURCES.map((src) => (
+              {(stats.traffic_sources || []).map((src) => (
                 <li key={src.name}>
                   <div className="flex items-center gap-3">
                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white ${src.iconBg}`}>
