@@ -90,3 +90,30 @@ This file serves as a central hub to track the progress of the E-commerce projec
 ---
 
 **AI Instruction:** Whenever you complete a new significant feature or fix a major bug, please update this `TODO.md` file accordingly so the context is never lost.
+
+## Go-Live Sequence (launch checklist)
+
+- [x] Money-critical: OrderObserver idempotent cancel (stock_restored_at guard) — tested 4/4, committed, pushed
+- [x] Auth hardening: Google OAuth takeover-proof, OTP removed, staff least-privilege — committed, pushed
+- [x] Admin dashboard: real data + mock-widget hide (Traffic Source, %-badge) — committed, pushed
+- [x] Address Book → Personal Info merge — committed, pushed
+- [x] Staff access fix: brands/coupons/promotions role-guard aligned — committed, pushed
+- [x] Reviews moderation page (admin-only, approve/reject) + nav move (Catalog→Marketing) — committed, pushed (793912d)
+- [ ] **Live smoke test** — Reviews page (admin approve/reject + staff blocked) — PENDING, push হয়ে গেছে কিন্তু test বাকি
+- [ ] **Delivery man real accounts তৈরি** (admin → Users → role=delivery) — এখনো শুধু test user (karim), launch-এর আগে বাধ্যতামূলক
+- [ ] 🚀 Soft Launch
+
+## Post-launch backlog
+- [ ] Q&A admin page (nav link আছে কিন্তু page hidden/broken — build later)
+- [ ] Traffic Source real analytics
+- [ ] Customer Growth month-selector fix (dropdown decorative)
+- [ ] Export button (no-op currently)
+- [ ] 403 role-mismatch → frontend auto token-clear + re-login prompt
+- [ ] Review reject = hard delete (acceptable for now, no rejected_at column)
+- [ ] Chart width(-1) height(-1) console warning (cosmetic, Recharts+grid timing)
+- [ ] 7 unused backend dashboard fields cleanup (total_cost, gross_profit, profit_margin, active_vendors, pending_orders, product_profits, low_stock_products, today_orders)
+- [ ] DB password rotate (was leaked in chat earlier, low urgency but do it)
+- [ ] Module 2 security audit (Catalog Core, Product CRUD/pricing, Vendor scoping/IDOR, Inventory race condition)
+- [ ] Delivery panel left sidebar, admin/delivery centralized page
+- [ ] Facebook OAuth, password reset email, admin order notification
+- [ ] Railway auto-migration setup (Procfile/release command)
