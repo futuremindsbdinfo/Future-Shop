@@ -101,6 +101,7 @@ This file serves as a central hub to track the progress of the E-commerce projec
 - [x] Reviews moderation page (admin-only, approve/reject) + nav move (Catalog→Marketing) — committed, pushed (793912d)
 - [ ] **Live smoke test** — Reviews page (admin approve/reject + staff blocked) — PENDING, push হয়ে গেছে কিন্তু test বাকি
 - [ ] **Delivery man real accounts তৈরি** (admin → Users → role=delivery) — এখনো শুধু test user (karim), launch-এর আগে বাধ্যতামূলক
+- [ ] Delivery Report feature (admin: all riders via Reports>Delivery tab; delivery-man: self via /delivery/report) — assigned/delivered/pending/cancelled/success-rate/collected-cash + per-day breakdown, timezone-safe, IDOR-safe
 - [ ] 🚀 Soft Launch
 
 ## Post-launch backlog
