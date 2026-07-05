@@ -20,9 +20,22 @@ interface DeliveryOrder {
   };
 }
 
-interface ReportData {
+interface DailyRow {
+  date: string;
   delivered_count: number;
   collected_cash: number;
+}
+
+/** Own-data only: the backend scopes everything to the bearer token's user —
+ *  this page never sends any user id. */
+interface ReportData {
+  assigned_count: number;
+  delivered_count: number;
+  pending_count: number;
+  cancelled_count: number;
+  success_rate: number;
+  collected_cash: number;
+  daily: DailyRow[];
   orders: DeliveryOrder[];
 }
 
@@ -101,7 +114,74 @@ export default function DeliveryReportPage() {
                 </p>
               </CardContent>
             </Card>
+
+            <Card className="rounded-xl border border-slate-100 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <span className="text-xs font-medium text-slate-500" lang="bn">অ্যাসাইন করা</span>
+                <p className="mt-1 text-2xl font-extrabold text-blue-600">{data.assigned_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border border-slate-100 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <span className="text-xs font-medium text-slate-500" lang="bn">চলমান</span>
+                <p className="mt-1 text-2xl font-extrabold text-[#f47920]">{data.pending_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border border-slate-100 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <span className="text-xs font-medium text-slate-500" lang="bn">বাতিল</span>
+                <p className="mt-1 text-2xl font-extrabold text-red-600">{data.cancelled_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border border-slate-100 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <span className="text-xs font-medium text-slate-500" lang="bn">সাফল্যের হার</span>
+                <p className="mt-1 text-2xl font-extrabold text-purple-600">
+                  {data.success_rate.toFixed(1)}%
+                </p>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Per-day breakdown (Dhaka-local dates from the backend) */}
+          <Card className="rounded-xl border border-slate-100 shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-800" lang="bn">
+                দিনভিত্তিক হিসাব
+              </h3>
+              {data.daily.length === 0 ? (
+                <p className="text-sm text-muted-foreground" lang="bn">
+                  এই সময়ে কোনো ডেলিভারি নেই।
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <th className="py-2 font-medium" lang="bn">তারিখ</th>
+                      <th className="py-2 text-center font-medium" lang="bn">ডেলিভারি</th>
+                      <th className="py-2 text-right font-medium" lang="bn">ক্যাশ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.daily.map((d) => (
+                      <tr key={d.date} className="border-b last:border-0">
+                        <td className="py-2 font-mono text-xs">
+                          {new Date(`${d.date}T00:00:00`).toLocaleDateString("en-GB")}
+                        </td>
+                        <td className="py-2 text-center font-medium">{d.delivered_count}</td>
+                        <td className="py-2 text-right font-semibold text-green-700">
+                          {formatTaka(d.collected_cash)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Deliveries List */}
           <div className="space-y-3">

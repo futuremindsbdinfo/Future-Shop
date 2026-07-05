@@ -46,8 +46,15 @@ interface DeliveryReportRow {
   id: number;
   name: string;
   phone: string | null;
+  assigned_count: number;
   delivered_count: number;
+  pending_count: number;
+  cancelled_count: number;
+  success_rate: number;
   collected_cash: number;
+  today_count: number;
+  week_count: number;
+  month_count: number;
 }
 
 const TK = "৳";
@@ -413,36 +420,66 @@ function DeliveryTab({ rows }: { rows: DeliveryReportRow[] }) {
   return (
     <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Delivery Agent</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead className="text-center">Delivered Orders</TableHead>
-              <TableHead className="text-right">Collected Cash</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  No delivery data found.
-                </TableCell>
+                <TableHead>Delivery Agent</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead className="text-center">Assigned</TableHead>
+                <TableHead className="text-center">Delivered</TableHead>
+                <TableHead className="text-center">Pending</TableHead>
+                <TableHead className="text-center">Cancelled</TableHead>
+                <TableHead className="text-center">Success %</TableHead>
+                <TableHead className="text-center">Today / Wk / Mo</TableHead>
+                <TableHead className="text-right">Collected Cash</TableHead>
               </TableRow>
-            ) : (
-              rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell>{r.phone ?? "—"}</TableCell>
-                  <TableCell className="text-center">{r.delivered_count}</TableCell>
-                  <TableCell className="text-right font-bold text-green-600">
-                    {formatTaka(r.collected_cash)}
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    No delivery data found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.name}</TableCell>
+                    <TableCell>{r.phone ?? "—"}</TableCell>
+                    <TableCell className="text-center">{fmtNum(r.assigned_count)}</TableCell>
+                    <TableCell className="text-center font-medium text-green-700">
+                      {fmtNum(r.delivered_count)}
+                    </TableCell>
+                    <TableCell className="text-center text-[#f47920]">
+                      {fmtNum(r.pending_count)}
+                    </TableCell>
+                    <TableCell className="text-center text-red-600">
+                      {fmtNum(r.cancelled_count)}
+                    </TableCell>
+                    <TableCell
+                      className={`text-center font-medium ${
+                        r.success_rate >= 80
+                          ? "text-green-700"
+                          : r.success_rate >= 50
+                            ? "text-amber-600"
+                            : "text-red-600"
+                      }`}
+                    >
+                      {r.success_rate.toFixed(1)}%
+                    </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">
+                      {fmtNum(r.today_count)} / {fmtNum(r.week_count)} / {fmtNum(r.month_count)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-green-600">
+                      {formatTaka(r.collected_cash)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

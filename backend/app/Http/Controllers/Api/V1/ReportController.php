@@ -301,6 +301,17 @@ class ReportController extends Controller
         $from = $fromDhaka->utc();
         $to = $toDhaka->utc();
 
+        // Fixed Dhaka-local quick windows (today / this week / this month) —
+        // independent of the requested range; same boundary pattern as
+        // DeliveryController@report (Dhaka wall-clock → UTC instants, because
+        // delivered_at is stored in UTC).
+        $nowDhaka = CarbonImmutable::now('Asia/Dhaka');
+        $quickWindows = [
+            'today_count' => [$nowDhaka->startOfDay()->utc(), $nowDhaka->endOfDay()->utc()],
+            'week_count' => [$nowDhaka->startOfWeek()->utc(), $nowDhaka->endOfWeek()->utc()],
+            'month_count' => [$nowDhaka->startOfMonth()->utc(), $nowDhaka->endOfMonth()->utc()],
+        ];
+
         // Fetch all active delivery agents
         $deliveryUsers = \App\Models\User::where('role', 'delivery')
             ->where('is_active', true)
@@ -320,12 +331,52 @@ class ReportController extends Controller
                 ->whereBetween('delivered_at', [$from, $to])
                 ->sum('total');
 
+            // Cohort counts scope by created_at: orders carry no assigned_at
+            // timestamp (delivery_user_id is a bare FK) and undelivered orders
+            // never get a delivered_at, so created_at is the one date every
+            // assigned order has.
+            $assignedCount = Order::where('delivery_user_id', $user->id)
+                ->whereBetween('created_at', [$from, $to])
+                ->count();
+
+            $pendingCount = Order::where('delivery_user_id', $user->id)
+                ->whereIn('order_status', ['pending', 'processing', 'shipped'])
+                ->whereBetween('created_at', [$from, $to])
+                ->count();
+
+            $cancelledCount = Order::where('delivery_user_id', $user->id)
+                ->where('order_status', 'cancelled')
+                ->whereBetween('created_at', [$from, $to])
+                ->count();
+
+            // delivered ÷ assigned, division-by-zero guarded. delivered is
+            // delivery-date-scoped while assigned is order-date-scoped, so a
+            // short range can legitimately read above 100%.
+            $successRate = $assignedCount > 0
+                ? round($deliveredCount / $assignedCount * 100, 1)
+                : 0.0;
+
+            $quickCounts = [];
+            foreach ($quickWindows as $key => [$winFrom, $winTo]) {
+                $quickCounts[$key] = Order::where('delivery_user_id', $user->id)
+                    ->where('order_status', 'delivered')
+                    ->whereBetween('delivered_at', [$winFrom, $winTo])
+                    ->count();
+            }
+
             $rows[] = [
                 'id' => $user->id,
                 'name' => $user->name,
                 'phone' => $user->phone,
+                'assigned_count' => $assignedCount,
                 'delivered_count' => $deliveredCount,
+                'pending_count' => $pendingCount,
+                'cancelled_count' => $cancelledCount,
+                'success_rate' => $successRate,
                 'collected_cash' => (float) $collectedCash,
+                'today_count' => $quickCounts['today_count'],
+                'week_count' => $quickCounts['week_count'],
+                'month_count' => $quickCounts['month_count'],
             ];
         }
 
