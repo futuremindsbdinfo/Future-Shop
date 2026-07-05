@@ -81,8 +81,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: faBagShopping },
       { href: "/admin/categories", label: "Categories", icon: faLayerGroup, adminOnly: true },
       { href: "/admin/brands", label: "Brands", icon: faTags },
-      { href: "/admin/reviews", label: "Reviews", icon: faStar, adminOnly: true },
-      { href: "/admin/qa", label: "Q&A", icon: faQuestionCircle, adminOnly: true },
     ]
   },
   {
@@ -108,6 +106,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/promotions", label: "Promotions", icon: faGift },
       { href: "/admin/coupons", label: "Coupons", icon: faPercent },
+      { href: "/admin/reviews", label: "Reviews", icon: faStar, adminOnly: true },
+      { href: "/admin/qa", label: "Q&A", icon: faQuestionCircle, adminOnly: true },
     ]
   },
   {

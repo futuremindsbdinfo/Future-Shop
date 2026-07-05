@@ -191,6 +191,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
             Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 
+            // Reviews management (admin-only).
+            Route::get('reviews', [ReviewController::class, 'adminIndex'])->name('reviews.index');
+            Route::patch('reviews/{review}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');
+            Route::delete('reviews/{review}', [ReviewController::class, 'reject'])->name('reviews.reject');
+
             // (Brands, coupons, promotions moved to admin,staff group below.)
         });
 

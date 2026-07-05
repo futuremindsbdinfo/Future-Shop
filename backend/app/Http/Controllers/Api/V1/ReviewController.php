@@ -60,4 +60,32 @@ class ReviewController extends Controller
 
         return response()->json(['message' => 'Review submitted successfully and is pending approval', 'data' => $review], 201);
     }
+
+    public function adminIndex(Request $request)
+    {
+        $status = $request->query('status', 'pending');
+        $isPublished = $status === 'published';
+
+        $reviews = Review::with(['product:id,name', 'user:id,name'])
+            ->where('is_published', $isPublished)
+            ->latest()
+            ->paginate(15);
+
+        return response()->json($reviews);
+    }
+
+    public function approve(Review $review)
+    {
+        $review->is_published = true;
+        $review->save();
+
+        return response()->json(['message' => 'Review approved successfully', 'data' => $review]);
+    }
+
+    public function reject(Review $review)
+    {
+        $review->delete();
+
+        return response()->json(['message' => 'Review rejected successfully']);
+    }
 }

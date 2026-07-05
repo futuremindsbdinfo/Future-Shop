@@ -59,6 +59,23 @@ This file serves as a central hub to track the progress of the E-commerce projec
   - [ ] Audit Category & Brand management.
   - [ ] Verify Vendor scoping (Vendors should only see/edit their own products).
 
+## Reviews & QA (in progress)
+- [x] Admin Reviews page (backend adminIndex/approve/reject + frontend page) — admin-only
+- [x] Nav move: Reviews+QA Catalog→Marketing (already coded, needs commit)
+- [ ] Q&A admin page — POST-LAUNCH (nav hidden for now)
+- [ ] Commit: reviews backend+frontend + nav move together
+- [ ] Push + live smoke test
+
+## Launch-blocking (non-code)
+- [ ] Real delivery-man accounts create (admin → Users, role=delivery) — currently only 1 test user (karim)
+
+## Post-launch backlog
+- [ ] Q&A admin page
+- [ ] Reviews: soft-reject (rejected_at column) instead of hard delete
+- [ ] Traffic Source real analytics; Customer Growth month-selector; Export button
+- [ ] 403 role-mismatch auto token-clear (frontend)
+- [ ] DB password rotate
+
 ---
 
 ## 📋 Upcoming Tasks (To-Do)
