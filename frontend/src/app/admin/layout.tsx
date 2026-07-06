@@ -209,9 +209,9 @@ function RightPanel({
   };
 
   return (
-    <div className="flex h-full w-[220px] flex-col bg-white">
+    <div className="flex h-full w-full flex-col bg-white">
       {/* Menu */}
-      <nav className="flex-1 overflow-y-auto px-2 pt-4">
+      <nav className="flex-1 overflow-y-auto min-h-0 px-2 py-4">
         {NAV_GROUPS.map((group) => {
           if (group.adminOnly && !isAdmin) return null;
 
@@ -325,21 +325,23 @@ function RightPanel({
               Help
             </a>
           </li>
-          <li>
-            <button
-              type="button"
-              onClick={() => {
-                onItemClick?.();
-                onLogout();
-              }}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50"
-            >
-              <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
-              Logout
-            </button>
-          </li>
         </ul>
       </nav>
+
+      {/* Fixed Logout Button at the bottom */}
+      <div className="border-t border-[#e5e7eb] p-4">
+        <button
+          type="button"
+          onClick={() => {
+            onItemClick?.();
+            onLogout();
+          }}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+        >
+          <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
+          Logout
+        </button>
+      </div>
     </div>
   );
 }
@@ -425,7 +427,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden shrink-0 -ml-2"
             onClick={() => setMobileOpen(true)}
           >
             <FontAwesomeIcon icon={faBars} className="h-5 w-5 text-[#374151]" />
@@ -495,7 +497,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar wrapper */}
         <aside
-          className="hidden shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:block border-r border-[#e5e7eb] bg-white"
+          className="hidden shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:flex flex-col border-r border-[#e5e7eb] bg-white"
           style={{ width: expanded ? "220px" : "64px" }}
         >
           {expanded ? (
@@ -515,16 +517,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Mobile Sidebar */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-[220px] p-0">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Admin menu</SheetTitle>
+          <SheetContent side="left" className="w-[260px] p-0 flex flex-col">
+            <SheetHeader className="border-b border-[#e5e7eb] p-4 text-left">
+              <SheetTitle className="text-[#f47920]">Admin Panel</SheetTitle>
             </SheetHeader>
-            <RightPanel
-              pathname={pathname}
-              onLogout={handleLogout}
-              onItemClick={() => setMobileOpen(false)}
-              isAdmin={isAdmin}
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <RightPanel
+                pathname={pathname}
+                onLogout={handleLogout}
+                onItemClick={() => setMobileOpen(false)}
+                isAdmin={isAdmin}
+              />
+            </div>
           </SheetContent>
         </Sheet>
 

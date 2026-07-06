@@ -466,7 +466,7 @@ function DeliveryTab({ rows }: { rows: DeliveryReportRow[] }) {
                             : "text-red-600"
                       }`}
                     >
-                      {r.success_rate.toFixed(1)}%
+                      {Math.min(100, r.success_rate).toFixed(1)}%
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
                       {fmtNum(r.today_count)} / {fmtNum(r.week_count)} / {fmtNum(r.month_count)}

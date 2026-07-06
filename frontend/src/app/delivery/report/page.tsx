@@ -140,7 +140,7 @@ export default function DeliveryReportPage() {
               <CardContent className="p-4 text-center">
                 <span className="text-xs font-medium text-slate-500" lang="bn">সাফল্যের হার</span>
                 <p className="mt-1 text-2xl font-extrabold text-purple-600">
-                  {data.success_rate.toFixed(1)}%
+                  {Math.min(100, data.success_rate).toFixed(1)}%
                 </p>
               </CardContent>
             </Card>
