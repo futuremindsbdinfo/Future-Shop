@@ -118,3 +118,4 @@ This file serves as a central hub to track the progress of the E-commerce projec
 - [ ] Delivery panel left sidebar, admin/delivery centralized page
 - [ ] Facebook OAuth, password reset email, admin order notification
 - [ ] Railway auto-migration setup (Procfile/release command)
+- [ ] Coupon max-discount-cap: migration (max_discount_amount nullable column) + OrderController-এ enforce (bcmath, null হলে unlimited) + admin coupon form-এ field। MEDIUM priority — বড়-% coupon বানালে তবেই প্রাসঙ্গিক। Claude Code দিয়ে (money-critical)।

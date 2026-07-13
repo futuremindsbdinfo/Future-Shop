@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,11 +27,19 @@ import type { WishlistItem } from "@/types";
  * store's own hydration callbacks instead.)
  */
 function useWishlistHydrated(): boolean {
-  return useSyncExternalStore(
-    (onChange) => useWishlistStore.persist.onFinishHydration(onChange),
-    () => useWishlistStore.persist.hasHydrated(),
-    () => false,
-  );
+  const [hydrated, setHydrated] = useState(false);
+  
+  useEffect(() => {
+    // If it's already hydrated before the effect runs, set true immediately
+    if (useWishlistStore.persist.hasHydrated()) {
+      setHydrated(true);
+    } else {
+      const unsub = useWishlistStore.persist.onFinishHydration(() => setHydrated(true));
+      return unsub;
+    }
+  }, []);
+
+  return hydrated;
 }
 
 export default function WishlistPage() {

@@ -34,7 +34,8 @@ export default function DeliveryPaymentConfirmPage() {
   // One-tick hydration gate.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setHydrated(true);
+    const t = setTimeout(() => setHydrated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {

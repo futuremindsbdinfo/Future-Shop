@@ -32,7 +32,10 @@ export function Chrome({
 
   return (
     <>
-      <Navbar siteName={settings.site_name ?? FALLBACK_SETTINGS.site_name ?? "Future Shop"} />
+      <Navbar
+        siteName={settings.site_name ?? FALLBACK_SETTINGS.site_name ?? "Future Shop"}
+        logo={settings.site_logo}
+      />
       <main className="flex-1">{children}</main>
       <Footer settings={settings} />
       <CartDrawer />

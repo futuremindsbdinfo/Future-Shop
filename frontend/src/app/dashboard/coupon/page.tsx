@@ -79,6 +79,11 @@ export default function CouponPage() {
                     </p>
                     <p className="text-sm font-medium">
                       {coupon.discount_percentage}% off
+                      {coupon.max_discount_amount && (
+                        <span className="text-muted-foreground font-normal ml-1">
+                          (up to {formatTaka(Number(coupon.max_discount_amount))})
+                        </span>
+                      )}
                     </p>
                     {coupon.description && (
                       <p className="mt-1 text-xs text-muted-foreground">

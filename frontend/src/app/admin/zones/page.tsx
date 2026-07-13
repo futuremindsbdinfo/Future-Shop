@@ -34,10 +34,12 @@ interface ZoneForm {
   areas: string;
   delivery_charge: string;
   free_delivery_threshold: string;
+  estimated_days_min: string;
+  estimated_days_max: string;
   is_active: boolean;
 }
 
-const EMPTY_FORM: ZoneForm = { name: "", areas: "", delivery_charge: "", free_delivery_threshold: "", is_active: true };
+const EMPTY_FORM: ZoneForm = { name: "", areas: "", delivery_charge: "", free_delivery_threshold: "", estimated_days_min: "", estimated_days_max: "", is_active: true };
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -81,14 +83,16 @@ export default function AdminZonesPage() {
       areas: zone.areas ?? "",
       delivery_charge: String(zone.delivery_charge),
       free_delivery_threshold: zone.free_delivery_threshold ? String(zone.free_delivery_threshold) : "",
+      estimated_days_min: zone.estimated_days_min ? String(zone.estimated_days_min) : "",
+      estimated_days_max: zone.estimated_days_max ? String(zone.estimated_days_max) : "",
       is_active: zone.is_active,
     });
     setOpen(true);
   };
 
   const submit = async () => {
-    if (!form.name.trim() || form.delivery_charge === "") {
-      toast.error("জোনের নাম ও চার্জ দিন");
+    if (!form.name.trim() || form.delivery_charge === "" || form.estimated_days_min === "" || form.estimated_days_max === "") {
+      toast.error("জোনের নাম, চার্জ এবং ডেলিভারি দিন পূরণ করুন");
       return;
     }
     setSaving(true);
@@ -97,6 +101,8 @@ export default function AdminZonesPage() {
       areas: form.areas || null,
       delivery_charge: Number(form.delivery_charge),
       free_delivery_threshold: form.free_delivery_threshold ? Number(form.free_delivery_threshold) : null,
+      estimated_days_min: Number(form.estimated_days_min),
+      estimated_days_max: Number(form.estimated_days_max),
       is_active: form.is_active,
     };
     try {
@@ -198,6 +204,16 @@ export default function AdminZonesPage() {
               <div className="space-y-1">
                 <Label htmlFor="z-free">Free threshold (৳)</Label>
                 <Input id="z-free" className="h-11" type="number" min="0" value={form.free_delivery_threshold} onChange={(e) => setForm({ ...form, free_delivery_threshold: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="z-min-days">সর্বনিম্ন দিন</Label>
+                <Input id="z-min-days" className="h-11" type="number" min="0" value={form.estimated_days_min} onChange={(e) => setForm({ ...form, estimated_days_min: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="z-max-days">সর্বোচ্চ দিন</Label>
+                <Input id="z-max-days" className="h-11" type="number" min="0" value={form.estimated_days_max} onChange={(e) => setForm({ ...form, estimated_days_max: e.target.value })} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm">

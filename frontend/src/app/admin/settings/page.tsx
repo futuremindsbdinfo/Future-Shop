@@ -35,6 +35,9 @@ export default function AdminSettingsPage() {
   });
   const [saving, setSaving] = useState(false);
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bTitle, setBTitle] = useState("");
   const [bLink, setBLink] = useState("");
@@ -54,7 +57,9 @@ export default function AdminSettingsPage() {
           contact_phone: d.contact_phone ?? "",
           contact_email: d.contact_email ?? "",
           contact_address: d.contact_address ?? "",
+          site_logo: d.site_logo ?? "",
         });
+        if (d.site_logo) setLogoPreview(d.site_logo);
       }),
       api.get<{ data: Banner[] }>("/admin/banners").then((r) => setBanners(r.data.data)),
     ]).finally(() => setLoading(false));
@@ -63,16 +68,29 @@ export default function AdminSettingsPage() {
   // Revoke any blob URL when the preview changes or the component unmounts —
   // avoids a leak when the user picks several files in a row.
   useEffect(() => {
-    if (!bPreviewUrl) return;
-    return () => URL.revokeObjectURL(bPreviewUrl);
-  }, [bPreviewUrl]);
+    if (!bPreviewUrl && !logoPreview) return;
+    return () => {
+      if (bPreviewUrl) URL.revokeObjectURL(bPreviewUrl);
+      if (logoPreview && logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    };
+  }, [bPreviewUrl, logoPreview]);
 
   if (loading) return <LoadingSpinner fullHeight />;
 
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await api.put("/admin/settings", settings);
+      const fd = new FormData();
+      if (settings.site_name) fd.append("site_name", settings.site_name);
+      if (settings.site_tagline) fd.append("site_tagline", settings.site_tagline);
+      if (settings.contact_phone) fd.append("contact_phone", settings.contact_phone);
+      if (settings.contact_email) fd.append("contact_email", settings.contact_email);
+      if (settings.contact_address) fd.append("contact_address", settings.contact_address);
+      if (logoFile) fd.append("site_logo", logoFile);
+      
+      fd.append("_method", "PUT");
+      
+      await api.post("/admin/settings", fd);
       toast.success("সেটিংস সংরক্ষিত হয়েছে");
     } catch (error) {
       toast.error(getErrorMessage(error, "সংরক্ষণ ব্যর্থ হয়েছে"));
@@ -157,6 +175,40 @@ export default function AdminSettingsPage() {
               }
               placeholder="Future Shop"
             />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">সাইটের লোগো</label>
+            <div className="flex items-center gap-4">
+              {logoPreview && (
+                <div className="relative h-14 w-auto border rounded bg-white p-1">
+                  <img src={logoPreview} alt="Logo" className="object-contain h-full w-auto max-w-[150px]" />
+                  <button
+                    onClick={() => {
+                      setLogoFile(null);
+                      setLogoPreview(null);
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <div>
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="max-w-[250px]"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setLogoFile(file);
+                      setLogoPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-1">সুপারিশকৃত: png/webp, স্বচ্ছ ব্যাকগ্রাউন্ড, সর্বোচ্চ ৫MB</p>
+              </div>
+            </div>
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="site_tagline">

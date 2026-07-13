@@ -73,6 +73,7 @@ export interface SiteSettings {
   contact_phone: string | null;
   contact_email: string | null;
   contact_address: string | null;
+  site_logo?: string;
 }
 
 export interface Vendor {
@@ -146,6 +147,7 @@ export interface Coupon {
   code: string;
   description: string | null;
   discount_percentage: number;
+  max_discount_amount: string | null;
   usage_limit: number | null;
   used_count: number;
   is_first_purchase_only: boolean;

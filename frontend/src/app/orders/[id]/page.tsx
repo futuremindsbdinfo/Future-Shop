@@ -35,7 +35,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   // Wait one tick for AuthHydrator to restore from sessionStorage.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setHydrated(true);
+    const t = setTimeout(() => setHydrated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {

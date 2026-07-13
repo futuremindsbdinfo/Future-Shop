@@ -77,6 +77,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
+            ->when($request->user()->isVendor(), fn ($q) => $q->where('vendor_id', $request->user()->vendor->id))
             ->when($request->filled('category'), fn ($q) => $q->whereHas(
                 'category', fn ($c) => $c->where('slug', $request->string('category'))
             ))
@@ -99,8 +100,12 @@ class ProductController extends Controller
     /**
      * Admin: show a single product by id (any status), for the edit form.
      */
-    public function adminShow(Product $product): JsonResponse
+    public function adminShow(Request $request, Product $product): JsonResponse
     {
+        if ($request->user()->isVendor()) {
+            abort_unless($product->vendor_id === $request->user()->vendor->id, 403, 'Forbidden. This product belongs to another vendor.');
+        }
+
         return response()->json([
             'data' => $product->load(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug']),
         ]);
@@ -149,6 +154,10 @@ class ProductController extends Controller
      */
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
+        if ($request->user()->isVendor()) {
+            abort_unless($product->vendor_id === $request->user()->vendor->id, 403, 'Forbidden. You cannot update another vendor\'s product.');
+        }
+
         $data = $request->validated();
 
         if ($request->filled('name')) {
@@ -198,6 +207,10 @@ class ProductController extends Controller
      */
     public function toggleStatus(Request $request, Product $product): JsonResponse
     {
+        if ($request->user()->isVendor()) {
+            abort_unless($product->vendor_id === $request->user()->vendor->id, 403, 'Forbidden.');
+        }
+
         if ($product->status === 'out_of_stock') {
             return response()->json([
                 'message' => 'স্টক আপডেট করে publish করুন'
@@ -215,8 +228,12 @@ class ProductController extends Controller
     /**
      * Admin: soft delete a product.
      */
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Request $request, Product $product): JsonResponse
     {
+        if ($request->user()->isVendor()) {
+            abort_unless($product->vendor_id === $request->user()->vendor->id, 403, 'Forbidden.');
+        }
+
         $product->delete();
 
         return response()->json(['message' => 'Product deleted.']);
@@ -235,17 +252,22 @@ class ProductController extends Controller
 
         $ids = $data['ids'];
         $action = $data['action'];
+        $vendorId = $request->user()->isVendor() ? $request->user()->vendor->id : null;
 
-        DB::transaction(function () use ($ids, $action) {
+        DB::transaction(function () use ($ids, $action, $vendorId) {
             if ($action === 'delete') {
-                Product::whereIn('id', $ids)->delete();
+                Product::whereIn('id', $ids)
+                    ->when($vendorId, fn($q) => $q->where('vendor_id', $vendorId))
+                    ->delete();
             } elseif ($action === 'activate') {
                 Product::whereIn('id', $ids)
                     ->where('status', 'draft')
+                    ->when($vendorId, fn($q) => $q->where('vendor_id', $vendorId))
                     ->update(['status' => 'published']);
             } elseif ($action === 'deactivate') {
                 Product::whereIn('id', $ids)
                     ->where('status', 'published')
+                    ->when($vendorId, fn($q) => $q->where('vendor_id', $vendorId))
                     ->update(['status' => 'draft']);
             }
         });

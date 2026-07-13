@@ -42,7 +42,7 @@ import { useWishlistStore } from "@/store/wishlistStore";
 import { AuthModal } from "@/components/shared/AuthModal";
 import type { Category, PaginatedResponse, Product } from "@/types";
 
-export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
+export function Navbar({ siteName = "Future Shop", logo }: { siteName?: string; logo?: string }) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [query, setQuery] = useState("");
@@ -136,7 +136,18 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
   const handleAuthSuccess = () => {
     setAuthOpen(false);
     const next = new URLSearchParams(window.location.search).get("next");
-    if (next) router.push(next);
+    if (next) {
+      router.push(next);
+      return;
+    }
+
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      if (currentUser.role === "admin") router.push("/admin");
+      else if (currentUser.role === "staff") router.push("/admin/orders");
+      else if (currentUser.role === "delivery") router.push("/delivery");
+      else if (currentUser.role === "vendor") router.push("/vendor");
+    }
   };
 
   useEffect(() => {
@@ -202,7 +213,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Home</Link>
               <Link href="/categories" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Categories</Link>
               <Link href="/brands" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted">Brands</Link>
-              <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted" lang="bn">আমার উইশলিস্ট</Link>
+              <Link href={isAuthenticated ? "/dashboard/wishlist" : "/wishlist"} onClick={() => setMobileMenuOpen(false)} className="rounded px-2 py-2 text-sm hover:bg-muted" lang="bn">আমার উইশলিস্ট</Link>
               <div className="mt-2 px-2 text-xs font-semibold uppercase text-muted-foreground">
                 Shop by category
               </div>
@@ -265,8 +276,12 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="shrink-0 text-xl font-bold text-[#f47920]">
-          {siteName}
+        <Link href="/" className="shrink-0 flex items-center">
+          {logo ? (
+            <img src={logo} alt={siteName} className="h-8 w-auto object-contain" />
+          ) : (
+            <span className="text-xl font-bold text-[#f47920]">{siteName}</span>
+          )}
         </Link>
 
         {/* Category dropdown (desktop) */}
@@ -384,7 +399,7 @@ export function Navbar({ siteName = "Future Shop" }: { siteName?: string }) {
               variant="ghost"
               size="icon"
               nativeButton={false}
-              render={<Link href="/wishlist" />}
+              render={<Link href={isAuthenticated ? "/dashboard/wishlist" : "/wishlist"} />}
               aria-label="উইশলিস্ট"
               className="h-11 w-11 sm:h-10 sm:w-10"
             >

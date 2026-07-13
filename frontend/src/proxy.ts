@@ -67,8 +67,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // /checkout and /orders/* → any authenticated user
-  if (pathname.startsWith('/checkout') || pathname.startsWith('/orders')) {
+  // /checkout, /orders/*, and /dashboard/* → any authenticated user
+  if (pathname.startsWith('/checkout') || pathname.startsWith('/orders') || pathname.startsWith('/dashboard')) {
     if (!isAuthed) return loginRedirect();
     return NextResponse.next();
   }
@@ -77,5 +77,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/delivery/:path*', '/checkout', '/checkout/:path*', '/orders/:path*'],
+  matcher: ['/admin/:path*', '/delivery/:path*', '/checkout', '/checkout/:path*', '/orders/:path*', '/dashboard', '/dashboard/:path*'],
 };

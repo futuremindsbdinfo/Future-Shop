@@ -124,7 +124,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         | user's role and active status. Add controllers as features are built.
         */
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-            // Dashboard summary.
+            // Dashboard summary (Admin only for now, though vendors might need their own later)
             Route::get('dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
             // Delivery agents (for order assignment).
@@ -152,8 +152,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
             Route::get('invoices/{order}', [InvoiceController::class, 'show'])->name('invoices.show');
 
-            // All categories (incl. inactive) for admin forms.
-            Route::get('categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
+            // All categories (incl. inactive) for admin forms. (Moved to admin,staff,vendor group below)
+
             // Category management (admin-only): create / update / delete.
             Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
             Route::match(['put', 'patch'], 'categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
@@ -164,11 +164,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
             Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
             Route::post('products/import-mapped', [AdminMappedImportController::class, 'import'])->name('products.import-mapped');
-            Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
-            Route::post('products', [ProductController::class, 'store'])->name('products.store');
             Route::patch('products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
-            Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
-            Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+            // store, update, destroy, bulk-action moved to admin,vendor group below
+
 
             // Manual verification of an online payment (admin only).
             Route::patch('orders/{order}/verify-payment', [AdminPaymentController::class, 'verify'])->name('orders.verify-payment');
@@ -200,29 +198,49 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
 
         /*
+        | Admin + Staff + Vendor group
+        | Allows vendors to manage their catalog.
+        */
+        Route::middleware('role:admin,staff,vendor')->prefix('admin')->group(function () {
+            Route::get('products', [ProductController::class, 'adminIndex']);
+            Route::get('products/{product}', [ProductController::class, 'adminShow']);
+            Route::get('categories', [CategoryController::class, 'adminIndex']);
+            Route::get('brands', [BrandController::class, 'index']);
+            Route::get('vendors', [VendorController::class, 'index']);
+        });
+
+        /*
+        | Admin + Vendor group
+        | Product creation and editing.
+        */
+        Route::middleware('role:admin,vendor')->prefix('admin')->group(function () {
+            Route::post('products', [ProductController::class, 'store']);
+            Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update']);
+            Route::delete('products/{product}', [ProductController::class, 'destroy']);
+            Route::post('products/bulk-action', [ProductController::class, 'bulkAction']);
+        });
+
+        /*
         | Admin + Staff group (Batch E-1). Routes accessible to both roles —
         | day-to-day fulfillment: read products, manage orders, manage vendors.
         | Sibling of the admin-only group above (same /admin prefix). No
         | name('admin.') prefix here to avoid duplicate route-name registration.
         */
         Route::middleware('role:admin,staff')->prefix('admin')->group(function () {
-            // Product catalog (read-only).
-            Route::get('products', [ProductController::class, 'adminIndex']);
-            Route::get('products/{product}', [ProductController::class, 'adminShow']);
+            // (Products moved to admin,staff,vendor below)
+
 
             // Orders: list + status update (status update fires OrderObserver).
             Route::get('orders', [OrderController::class, 'adminIndex']);
             Route::match(['put', 'patch'], 'orders/{order}', [OrderController::class, 'updateStatus']);
 
             // Vendor management (admin + staff). DELETE is admin-only and
-            // lives in the admin-only group above.
-            Route::get('vendors', [VendorController::class, 'index']);
+            // lives in the admin-only group above. (index moved to admin,staff,vendor)
             Route::post('vendors', [VendorController::class, 'store']);
             Route::get('vendors/{vendor}', [VendorController::class, 'show']);
             Route::match(['put', 'patch'], 'vendors/{vendor}', [VendorController::class, 'update']);
 
-            // Brands.
-            Route::get('brands', [BrandController::class, 'index']);
+            // Brands. (Moved index to admin,staff,vendor below)
             Route::post('brands', [BrandController::class, 'store']);
             Route::match(['put', 'patch'], 'brands/{brand}', [BrandController::class, 'update']);
             Route::delete('brands/{brand}', [BrandController::class, 'destroy']);
@@ -265,6 +283,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('wishlists', [WishlistController::class, 'index'])->name('wishlists.index');
             Route::post('wishlists', [WishlistController::class, 'store'])->name('wishlists.store');
             Route::delete('wishlists/{wishlist}', [WishlistController::class, 'destroy'])->name('wishlists.destroy');
+            Route::delete('wishlists/product/{product_id}', [WishlistController::class, 'removeByProduct'])->name('wishlists.removeByProduct');
 
             // Wallet (Batch D) — balance + paginated immutable ledger.
             Route::get('wallet', function (\Illuminate\Http\Request $r) {
@@ -310,6 +329,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 return response()->json([
                     'valid'               => true,
                     'discount_percentage' => $coupon->discount_percentage,
+                    'max_discount_amount' => $coupon->max_discount_amount,
                     'description'         => $coupon->description,
                     'message'             => $coupon->discount_percentage.'% off your order!',
                 ]);
@@ -318,7 +338,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             // Customer coupon history + available coupons (Batch D-2b).
             Route::get('coupons', function (\Illuminate\Http\Request $r) {
                 $usages = \App\Models\CouponUsage::where('user_id', $r->user()->id)
-                    ->with('coupon:id,code,discount_percentage,description')
+                    ->with('coupon:id,code,discount_percentage,max_discount_amount,description')
                     ->latest()
                     ->get();
 
@@ -332,7 +352,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                         ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
                         ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))
                         ->whereNotIn('id', $usages->pluck('coupon_id'))
-                        ->select('id', 'code', 'discount_percentage', 'description', 'expires_at')
+                        ->select('id', 'code', 'discount_percentage', 'max_discount_amount', 'description', 'expires_at')
                         ->get()
                     : collect();
 

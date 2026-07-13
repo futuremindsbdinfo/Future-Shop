@@ -21,10 +21,17 @@ export function useDashboardAuth() {
   }, []);
 
   useEffect(() => {
-    if (hydrated && !isAuthenticated) {
-      router.replace("/?auth=login&next=/dashboard");
+    if (hydrated) {
+      if (!isAuthenticated) {
+        router.replace("/?auth=login&next=/dashboard");
+      } else if (user?.role && user.role !== "customer") {
+        if (user.role === "admin") router.replace("/admin");
+        else if (user.role === "staff") router.replace("/admin/orders");
+        else if (user.role === "delivery") router.replace("/delivery");
+        else if (user.role === "vendor") router.replace("/vendor");
+      }
     }
-  }, [hydrated, isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, user, router]);
 
   return { hydrated, user, isAuthenticated };
 }

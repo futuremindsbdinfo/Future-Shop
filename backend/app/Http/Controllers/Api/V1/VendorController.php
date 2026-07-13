@@ -20,9 +20,12 @@ class VendorController extends Controller
      * total_commission = Σ order_items.commission (platform's cut)
      * net_earnings = gross_sales − total_commission (vendor payout)
      */
-    public function index(): JsonResponse
+    public function index(\Illuminate\Http\Request $request): JsonResponse
     {
         $vendors = Vendor::query()
+            ->when($request->user()->role === 'vendor', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            })
             ->with(['user:id,name,email,phone,role', 'deliveryZone:id,name', 'brands:id,name'])
             ->withCount('products')
             ->withSum('orderItems as gross_sales', 'subtotal')

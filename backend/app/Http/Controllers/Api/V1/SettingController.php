@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
-    public function __construct(private readonly RevalidateService $revalidate)
-    {
+    public function __construct(
+        private readonly RevalidateService $revalidate,
+        private readonly \App\Services\ImageUploadService $images,
+    ) {
     }
 
     /**
@@ -27,6 +29,7 @@ class SettingController extends Controller
         'contact_phone' => null,
         'contact_email' => null,
         'contact_address' => null,
+        'site_logo' => null,
     ];
 
     /** Admin: get all settings as a key→value object. */
@@ -54,7 +57,13 @@ class SettingController extends Controller
             'contact_phone' => ['sometimes', 'nullable', 'string', 'max:50'],
             'contact_email' => ['sometimes', 'nullable', 'email', 'max:255'],
             'contact_address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'site_logo' => ['sometimes', 'nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ]);
+
+        if ($request->hasFile('site_logo')) {
+            $uploaded = $this->images->store($request->file('site_logo'), 'settings', 'site_logo');
+            $data['site_logo'] = $uploaded['url'];
+        }
 
         foreach ($data as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);

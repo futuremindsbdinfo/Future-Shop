@@ -71,7 +71,7 @@ export default function DashboardLayout({
     router.replace("/");
   };
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex h-full flex-col">
       {/* User header */}
       <div className="border-b px-4 py-5">
@@ -154,13 +154,13 @@ export default function DashboardLayout({
           <SheetHeader className="sr-only">
             <SheetTitle>Dashboard menu</SheetTitle>
           </SheetHeader>
-          <SidebarContent />
+          {sidebarContent}
         </SheetContent>
       </Sheet>
 
       {/* Desktop sidebar */}
       <aside className="fixed left-0 top-0 z-30 hidden h-full w-64 flex-col border-r bg-card shadow-sm md:flex">
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Main content */}

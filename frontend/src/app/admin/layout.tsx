@@ -370,7 +370,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         (setExpanded as any)(true); // Bypass strict set-state-in-effect rule
       }
     }
-    setHydrated(true);
+    const t = setTimeout(() => {
+      setHydrated(true);
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Persist any later changes to the sidebar state.
@@ -379,7 +382,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.localStorage.setItem("admin-sidebar-expanded", String(expanded));
   }, [expanded, hydrated]);
 
-  const isAllowed = user?.role === "admin" || user?.role === "staff";
+  const isAllowed = user?.role === "admin" || user?.role === "staff" || user?.role === "vendor";
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
@@ -388,6 +391,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.replace("/?auth=login&next=/admin");
     }
   }, [hydrated, isAuthenticated, isAllowed, router]);
+
+  // Guard for staff/vendor accessing admin-only routes directly via URL
+  useEffect(() => {
+    if (!hydrated || !isAuthenticated || !user) return;
+    if (user.role === "admin") return;
+
+    let adminOnlyPath = false;
+    for (const group of NAV_GROUPS) {
+      if (group.href && isActive(pathname, group.href)) {
+        if (group.adminOnly) adminOnlyPath = true;
+      }
+      if (group.items) {
+        for (const item of group.items) {
+          if (isActive(pathname, item.href)) {
+            if (group.adminOnly || item.adminOnly) adminOnlyPath = true;
+          }
+        }
+      }
+    }
+
+    if (pathname === "/admin") {
+      router.replace(user.role === "staff" ? "/admin/orders" : "/admin/products");
+      return;
+    }
+
+    if (adminOnlyPath) {
+      router.replace(user.role === "staff" ? "/admin/orders" : "/admin/products");
+    }
+  }, [hydrated, isAuthenticated, user, pathname, router]);
 
   // Fetch last few orders for the notifications panel.
   // Dashboard endpoint is admin-only; staff just sees an empty notifications block.

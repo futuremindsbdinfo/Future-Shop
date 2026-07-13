@@ -60,9 +60,17 @@ interface DeliveryReportRow {
 const TK = "৳";
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
-function todayStr(): string { return new Date().toISOString().slice(0, 10); }
+function getLocalDateString(d: Date): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function todayStr(): string { return getLocalDateString(new Date()); }
 function daysAgoStr(d: number): string {
-  return new Date(Date.now() - d * 86_400_000).toISOString().slice(0, 10);
+  const date = new Date(Date.now() - d * 86_400_000);
+  return getLocalDateString(date);
 }
 
 const STATUS_COLORS: Record<string, string> = {

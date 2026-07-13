@@ -17,7 +17,7 @@ class ReportController extends Controller
      * Resolve a [from, to] inclusive range from the request.
      * Defaults to the last 30 days.
      *
-     * @return array{CarbonImmutable, CarbonImmutable}
+     * @return array{CarbonImmutable, CarbonImmutable, CarbonImmutable, CarbonImmutable}
      */
     private function range(Request $request): array
     {
@@ -26,15 +26,22 @@ class ReportController extends Controller
             'to' => ['sometimes', 'nullable', 'date'],
         ]);
 
-        $to = $request->filled('to')
-            ? CarbonImmutable::parse($request->get('to'))->endOfDay()
-            : CarbonImmutable::now()->endOfDay();
+        $tz = 'Asia/Dhaka';
 
-        $from = $request->filled('from')
-            ? CarbonImmutable::parse($request->get('from'))->startOfDay()
-            : $to->subDays(29)->startOfDay();
+        $toDhaka = $request->filled('to')
+            ? CarbonImmutable::parse($request->get('to'), $tz)->endOfDay()
+            : CarbonImmutable::now($tz)->endOfDay();
 
-        return [$from, $to];
+        $fromDhaka = $request->filled('from')
+            ? CarbonImmutable::parse($request->get('from'), $tz)->startOfDay()
+            : $toDhaka->subDays(29)->startOfDay();
+
+        return [
+            $fromDhaka->setTimezone('UTC'),
+            $toDhaka->setTimezone('UTC'),
+            $fromDhaka,
+            $toDhaka,
+        ];
     }
 
     /**
@@ -42,7 +49,7 @@ class ReportController extends Controller
      */
     public function sales(Request $request): JsonResponse
     {
-        [$from, $to] = $this->range($request);
+        [$from, $to, $fromDhaka, $toDhaka] = $this->range($request);
 
         $orders = Order::whereBetween('created_at', [$from, $to])->get();
         $paidOrderIds = $orders->where('payment_status', 'paid')->pluck('id');
@@ -68,15 +75,15 @@ class ReportController extends Controller
         $profitMargin = $totalRevenue > 0 ? round(($grossProfit / $totalRevenue) * 100, 2) : 0.0;
         $avgOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0.0;
 
-        // Daily buckets between from..to (inclusive).
+        // Daily buckets between fromDhaka..toDhaka (inclusive).
         $daily = [];
-        for ($d = $from; $d <= $to; $d = $d->addDay()) {
+        for ($d = $fromDhaka; $d <= $toDhaka; $d = $d->addDay()) {
             $key = $d->toDateString();
             $daily[$key] = ['date' => $key, 'revenue' => 0.0, 'orders' => 0, 'cost' => 0.0, 'profit' => 0.0];
         }
 
         foreach ($orders as $o) {
-            $d = $o->created_at?->toDateString();
+            $d = CarbonImmutable::parse($o->created_at)->setTimezone('Asia/Dhaka')->toDateString();
             if (! isset($daily[$d])) {
                 continue;
             }
@@ -115,8 +122,8 @@ class ReportController extends Controller
 
         return response()->json([
             'data' => [
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
+                'from' => $fromDhaka->toDateString(),
+                'to' => $toDhaka->toDateString(),
                 'summary' => [
                     'total_revenue' => round($totalRevenue, 2),
                     'total_orders' => $totalOrders,
@@ -137,7 +144,7 @@ class ReportController extends Controller
      */
     public function products(Request $request): JsonResponse
     {
-        [$from, $to] = $this->range($request);
+        [$from, $to, $fromDhaka, $toDhaka] = $this->range($request);
 
         $paidItems = OrderItem::whereHas('order', fn ($q) => $q->where('payment_status', 'paid')->whereBetween('created_at', [$from, $to]))
             ->with('product:id,name,cost_price')
@@ -176,8 +183,8 @@ class ReportController extends Controller
 
         return response()->json([
             'data' => [
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
+                'from' => $fromDhaka->toDateString(),
+                'to' => $toDhaka->toDateString(),
                 'rows' => array_slice($rows, 0, 20),
             ],
         ]);
@@ -188,7 +195,7 @@ class ReportController extends Controller
      */
     public function vendors(Request $request): JsonResponse
     {
-        [$from, $to] = $this->range($request);
+        [$from, $to, $fromDhaka, $toDhaka] = $this->range($request);
 
         $paidItems = OrderItem::whereHas('order', fn ($q) => $q->where('payment_status', 'paid')->whereBetween('created_at', [$from, $to]))
             ->get(['id', 'order_id', 'vendor_id', 'subtotal', 'commission']);
@@ -230,8 +237,8 @@ class ReportController extends Controller
 
         return response()->json([
             'data' => [
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
+                'from' => $fromDhaka->toDateString(),
+                'to' => $toDhaka->toDateString(),
                 'rows' => $rows,
             ],
         ]);
@@ -242,10 +249,10 @@ class ReportController extends Controller
      */
     public function export(Request $request): StreamedResponse
     {
-        [$from, $to] = $this->range($request);
+        [$from, $to, $fromDhaka, $toDhaka] = $this->range($request);
         $type = $request->get('type', 'sales');
 
-        $filename = "report-{$type}-{$from->toDateString()}-to-{$to->toDateString()}.csv";
+        $filename = "report-{$type}-{$fromDhaka->toDateString()}-to-{$toDhaka->toDateString()}.csv";
 
         return response()->streamDownload(function () use ($type, $request) {
             $fh = fopen('php://output', 'w');
@@ -280,26 +287,7 @@ class ReportController extends Controller
      */
     public function deliveryReport(Request $request): JsonResponse
     {
-        $request->validate([
-            'from' => ['sometimes', 'nullable', 'date'],
-            'to' => ['sometimes', 'nullable', 'date'],
-        ]);
-
-        // Dhaka-local day boundaries, converted to UTC for the query. delivered_at
-        // is stored in UTC, so cash must be bucketed against the UTC instants of
-        // the Dhaka day (otherwise it skews ~6 hours into the wrong day). The
-        // shared range() helper is intentionally NOT used here — it returns
-        // UTC-day bounds (fine for the created_at sales reports, wrong for this
-        // COD cash report). Display uses the Dhaka dates the admin requested.
-        $toDhaka = $request->filled('to')
-            ? CarbonImmutable::parse($request->get('to'), 'Asia/Dhaka')->endOfDay()
-            : CarbonImmutable::now('Asia/Dhaka')->endOfDay();
-        $fromDhaka = $request->filled('from')
-            ? CarbonImmutable::parse($request->get('from'), 'Asia/Dhaka')->startOfDay()
-            : $toDhaka->subDays(29)->startOfDay();
-
-        $from = $fromDhaka->utc();
-        $to = $toDhaka->utc();
+        [$from, $to, $fromDhaka, $toDhaka] = $this->range($request);
 
         // Fixed Dhaka-local quick windows (today / this week / this month) —
         // independent of the requested range; same boundary pattern as

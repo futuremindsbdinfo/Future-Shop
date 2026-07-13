@@ -8,11 +8,11 @@ use Illuminate\Validation\Rule;
 class StoreProductRequest extends FormRequest
 {
     /**
-     * Only admins may create products (route is also gated by role:admin).
+     * Admins and vendors may create products.
      */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->isAdmin();
+        return $this->user()?->isAdmin() || $this->user()?->isVendor();
     }
 
     /**
@@ -49,6 +49,21 @@ class StoreProductRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->user()?->isVendor()) {
+            $this->merge([
+                'vendor_id' => $this->user()->vendor->id ?? 0,
+            ]);
+        }
+
+        // Optional: unpack JSON stringified arrays from FormData
+        if ($this->has('image_urls') && is_string($this->get('image_urls'))) {
+            $this->merge(['image_urls' => json_decode($this->get('image_urls'), true)]);
+        }
+
+        if ($this->has('attributes') && is_string($this->get('attributes'))) {
+            $this->merge(['attributes' => json_decode($this->get('attributes'), true)]);
+        }
+
         $this->normalizeAttributes();
         $this->normalizeImageUrls();
     }

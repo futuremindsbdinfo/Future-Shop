@@ -6,6 +6,8 @@ import { Heart, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
+import { useAuthStore } from "@/store/authStore";
+import api from "@/lib/api";
 import { formatTaka } from "@/lib/utils";
 import type { Product, ProductImage } from "@/types";
 
@@ -62,7 +64,7 @@ export function ProductCard({ product }: Props) {
     toast.success("কার্টে যোগ হয়েছে");
   };
 
-  const handleWishlist = (e: React.MouseEvent) => {
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     // Guest-friendly: toggle the client-side wishlist (localStorage). Capture
     // the state before toggling so the toast describes what just happened.
@@ -80,6 +82,20 @@ export function ProductCard({ product }: Props) {
     toast.success(
       wasWishlisted ? "উইশলিস্ট থেকে সরানো হয়েছে" : "উইশলিস্টে যোগ হয়েছে",
     );
+
+    // Sync with server if authenticated
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (isAuthenticated) {
+      try {
+        if (wasWishlisted) {
+          await api.delete(`/account/wishlists/product/${id}`);
+        } else {
+          await api.post("/account/wishlists", { product_id: id });
+        }
+      } catch (err) {
+        console.error("Failed to sync wishlist with server", err);
+      }
+    }
   };
 
   const subline = brand?.name;

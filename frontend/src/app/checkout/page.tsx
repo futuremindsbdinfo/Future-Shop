@@ -50,6 +50,7 @@ export default function CheckoutPage() {
     valid: boolean;
     message: string;
     discount_percentage?: number;
+    max_discount_amount?: number | null;
   } | null>(null);
   const [useWallet, setUseWallet] = useState(false);
   const [walletBalance, setWalletBalance] = useState("0.00");
@@ -58,8 +59,8 @@ export default function CheckoutPage() {
   // deciding the user is unauthenticated (avoids a redirect race on refresh).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHydrated(true);
+    const t = setTimeout(() => setHydrated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Protect: in-memory token means a hard refresh logs out → back to login.
@@ -101,6 +102,7 @@ export default function CheckoutPage() {
         valid: boolean;
         message: string;
         discount_percentage?: number;
+        max_discount_amount?: number | null;
       }>(`/account/coupons/check?code=${encodeURIComponent(code)}`);
       setCouponResult(res.data);
     } catch (e: unknown) {
@@ -124,10 +126,13 @@ export default function CheckoutPage() {
   const deliveryCharge = selectedZone ? Number(selectedZone.delivery_charge) : 0;
 
   // Preview discount / wallet usage (the server recomputes authoritatively).
-  const couponDiscount =
-    couponResult?.valid && couponResult.discount_percentage
-      ? Math.round((subtotal * couponResult.discount_percentage) / 100 * 100) / 100
-      : 0;
+  let couponDiscount = 0;
+  if (couponResult?.valid && couponResult.discount_percentage) {
+    couponDiscount = Math.round((subtotal * couponResult.discount_percentage) / 100 * 100) / 100;
+    if (couponResult.max_discount_amount != null && couponDiscount > couponResult.max_discount_amount) {
+      couponDiscount = Number(couponResult.max_discount_amount);
+    }
+  }
   const walletNumber = Number(walletBalance) || 0;
   const subtotalPlusDelivery = subtotal + deliveryCharge;
   const amountAfterDiscount = Math.max(0, subtotalPlusDelivery - couponDiscount);
