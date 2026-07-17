@@ -168,7 +168,7 @@ class OrderController extends Controller
                     );
 
                     if ($coupon->max_discount_amount !== null && bccomp($couponDiscount, (string) $coupon->max_discount_amount, 2) > 0) {
-                        $couponDiscount = number_format((float) $coupon->max_discount_amount, 2, '.', '');
+                        $couponDiscount = bcadd((string) $coupon->max_discount_amount, '0', 2);
                     }
 
                     $appliedCoupon = $coupon;
