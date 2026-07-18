@@ -48,6 +48,7 @@ export function Navbar({ siteName = "Future Shop", logo }: { siteName?: string; 
   const [query, setQuery] = useState("");
 
   const user = useAuthStore((state) => state.user);
+  const isAuthenticated = !!user;
   const logout = useAuthStore((state) => state.logout);
   const totalItems = useCartStore((state) => state.totalItems);
   const openCart = useCartStore((state) => state.openCart);
