@@ -45,6 +45,7 @@ export default function AdminCouponsPage() {
   const [fCode, setFCode] = useState("");
   const [fDescription, setFDescription] = useState("");
   const [fPercent, setFPercent] = useState("10");
+  const [fMaxDiscount, setFMaxDiscount] = useState("");
   const [fUsageLimit, setFUsageLimit] = useState("");
   const [fFirstPurchaseOnly, setFFirstPurchaseOnly] = useState(true);
   const [fIsActive, setFIsActive] = useState(true);
@@ -88,6 +89,7 @@ export default function AdminCouponsPage() {
     setFCode("");
     setFDescription("");
     setFPercent("10");
+    setFMaxDiscount("");
     setFUsageLimit("");
     setFFirstPurchaseOnly(true);
     setFIsActive(true);
@@ -101,6 +103,9 @@ export default function AdminCouponsPage() {
     setFCode(coupon.code);
     setFDescription(coupon.description ?? "");
     setFPercent(String(coupon.discount_percentage));
+    setFMaxDiscount(
+      coupon.max_discount_amount === null ? "" : String(coupon.max_discount_amount)
+    );
     setFUsageLimit(coupon.usage_limit === null ? "" : String(coupon.usage_limit));
     setFFirstPurchaseOnly(coupon.is_first_purchase_only);
     setFIsActive(coupon.is_active);
@@ -120,12 +125,18 @@ export default function AdminCouponsPage() {
       toast.error("Discount must be between 1 and 100");
       return;
     }
+    const maxDiscount = fMaxDiscount.trim() ? Number(fMaxDiscount) : null;
+    if (maxDiscount !== null && (!Number.isFinite(maxDiscount) || maxDiscount < 0)) {
+      toast.error("Max discount must be 0 or more");
+      return;
+    }
     setSaving(true);
     try {
       const body: Record<string, unknown> = {
         code: fCode.trim(),
         description: fDescription.trim() || null,
         discount_percentage: percent,
+        max_discount_amount: maxDiscount,
         usage_limit: fUsageLimit.trim() ? Number(fUsageLimit) : null,
         is_first_purchase_only: fFirstPurchaseOnly,
         is_active: fIsActive,
@@ -347,6 +358,19 @@ export default function AdminCouponsPage() {
                   onChange={(e) => setFPercent(e.target.value)}
                   className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Max Discount (৳)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={fMaxDiscount}
+                  onChange={(e) => setFMaxDiscount(e.target.value)}
+                  placeholder="Unlimited"
+                  className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <p className="text-xs text-muted-foreground">Leave blank for no cap.</p>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Usage Limit</label>
