@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +29,7 @@ const FILTER_TABS: { key: FilterRole; label: string }[] = [
   { key: "admin", label: "Admins" },
   { key: "staff", label: "Staff" },
 ];
+const FILTER_ROLE_KEYS: FilterRole[] = FILTER_TABS.map((t) => t.key);
 
 const ROLE_BADGE: Record<UserRole, string> = {
   admin: "bg-purple-100 text-purple-700",
@@ -45,12 +47,17 @@ function getErrorMessage(e: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function AdminUsersPage() {
+function AdminUsersContent() {
+  const searchParams = useSearchParams();
+  const initialFilter = FILTER_ROLE_KEYS.includes(searchParams.get("role") as FilterRole)
+    ? (searchParams.get("role") as FilterRole)
+    : "all";
+
   const [data, setData] = useState<PaginatedResponse<AdminUserRow> | null>(null);
   const [counts, setCounts] = useState<Record<FilterRole, number>>({
     all: 0, customer: 0, vendor: 0, delivery: 0, admin: 0, staff: 0,
   });
-  const [filter, setFilter] = useState<FilterRole>("all");
+  const [filter, setFilter] = useState<FilterRole>(initialFilter);
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [page, setPage] = useState(1);
@@ -476,5 +483,13 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AdminUsersContent />
+    </Suspense>
   );
 }

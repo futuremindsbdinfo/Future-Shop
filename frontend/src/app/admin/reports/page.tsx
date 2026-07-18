@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -25,6 +26,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +85,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 type TabKey = "sales" | "products" | "vendors" | "delivery";
+const TAB_KEYS: TabKey[] = ["sales", "products", "vendors", "delivery"];
 
 function MarginBar({ pct }: { pct: number }) {
   const clamped = Math.max(-100, Math.min(100, pct));
@@ -118,10 +121,15 @@ function StatTile({ label, value, icon, color = "text-[#f47920]", bg = "bg-orang
   );
 }
 
-export default function AdminReportsPage() {
+function AdminReportsContent() {
+  const searchParams = useSearchParams();
+  const initialTab = TAB_KEYS.includes(searchParams.get("tab") as TabKey)
+    ? (searchParams.get("tab") as TabKey)
+    : "sales";
+
   const [from, setFrom] = useState(daysAgoStr(29));
   const [to, setTo] = useState(todayStr());
-  const [tab, setTab] = useState<TabKey>("sales");
+  const [tab, setTab] = useState<TabKey>(initialTab);
 
   const [sales, setSales] = useState<SalesReport | null>(null);
   const [products, setProducts] = useState<ProductsReportRow[] | null>(null);
@@ -225,6 +233,14 @@ export default function AdminReportsPage() {
         <p className="text-sm text-muted-foreground">No data.</p>
       )}
     </div>
+  );
+}
+
+export default function AdminReportsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AdminReportsContent />
+    </Suspense>
   );
 }
 

@@ -11,6 +11,7 @@ import {
   faBell,
   faBoxOpen,
   faBullhorn,
+  faChartLine,
   faChevronDown,
   faChevronRight,
   faCircleQuestion,
@@ -28,6 +29,7 @@ import {
   faTableCells,
   faTags,
   faTruck,
+  faTruckFast,
   faUserGroup,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
@@ -114,6 +116,9 @@ const NAV_GROUPS: NavGroup[] = [
     groupLabel: "Delivery",
     icon: faTruck,
     items: [
+      { href: "/admin/reports?tab=delivery", label: "Delivery Report", icon: faChartLine, adminOnly: true },
+      { href: "/admin/orders?assignment_status=assigned_pending", label: "Assign / Pending", icon: faTruckFast, adminOnly: true },
+      { href: "/admin/users?role=delivery", label: "Delivery Men", icon: faUsers, adminOnly: true },
       { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot, adminOnly: true },
     ]
   }
