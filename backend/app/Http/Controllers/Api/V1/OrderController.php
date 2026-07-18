@@ -424,15 +424,24 @@ class OrderController extends Controller
 
     /**
      * Admin: list all orders with filters.
-     * ?order_status= &payment_status= &user_id= &from= &to= &search=<order_number>
+     * ?order_status= &payment_status= &user_id= &delivery_user_id= &assignment_status= &from= &to= &search=<order_number>
      */
     public function adminIndex(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'delivery_user_id' => ['nullable', 'exists:users,id'],
+            'assignment_status' => ['nullable', Rule::in(['assigned_pending'])],
+        ]);
+
         $orders = Order::query()
             ->with(['user:id,name,email', 'deliveryUser:id,name', 'items'])
             ->when($request->filled('order_status'), fn ($q) => $q->where('order_status', $request->string('order_status')))
             ->when($request->filled('payment_status'), fn ($q) => $q->where('payment_status', $request->string('payment_status')))
             ->when($request->filled('user_id'), fn ($q) => $q->where('user_id', $request->integer('user_id')))
+            ->when(! empty($validated['delivery_user_id']), fn ($q) => $q->where('delivery_user_id', $validated['delivery_user_id']))
+            ->when(($validated['assignment_status'] ?? null) === 'assigned_pending', fn ($q) => $q
+                ->whereNotNull('delivery_user_id')
+                ->whereIn('order_status', ['pending', 'processing', 'shipped']))
             ->when($request->filled('search'), fn ($q) => $q->where('order_number', 'ilike', '%'.$request->string('search').'%'))
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->date('from')))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->date('to')))

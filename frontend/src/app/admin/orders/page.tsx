@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,10 +36,16 @@ interface DeliveryUser {
   phone: string | null;
 }
 
-export default function AdminOrdersPage() {
+function AdminOrdersContent() {
+  const searchParams = useSearchParams();
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [deliveryUsers, setDeliveryUsers] = useState<DeliveryUser[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [assignmentFilter, setAssignmentFilter] = useState(
+    searchParams.get("assignment_status") === "assigned_pending" ? "assigned_pending" : "",
+  );
+  const [riderFilter, setRiderFilter] = useState(searchParams.get("delivery_user_id") ?? "");
   const [loading, setLoading] = useState(true);
 
   // Collapsible items state
@@ -92,12 +99,14 @@ export default function AdminOrdersPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter) params.set("order_status", statusFilter);
+    if (assignmentFilter) params.set("assignment_status", assignmentFilter);
+    if (riderFilter) params.set("delivery_user_id", riderFilter);
     api
       .get<PaginatedResponse<Order>>(`/admin/orders?${params.toString()}`)
       .then((r) => setOrders(r.data.data))
       .catch(() => toast.error("Failed to load orders"))
       .finally(() => setLoading(false));
-  }, [statusFilter]);
+  }, [statusFilter, assignmentFilter, riderFilter]);
 
   useEffect(() => {
     load();
@@ -128,16 +137,42 @@ export default function AdminOrdersPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Orders</h1>
 
-      <select
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="h-11 rounded-md border border-input bg-transparent px-3 text-sm"
-      >
-        <option value="">All statuses</option>
-        {ORDER_STATUSES.map((s) => (
-          <option key={s} value={s}>{ORDER_STATUS_BN[s]}</option>
-        ))}
-      </select>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="h-11 rounded-md border border-input bg-transparent px-3 text-sm"
+        >
+          <option value="">All statuses</option>
+          {ORDER_STATUSES.map((s) => (
+            <option key={s} value={s}>{ORDER_STATUS_BN[s]}</option>
+          ))}
+        </select>
+
+        <button
+          type="button"
+          onClick={() => setAssignmentFilter((prev) => (prev === "assigned_pending" ? "" : "assigned_pending"))}
+          className={`h-11 rounded-md border px-4 text-sm font-medium transition-colors ${
+            assignmentFilter === "assigned_pending"
+              ? "border-[#f47920] bg-[#f47920] text-white"
+              : "border-input bg-transparent text-foreground hover:bg-muted"
+          }`}
+        >
+          Assigned &amp; Pending
+        </button>
+
+        <select
+          value={riderFilter}
+          onChange={(e) => setRiderFilter(e.target.value)}
+          className="h-11 rounded-md border border-input bg-transparent px-3 text-sm"
+          aria-label="Filter by delivery agent"
+        >
+          <option value="">All riders</option>
+          {deliveryUsers.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}{u.phone ? ` (${u.phone})` : ""}</option>
+          ))}
+        </select>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -336,5 +371,13 @@ export default function AdminOrdersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminOrdersPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AdminOrdersContent />
+    </Suspense>
   );
 }
