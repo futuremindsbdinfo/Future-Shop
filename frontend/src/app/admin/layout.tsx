@@ -119,6 +119,18 @@ const NAV_GROUPS: NavGroup[] = [
   }
 ];
 
+// Client-side mirror of STAFF_ALLOWED in src/proxy.ts — keep the two in sync.
+// Deriving this from NAV_GROUPS instead would silently allow any admin route
+// that has no nav entry (analytics, reports, settings).
+const STAFF_ALLOWED = [
+  "/admin/products",
+  "/admin/orders",
+  "/admin/vendors",
+  "/admin/brands",
+  "/admin/coupons",
+  "/admin/promotions",
+];
+
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || (href !== "/admin" && pathname.startsWith(href));
 }
@@ -397,6 +409,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!hydrated || !isAuthenticated || !user) return;
     if (user.role === "admin") return;
 
+    if (pathname === "/admin") {
+      router.replace(user.role === "staff" ? "/admin/orders" : "/admin/products");
+      return;
+    }
+
+    // Staff: allowlist, identical to the proxy. /admin/orders is itself allowed,
+    // so the redirect target can never re-trigger this guard.
+    if (user.role === "staff") {
+      const allowed = STAFF_ALLOWED.some(
+        (p) => pathname === p || pathname.startsWith(p + "/"),
+      );
+      if (!allowed) router.replace("/admin/orders");
+      return;
+    }
+
+    // Vendor: nav-derived admin-only flags (the proxy already bars vendors from
+    // /admin entirely, so this is belt-and-braces only).
     let adminOnlyPath = false;
     for (const group of NAV_GROUPS) {
       if (group.href && isActive(pathname, group.href)) {
@@ -411,13 +440,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     }
 
-    if (pathname === "/admin") {
-      router.replace(user.role === "staff" ? "/admin/orders" : "/admin/products");
-      return;
-    }
-
     if (adminOnlyPath) {
-      router.replace(user.role === "staff" ? "/admin/orders" : "/admin/products");
+      router.replace("/admin/products");
     }
   }, [hydrated, isAuthenticated, user, pathname, router]);
 
