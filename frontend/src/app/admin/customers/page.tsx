@@ -75,6 +75,7 @@ export default function AdminCustomersPage() {
 
   // Summary aggregates from the current page (best signal without an extra endpoint).
   const totalCustomers = data?.total ?? 0;
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const activeThisMonth = (data?.data ?? []).filter((c) => {
     if (!c.last_order_date) return false;
