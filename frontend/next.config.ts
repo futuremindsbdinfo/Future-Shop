@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
         port: "8000",
         pathname: "/storage/**",
       },
+      // Production Laravel API
+      {
+        protocol: "https",
+        hostname: "api.fuminds.com",
+        pathname: "/storage/**",
+      },
       // Cloudflare R2 (kept for flexibility; not in active use)
       {
         protocol: "https",
