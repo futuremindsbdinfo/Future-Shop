@@ -30,9 +30,9 @@ class InvoiceController extends Controller
             ->when($request->filled('search'), function ($q) use ($request) {
                 $term = '%'.$request->string('search').'%';
                 $q->where(function ($w) use ($term) {
-                    $w->where('order_number', 'ilike', $term)
-                        ->orWhere('shipping_name', 'ilike', $term)
-                        ->orWhereHas('user', fn ($u) => $u->where('name', 'ilike', $term));
+                    $w->where('order_number', 'like', $term)
+                        ->orWhere('shipping_name', 'like', $term)
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $term));
                 });
             })
             ->latest()

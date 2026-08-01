@@ -442,7 +442,7 @@ class OrderController extends Controller
             ->when(($validated['assignment_status'] ?? null) === 'assigned_pending', fn ($q) => $q
                 ->whereNotNull('delivery_user_id')
                 ->whereIn('order_status', ['pending', 'processing', 'shipped']))
-            ->when($request->filled('search'), fn ($q) => $q->where('order_number', 'ilike', '%'.$request->string('search').'%'))
+            ->when($request->filled('search'), fn ($q) => $q->where('order_number', 'like', '%'.$request->string('search').'%'))
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->date('from')))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->date('to')))
             ->latest()

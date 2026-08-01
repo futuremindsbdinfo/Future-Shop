@@ -35,9 +35,9 @@ class UserManagementController extends Controller
             ->when($request->filled('search'), function ($q) use ($request) {
                 $term = '%'.$request->string('search').'%';
                 $q->where(function ($w) use ($term) {
-                    $w->where('name', 'ilike', $term)
-                        ->orWhere('phone', 'ilike', $term)
-                        ->orWhere('email', 'ilike', $term);
+                    $w->where('name', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhere('email', 'like', $term);
                 });
             })
             ->orderByDesc('id')
@@ -191,7 +191,7 @@ class UserManagementController extends Controller
             ->when($request->filled('search'), function ($q) use ($request) {
                 $term = '%'.$request->string('search').'%';
                 $q->where(function ($w) use ($term) {
-                    $w->where('name', 'ilike', $term)->orWhere('phone', 'ilike', $term);
+                    $w->where('name', 'like', $term)->orWhere('phone', 'like', $term)->orWhere('email', 'like', $term);
                 });
             })
             ->withCount('orders as total_orders')

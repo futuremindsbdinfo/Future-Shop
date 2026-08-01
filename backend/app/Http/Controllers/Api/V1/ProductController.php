@@ -51,7 +51,7 @@ class ProductController extends Controller
             ->when($request->filled('min_price'), fn ($q) => $q->where('price', '>=', $request->float('min_price')))
             ->when($request->filled('max_price'), fn ($q) => $q->where('price', '<=', $request->float('max_price')))
             ->when($request->boolean('is_featured'), fn ($q) => $q->where('is_featured', true))
-            ->when($request->filled('search'), fn ($q) => $q->where('name', 'ilike', '%'.$request->string('search').'%'))
+            ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->string('search').'%'))
             ->when(
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
