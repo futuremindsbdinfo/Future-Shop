@@ -1,3 +1,4 @@
+export const dynamic = "force-static";
 import { MetadataRoute } from "next";
 import { apiFetchSafe } from "@/lib/server-api";
 import type { Product } from "@/types";
