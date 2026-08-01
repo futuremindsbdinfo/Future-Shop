@@ -3,24 +3,13 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      // Local Laravel backend on port 8000 (public disk: /storage/...)
-      {
-        protocol: "http",
-        hostname: "localhost",
-        port: "8000",
-        pathname: "/storage/**",
-      },
-      {
-        protocol: "http",
-        hostname: "127.0.0.1",
-        port: "8000",
-        pathname: "/storage/**",
-      },
-      // Production Laravel API
       {
         protocol: "https",
-        hostname: "api.fuminds.com",
-        pathname: "/storage/**",
+        hostname: "**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
       },
       // Cloudflare R2 (kept for flexibility; not in active use)
       {
