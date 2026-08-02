@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Camera } from "lucide-react";
+import { CheckCircle2, Camera, Receipt, Calendar, CreditCard, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -176,24 +176,68 @@ export default function DeliveryPaymentConfirmPage() {
   }
 
   // Step 3 — Success.
-  if (confirmed) {
+  if (confirmed && preview) {
+    const totalNumber = Number(preview.total);
+    const dateStr = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+
     return (
       <div className="mx-auto max-w-sm px-4 py-12">
-        <Card className="rounded-xl border-green-200 shadow-sm">
-          <CardContent className="space-y-4 p-8 text-center">
-            <CheckCircle2 className="mx-auto h-20 w-20 text-green-600" />
-            <h1 className="text-xl font-bold text-green-800" lang="bn">
-              পেমেন্ট নিশ্চিত হয়েছে!
-            </h1>
-            <p className="text-sm text-muted-foreground" lang="bn">
-              ডেলিভারি সম্পন্ন হয়েছে।
-            </p>
-            <Button
-              onClick={() => router.push("/delivery")}
-              className="h-12 w-full bg-[#f47920] hover:bg-[#e56910]"
-            >
-              <span lang="bn">ড্যাশবোর্ডে ফিরুন</span>
-            </Button>
+        <Card className="rounded-2xl border border-gray-100 shadow-lg">
+          <CardContent className="space-y-6 p-8">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="rounded-full bg-green-50 p-3">
+                <CheckCircle2 className="h-12 w-12 text-green-500" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Payment Successful!
+                </h1>
+                <p className="mt-2 text-sm text-gray-500">
+                  Your payment of <span className="font-semibold text-gray-900">{formatTaka(totalNumber)}</span> has been completed successfully.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-gray-200 pt-6 space-y-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded bg-green-50 p-1.5">
+                    <Receipt className="h-4 w-4 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">Transaction ID</p>
+                </div>
+                <p className="text-sm text-gray-500 font-mono">{preview.order_number}</p>
+              </div>
+              
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded bg-green-50 p-1.5">
+                    <Calendar className="h-4 w-4 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">Date & Time</p>
+                </div>
+                <p className="text-sm text-gray-500">{dateStr}</p>
+              </div>
+
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded bg-green-50 p-1.5">
+                    <CreditCard className="h-4 w-4 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">Payment Method</p>
+                </div>
+                <p className="text-sm text-gray-500">Cash on Delivery</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-4 flex flex-col items-center">
+              <Button
+                onClick={() => router.push("/delivery")}
+                className="h-12 w-full bg-[#10b981] hover:bg-[#059669] text-white flex items-center justify-center gap-2 rounded-xl"
+              >
+                Back to Dashboard <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
