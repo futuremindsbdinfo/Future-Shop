@@ -61,7 +61,10 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
           <Button variant="ghost" size="icon" className="shrink-0 -ml-2" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5 text-slate-700" />
           </Button>
-          <Link href="/delivery" className="font-bold text-[#f47920] text-lg tracking-tight" lang="bn">Future Shop ডেলিভারি</Link>
+          <Link href="/delivery" className="flex items-center gap-2">
+            <img src="/logo.png" alt="Future Shop" className="h-8 w-auto object-contain" />
+            <span className="font-bold text-[#f47920] text-lg tracking-tight" lang="bn">ডেলিভারি</span>
+          </Link>
         </div>
         <Button variant="outline" className="h-10 px-3 md:px-4" onClick={handleLogout}>
           <LogOut className="h-4 w-4 md:mr-2" />

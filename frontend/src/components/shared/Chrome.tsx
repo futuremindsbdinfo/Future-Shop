@@ -34,7 +34,7 @@ export function Chrome({
     <>
       <Navbar
         siteName={settings.site_name ?? FALLBACK_SETTINGS.site_name ?? "Future Shop"}
-        logo={settings.site_logo}
+        logo={settings.site_logo || "/logo.png"}
       />
       <main className="flex-1">{children}</main>
       <Footer settings={settings} />

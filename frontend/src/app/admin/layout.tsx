@@ -502,8 +502,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <FontAwesomeIcon icon={faBars} className="h-5 w-5" />
           </button>
 
-          <Link href="/admin" className="flex h-10 px-3 items-center justify-center rounded-lg bg-[#f47920] text-base font-bold tracking-tight text-white ml-2">
-            Future Shop
+          <Link href="/admin" className="flex h-10 items-center justify-center ml-2">
+            <img src="/logo.png" alt="Future Shop" className="h-full w-auto object-contain" />
           </Link>
         </div>
 
