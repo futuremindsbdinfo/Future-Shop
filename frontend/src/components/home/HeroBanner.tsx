@@ -60,13 +60,8 @@ export function HeroBanner() {
 
             {/* Right Content - Hero Image Box */}
             <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-              <div className="w-full max-w-[500px] aspect-[4/3] rounded-2xl bg-white/10 border-2 border-white/20 shadow-xl overflow-hidden relative flex items-center justify-center">
-                {/* Replace this with an actual image tag when you have a banner image */}
-                <div className="text-white/50 text-center px-4">
-                  <span className="block mb-2 text-3xl">🖼️</span>
-                  <span className="text-sm font-medium">Hero Image / Banner Slider</span>
-                  <p className="text-xs mt-1">500x375 recommended size</p>
-                </div>
+              <div className="w-full max-w-[500px] aspect-[4/3] rounded-2xl bg-white/10 border-2 border-white/20 shadow-xl overflow-hidden relative flex items-center justify-center p-8">
+                <img src="/logo.png" alt="Future Shop Logo" className="w-full h-full object-contain drop-shadow-2xl opacity-90" />
               </div>
             </div>
           </div>
