@@ -51,7 +51,14 @@ class ProductController extends Controller
             ->when($request->filled('min_price'), fn ($q) => $q->where('price', '>=', $request->float('min_price')))
             ->when($request->filled('max_price'), fn ($q) => $q->where('price', '<=', $request->float('max_price')))
             ->when($request->boolean('is_featured'), fn ($q) => $q->where('is_featured', true))
-            ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->string('search').'%'))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $keywords = array_filter(explode(' ', $request->string('search')));
+                $q->where(function ($query) use ($keywords) {
+                    foreach ($keywords as $word) {
+                        $query->where('name', 'like', '%' . $word . '%');
+                    }
+                });
+            })
             ->when(
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
@@ -87,7 +94,14 @@ class ProductController extends Controller
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
             )
-            ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->string('search').'%'))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $keywords = array_filter(explode(' ', $request->string('search')));
+                $q->where(function ($query) use ($keywords) {
+                    foreach ($keywords as $word) {
+                        $query->where('name', 'like', '%' . $word . '%');
+                    }
+                });
+            })
             // created_at has second-level precision (timestamps precision 0), so
             // bulk/CSV-imported rows tie; add id as a stable tiebreaker so the
             // order does not reshuffle after a delete (arbitrary heap order).
