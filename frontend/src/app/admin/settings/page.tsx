@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageOff, Trash2 } from "lucide-react";
+import {
+  Building2,
+  Globe,
+  ImageOff,
+  ImagePlus,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Settings,
+  Store,
+  Trash2,
+  Type,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +28,6 @@ import api from "@/lib/api";
 import type { Banner, SiteSettings } from "@/types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
-const TEXTAREA_CLASS =
-  "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-none min-h-[64px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -22,6 +35,82 @@ function getErrorMessage(error: unknown, fallback: string): string {
     return resp?.data?.message ?? fallback;
   }
   return fallback;
+}
+
+/* ─────────────── Reusable: Icon Input Wrapper ─────────────── */
+function IconInput({
+  icon: Icon,
+  id,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+}: {
+  icon: React.ElementType;
+  id: string;
+  type?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+        <Icon className="h-4 w-4 text-gray-400" />
+      </div>
+      <Input
+        id={id}
+        type={type}
+        className="h-11 pl-10 transition-all duration-200 focus:ring-2 focus:ring-[#f47920]/20 focus:border-[#f47920]"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
+
+/* ─────────────── Reusable: Section Header ─────────────── */
+function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+  accentColor = "#f47920",
+  badge,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description?: string;
+  accentColor?: string;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <div
+      className="flex items-start gap-4 rounded-t-xl border-b px-6 py-4"
+      style={{
+        background: `linear-gradient(135deg, ${accentColor}08 0%, ${accentColor}03 100%)`,
+        borderBottomColor: `${accentColor}15`,
+      }}
+    >
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+        style={{
+          background: `linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}08 100%)`,
+        }}
+      >
+        <Icon className="h-5 w-5" style={{ color: accentColor }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[15px] font-semibold text-gray-800" lang="bn">{title}</h3>
+          {badge}
+        </div>
+        {description && (
+          <p className="mt-0.5 text-xs text-gray-500" lang="bn">{description}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function AdminSettingsPage() {
@@ -37,6 +126,7 @@ export default function AdminSettingsPage() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoDragOver, setLogoDragOver] = useState(false);
 
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bTitle, setBTitle] = useState("");
@@ -46,6 +136,7 @@ export default function AdminSettingsPage() {
   const [bPreviewUrl, setBPreviewUrl] = useState<string | null>(null);
   const [savingBanner, setSavingBanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.allSettled([
@@ -65,8 +156,7 @@ export default function AdminSettingsPage() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  // Revoke any blob URL when the preview changes or the component unmounts —
-  // avoids a leak when the user picks several files in a row.
+  // Revoke any blob URL when the preview changes or the component unmounts
   useEffect(() => {
     if (!bPreviewUrl && !logoPreview) return;
     return () => {
@@ -91,11 +181,21 @@ export default function AdminSettingsPage() {
       fd.append("_method", "PUT");
       
       await api.post("/admin/settings", fd);
-      toast.success("সেটিংস সংরক্ষিত হয়েছে");
+      toast.success("সেটিংস সংরক্ষিত হয়েছে ✓");
     } catch (error) {
       toast.error(getErrorMessage(error, "সংরক্ষণ ব্যর্থ হয়েছে"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setLogoDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
     }
   };
 
@@ -124,14 +224,13 @@ export default function AdminSettingsPage() {
     try {
       const res = await api.post<{ data: Banner }>("/admin/banners", form);
       setBanners((prev) => [res.data.data, ...prev]);
-      // Full form reset including the file input DOM and the active checkbox.
       setBTitle("");
       setBLink("");
       setBFile(null);
       setBActive(true);
       setBPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      toast.success("ব্যানার যোগ হয়েছে");
+      toast.success("ব্যানার যোগ হয়েছে ✓");
     } catch (error) {
       toast.error(getErrorMessage(error, "ব্যানার যোগ ব্যর্থ হয়েছে"));
     } finally {
@@ -150,25 +249,44 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">সেটিংস</h1>
+    <div className="space-y-6 max-w-4xl">
+      {/* ═══════════ PAGE HEADER ═══════════ */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f47920] via-[#fb923c] to-[#f59e0b] px-6 py-6 text-white shadow-lg">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-inner">
+            <Settings className="h-7 w-7 text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-white/70 mb-0.5">Admin Panel</p>
+            <h1 className="text-2xl font-bold tracking-tight" lang="bn">সেটিংস</h1>
+            <p className="text-sm text-white/80 mt-0.5" lang="bn">
+              সাইটের তথ্য, যোগাযোগ ও ব্যানার পরিচালনা করুন
+            </p>
+          </div>
+        </div>
+        {/* Decorative */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-6 -right-6 h-28 w-28 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute left-1/2 -bottom-10 h-32 w-32 rounded-full bg-white/5" />
       </div>
 
-      {/* ── Card 1: Site Info ── */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">সাইটের তথ্য</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="site_name">
+      {/* ═══════════ CARD 1: Site Info ═══════════ */}
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md">
+        <SectionHeader
+          icon={Store}
+          title="সাইটের তথ্য"
+          description="সাইটের নাম, লোগো ও ট্যাগলাইন কনফিগার করুন"
+          accentColor="#f47920"
+        />
+        <div className="space-y-5 p-6">
+          {/* Site Name */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700" htmlFor="site_name" lang="bn">
               সাইটের নাম
             </label>
-            <Input
+            <IconInput
+              icon={Type}
               id="site_name"
-              className="h-11"
               value={settings.site_name ?? ""}
               onChange={(e) =>
                 setSettings((s) => ({ ...s, site_name: e.target.value }))
@@ -176,28 +294,46 @@ export default function AdminSettingsPage() {
               placeholder="Future Shop"
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium">সাইটের লোগো</label>
-            <div className="flex items-center gap-4">
+
+          {/* Logo Upload — Drag & Drop */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700" lang="bn">সাইটের লোগো</label>
+            <div className="flex flex-col sm:flex-row items-start gap-4">
               {logoPreview && (
-                <div className="relative h-14 w-auto border rounded bg-white p-1">
-                  <img src={logoPreview} alt="Logo" className="object-contain h-full w-auto max-w-[150px]" />
+                <div className="relative group">
+                  <div className="h-20 w-auto rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-2 transition-colors group-hover:border-[#f47920]/40">
+                    <img src={logoPreview} alt="Logo" className="object-contain h-full w-auto max-w-[160px]" />
+                  </div>
                   <button
                     onClick={() => {
                       setLogoFile(null);
                       setLogoPreview(null);
                     }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition-transform hover:scale-110"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               )}
-              <div>
-                <Input
+              <div
+                className={`flex-1 w-full cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-all duration-200 ${
+                  logoDragOver
+                    ? "border-[#f47920] bg-[#f47920]/5"
+                    : "border-gray-200 bg-gray-50 hover:border-[#f47920]/40 hover:bg-[#f47920]/5"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setLogoDragOver(true); }}
+                onDragLeave={() => setLogoDragOver(false)}
+                onDrop={handleLogoDrop}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-sm font-medium text-gray-600" lang="bn">ক্লিক করুন বা ড্র্যাগ করুন</p>
+                <p className="text-xs text-gray-400 mt-1">PNG, JPEG, WebP · সর্বোচ্চ ৫MB</p>
+                <input
+                  ref={logoInputRef}
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
-                  className="max-w-[250px]"
+                  className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
@@ -206,42 +342,49 @@ export default function AdminSettingsPage() {
                     }
                   }}
                 />
-                <p className="text-xs text-muted-foreground mt-1">সুপারিশকৃত: png/webp, স্বচ্ছ ব্যাকগ্রাউন্ড, সর্বোচ্চ ৫MB</p>
               </div>
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="site_tagline">
+
+          {/* Tagline */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700" htmlFor="site_tagline" lang="bn">
               ট্যাগলাইন (বাংলা)
             </label>
-            <textarea
-              id="site_tagline"
-              value={settings.site_tagline ?? ""}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, site_tagline: e.target.value }))
-              }
-              rows={2}
-              placeholder="বাজারে নয়, বাজার আসবে আপনার ঘরে।"
-              className={TEXTAREA_CLASS}
-            />
+            <div className="relative">
+              <textarea
+                id="site_tagline"
+                value={settings.site_tagline ?? ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, site_tagline: e.target.value }))
+                }
+                rows={2}
+                placeholder="বাজারে নয়, বাজার আসবে আপনার ঘরে।"
+                className="flex w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm resize-none min-h-[64px] placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f47920]/20 focus-visible:border-[#f47920] transition-all duration-200"
+              />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* ── Card 2: Contact ── */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">যোগাযোগের তথ্য</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="contact_phone">
+      {/* ═══════════ CARD 2: Contact ═══════════ */}
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md">
+        <SectionHeader
+          icon={Phone}
+          title="যোগাযোগের তথ্য"
+          description="ফোন, ইমেইল ও ঠিকানা আপডেট করুন"
+          accentColor="#3b82f6"
+        />
+        <div className="space-y-5 p-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700" htmlFor="contact_phone" lang="bn">
                 ফোন নম্বর
               </label>
-              <Input
+              <IconInput
+                icon={Phone}
                 id="contact_phone"
-                className="h-11"
                 type="tel"
                 value={settings.contact_phone ?? ""}
                 onChange={(e) =>
@@ -250,13 +393,14 @@ export default function AdminSettingsPage() {
                 placeholder="01XXXXXXXXX"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="contact_email">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700" htmlFor="contact_email" lang="bn">
                 ইমেইল
               </label>
-              <Input
+              <IconInput
+                icon={Mail}
                 id="contact_email"
-                className="h-11"
                 type="email"
                 value={settings.contact_email ?? ""}
                 onChange={(e) =>
@@ -266,41 +410,58 @@ export default function AdminSettingsPage() {
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="contact_address">
+          {/* Address */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700" htmlFor="contact_address" lang="bn">
               ঠিকানা
             </label>
-            <textarea
-              id="contact_address"
-              value={settings.contact_address ?? ""}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, contact_address: e.target.value }))
-              }
-              rows={2}
-              placeholder="শেরপুর, বগুড়া, বাংলাদেশ"
-              className={TEXTAREA_CLASS}
-            />
+            <div className="relative">
+              <div className="pointer-events-none absolute left-0 top-0 flex items-start pl-3.5 pt-3">
+                <MapPin className="h-4 w-4 text-gray-400" />
+              </div>
+              <textarea
+                id="contact_address"
+                value={settings.contact_address ?? ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, contact_address: e.target.value }))
+                }
+                rows={2}
+                placeholder="শেরপুর, বগুড়া, বাংলাদেশ"
+                className="flex w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2.5 text-sm resize-none min-h-[64px] placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6] transition-all duration-200"
+              />
+            </div>
           </div>
 
-          {/* Save button covers BOTH Card 1 and Card 2 (single PUT). */}
+          {/* Save button */}
           <div className="flex justify-end pt-2">
             <Button
               onClick={saveSettings}
               disabled={saving}
-              className="h-11 min-w-[140px] bg-[#f47920] hover:bg-orange-600"
+              className="h-11 min-w-[160px] rounded-lg bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white font-semibold shadow-md transition-all duration-200 hover:shadow-lg hover:from-[#e56910] hover:to-[#f47920] active:scale-[0.98]"
             >
+              <Save className="mr-2 h-4 w-4" />
               {saving ? "সেভ হচ্ছে..." : "সেটিংস সেভ করুন"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* ── Card 3: Banner List ── */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">ব্যানার তালিকা</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* ═══════════ CARD 3: Banner List ═══════════ */}
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md">
+        <SectionHeader
+          icon={Globe}
+          title="ব্যানার তালিকা"
+          description="হোমপেইজের ব্যানার ছবি পরিচালনা করুন"
+          accentColor="#8b5cf6"
+          badge={
+            banners.length > 0 ? (
+              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[11px] font-semibold">
+                {banners.length}টি
+              </Badge>
+            ) : null
+          }
+        />
+        <div className="p-6">
           {banners.length === 0 ? (
             <EmptyState
               icon={<ImageOff className="h-7 w-7" />}
@@ -308,26 +469,28 @@ export default function AdminSettingsPage() {
               description="নিচের ফর্ম থেকে নতুন ব্যানার যোগ করুন।"
             />
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3">
               {banners.map((banner) => (
                 <div
                   key={banner.id}
-                  className="flex items-center gap-3 rounded-lg border border-[#f1f5f9] p-3"
+                  className="group flex items-center gap-4 rounded-xl border border-gray-100 bg-gray-50/50 p-3 transition-all duration-200 hover:bg-white hover:shadow-sm hover:border-gray-200"
                 >
                   {banner.image ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={banner.image}
                       alt={banner.title}
-                      className="h-12 w-20 flex-shrink-0 rounded object-cover"
+                      className="h-14 w-24 flex-shrink-0 rounded-lg object-cover border border-gray-200 shadow-sm"
                     />
                   ) : (
-                    <div className="h-12 w-20 flex-shrink-0 rounded bg-muted" />
+                    <div className="h-14 w-24 flex-shrink-0 rounded-lg bg-gray-200 flex items-center justify-center">
+                      <ImageOff className="h-5 w-5 text-gray-400" />
+                    </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{banner.title}</p>
+                    <p className="truncate text-sm font-semibold text-gray-800">{banner.title}</p>
                     {banner.link_url && (
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      <p className="mt-0.5 truncate text-xs text-gray-400">
                         🔗 {banner.link_url}
                       </p>
                     )}
@@ -335,16 +498,17 @@ export default function AdminSettingsPage() {
                   <Badge
                     className={
                       banner.is_active
-                        ? "flex-shrink-0 bg-green-100 text-green-800 hover:bg-green-100"
-                        : "flex-shrink-0 bg-gray-100 text-gray-600 hover:bg-gray-100"
+                        ? "flex-shrink-0 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 font-medium"
+                        : "flex-shrink-0 bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-100 font-medium"
                     }
                   >
+                    <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${banner.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                     {banner.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}
                   </Badge>
                   <Button
                     onClick={() => deleteBanner(banner.id)}
                     variant="ghost"
-                    className="h-10 w-10 flex-shrink-0 p-0 text-red-500"
+                    className="h-9 w-9 flex-shrink-0 p-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:text-red-500 hover:bg-red-50 rounded-lg"
                     aria-label={`Delete ${banner.title}`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -353,35 +517,40 @@ export default function AdminSettingsPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* ── Card 4: Add New Banner ── */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">নতুন ব্যানার যোগ করুন</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="banner_title">
+      {/* ═══════════ CARD 4: Add New Banner ═══════════ */}
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md">
+        <SectionHeader
+          icon={ImagePlus}
+          title="নতুন ব্যানার যোগ করুন"
+          description="হোমপেইজে নতুন ব্যানার ছবি যোগ করুন"
+          accentColor="#10b981"
+        />
+        <div className="space-y-5 p-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {/* Title */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700" htmlFor="banner_title" lang="bn">
                 শিরোনাম <span className="text-red-500">*</span>
               </label>
-              <Input
+              <IconInput
+                icon={Type}
                 id="banner_title"
-                className="h-11"
                 value={bTitle}
                 onChange={(e) => setBTitle(e.target.value)}
                 placeholder="গ্রীষ্মকালীন অফার"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="banner_link">
+            {/* Link */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700" htmlFor="banner_link" lang="bn">
                 লিংক URL (ঐচ্ছিক)
               </label>
-              <Input
+              <IconInput
+                icon={Globe}
                 id="banner_link"
-                className="h-11"
                 value={bLink}
                 onChange={(e) => setBLink(e.target.value)}
                 placeholder="https://..."
@@ -389,55 +558,83 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          {/* Banner Image Upload */}
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="banner_file">
+            <label className="text-sm font-medium text-gray-700" htmlFor="banner_file" lang="bn">
               ছবি <span className="text-red-500">*</span>
             </label>
+            <div
+              className="cursor-pointer rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center transition-all duration-200 hover:border-emerald-400 hover:bg-emerald-50/30"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {bPreviewUrl ? (
+                <div className="relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={bPreviewUrl}
+                    alt="Preview"
+                    className="mx-auto h-28 w-auto rounded-lg border border-gray-200 object-cover shadow-sm"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBFile(null);
+                      setBPreviewUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition-transform hover:scale-110"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-600" lang="bn">ব্যানার ছবি আপলোড করুন</p>
+                  <p className="text-xs text-gray-400 mt-1">JPG, PNG বা WebP · সর্বোচ্চ 5MB</p>
+                </>
+              )}
+            </div>
             <input
               id="banner_file"
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={onPickFile}
-              className="block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#f47920] file:px-3 file:text-sm file:text-white"
+              className="hidden"
             />
-            {bPreviewUrl && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={bPreviewUrl}
-                alt="Preview"
-                className="mt-2 h-24 w-40 rounded-md border border-input object-cover"
-              />
-            )}
-            <p className="text-xs text-muted-foreground">
-              JPG, PNG বা WebP, সর্বোচ্চ 5MB
-            </p>
           </div>
 
+          {/* Active Toggle */}
           <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="bActive"
-              checked={bActive}
-              onChange={(e) => setBActive(e.target.checked)}
-              className="h-4 w-4"
-            />
-            <label htmlFor="bActive" className="text-sm font-medium">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                id="bActive"
+                checked={bActive}
+                onChange={(e) => setBActive(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+            <label htmlFor="bActive" className="text-sm font-medium text-gray-700 cursor-pointer" lang="bn">
               সঙ্গে সঙ্গে সক্রিয় করুন
             </label>
           </div>
 
+          {/* Add Banner Button */}
           <div className="flex justify-end">
             <Button
               onClick={addBanner}
               disabled={savingBanner || !bTitle.trim() || !bFile}
-              className="h-11 min-w-[140px] bg-[#f47920] hover:bg-orange-600"
+              className="h-11 min-w-[160px] rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-md transition-all duration-200 hover:shadow-lg hover:from-emerald-600 hover:to-emerald-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <ImagePlus className="mr-2 h-4 w-4" />
               {savingBanner ? "যোগ হচ্ছে..." : "ব্যানার যোগ করুন"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
