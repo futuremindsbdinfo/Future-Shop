@@ -69,11 +69,12 @@ class ProductController extends Controller
 
     /**
      * Admin: list ALL products (any status), with optional filters.
-     * ?category=<slug> &status=<draft|published|out_of_stock> &per_page=
+     * ?category=<slug> &status=<draft|published|out_of_stock> &per_page= &search=
      */
     public function adminIndex(Request $request): JsonResponse
     {
-        $perPage = max(min((int) $request->get('per_page', 15), 50), 1);
+        // Allow up to 5000 for bulk export; default 15 for normal listing.
+        $perPage = max(min((int) $request->get('per_page', 15), 5000), 1);
 
         $products = Product::query()
             ->with(['vendor:id,shop_name,slug', 'category:id,name,slug', 'brand:id,name,slug'])
@@ -86,6 +87,7 @@ class ProductController extends Controller
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
             )
+            ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->string('search').'%'))
             // created_at has second-level precision (timestamps precision 0), so
             // bulk/CSV-imported rows tie; add id as a stable tiebreaker so the
             // order does not reshuffle after a delete (arbitrary heap order).
