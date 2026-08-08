@@ -60,8 +60,8 @@ export function HeroBanner() {
 
             {/* Right Content - Hero Image Box */}
             <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-              <div className="w-full max-w-[500px] aspect-[4/3] rounded-2xl bg-white/10 border-2 border-white/20 shadow-xl overflow-hidden relative flex items-center justify-center p-8">
-                <img src="/logo.png" alt="Future Shop Logo" className="w-full h-full object-contain drop-shadow-2xl opacity-90" />
+              <div className="w-full max-w-[500px] relative flex items-center justify-center p-4 sm:p-8">
+                <img src="/logo.png" alt="Future Shop Logo" className="w-full h-auto object-contain" />
               </div>
             </div>
           </div>
