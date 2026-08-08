@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ImageOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Download, ImageOff, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,10 @@ function AdminProductsContent() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Bulk Mode state
   const [bulkMode, setBulkMode] = useState(false);
@@ -124,12 +127,57 @@ function AdminProductsContent() {
     if (categoryFilter) params.set("category", categoryFilter);
     if (statusFilter) params.set("status", statusFilter);
     if (brandFilter) params.set("brand_id", brandFilter);
+    if (searchQuery) params.set("search", searchQuery);
     api
       .get<PaginatedResponse<Product>>(`/admin/products?${params.toString()}`)
       .then((r) => setData(r.data))
       .catch(() => toast.error("Failed to load products"))
       .finally(() => setLoading(false));
-  }, [page, categoryFilter, statusFilter, brandFilter]);
+  }, [page, categoryFilter, statusFilter, brandFilter, searchQuery]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ per_page: "5000" });
+      if (categoryFilter) params.set("category", categoryFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      if (brandFilter) params.set("brand_id", brandFilter);
+      if (searchQuery) params.set("search", searchQuery);
+      const r = await api.get<PaginatedResponse<Product>>(`/admin/products?${params.toString()}`);
+      const rows = r.data.data.map((p) => ({
+        ID: p.id,
+        Name: p.name,
+        SKU: p.sku ?? "",
+        Category: (p as unknown as { category?: { name?: string } }).category?.name ?? "",
+        Brand: p.brand?.name ?? "",
+        Price: p.price,
+        "Cost Price": p.cost_price ?? "",
+        "Sale Price": p.sale_price ?? "",
+        Stock: p.stock_quantity,
+        Status: p.status,
+      }));
+      const csv = [
+        Object.keys(rows[0] ?? {}).join(","),
+        ...rows.map((row) =>
+          Object.values(row)
+            .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+            .join(",")
+        ),
+      ].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `products-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${rows.length}টি প্রোডাক্ট Export হয়েছে`);
+    } catch {
+      toast.error("Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -324,13 +372,22 @@ function AdminProductsContent() {
             </span>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={bulkMode ? "default" : "outline"}
             className="h-11"
             onClick={toggleBulkMode}
           >
             Bulk Mode
+          </Button>
+          <Button
+            variant="outline"
+            className="h-11"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {exporting ? "Exporting..." : "Export CSV"}
           </Button>
           <Button
             variant="outline"
@@ -345,8 +402,34 @@ function AdminProductsContent() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search + Filters */}
       <div className="flex flex-wrap gap-3">
+        {/* Search */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); setPage(1); setSearchQuery(searchInput.trim()); }}
+          className="flex items-center gap-1"
+        >
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                if (e.target.value === "") { setSearchQuery(""); setPage(1); }
+              }}
+              placeholder="Search products..."
+              className="h-9 w-52 rounded-md border border-input bg-transparent pl-8 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#f47920]"
+            />
+          </div>
+          <button
+            type="submit"
+            className="h-9 rounded-md bg-[#f47920] px-3 text-sm font-medium text-white hover:bg-[#e56910] transition-colors"
+          >
+            Search
+          </button>
+        </form>
+
         <select
           value={categoryFilter}
           onChange={(e) => { setPage(1); setCategoryFilter(e.target.value); }}
