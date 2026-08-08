@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Download, ImageOff, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -61,27 +60,11 @@ function autoMap(header: string): string {
 }
 
 function AdminProductsContent() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
   const [data, setData] = useState<PaginatedResponse<Product> | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
 
-  const pageParam = searchParams.get("page");
-  const page = pageParam ? parseInt(pageParam, 10) : 1;
-
-  const setPage = (val: number | ((p: number) => number)) => {
-    const next = typeof val === "function" ? val(page) : val;
-    const params = new URLSearchParams(searchParams.toString());
-    if (next === 1 || next < 1) {
-      params.delete("page");
-    } else {
-      params.set("page", String(next));
-    }
-    router.push(`${pathname}?${params.toString()}`);
-  };
+  const [page, setPage] = useState(1);
 
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
