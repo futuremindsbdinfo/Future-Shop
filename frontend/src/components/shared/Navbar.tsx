@@ -279,7 +279,7 @@ export function Navbar({ siteName = "Future Shop", logo }: { siteName?: string; 
         {/* Logo */}
         <Link href="/" className="shrink-0 flex items-center">
           {logo ? (
-            <img src={logo} alt={siteName} className="h-8 w-auto object-contain" />
+            <img src={logo} alt={siteName} className="h-12 md:h-14 w-auto object-contain" />
           ) : (
             <span className="text-xl font-bold text-[#f47920]">{siteName}</span>
           )}
