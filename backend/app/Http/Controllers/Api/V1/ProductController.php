@@ -52,10 +52,11 @@ class ProductController extends Controller
             ->when($request->filled('max_price'), fn ($q) => $q->where('price', '<=', $request->float('max_price')))
             ->when($request->boolean('is_featured'), fn ($q) => $q->where('is_featured', true))
             ->when($request->filled('search'), function ($q) use ($request) {
-                $keywords = array_filter(explode(' ', $request->string('search')));
+                $searchStr = (string) $request->string('search');
+                $keywords = array_filter(explode(' ', $searchStr));
                 $q->where(function ($query) use ($keywords) {
                     foreach ($keywords as $word) {
-                        $query->where('name', 'like', '%' . $word . '%');
+                        $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($word) . '%']);
                     }
                 });
             })
@@ -95,10 +96,11 @@ class ProductController extends Controller
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
             )
             ->when($request->filled('search'), function ($q) use ($request) {
-                $keywords = array_filter(explode(' ', $request->string('search')));
+                $searchStr = (string) $request->string('search');
+                $keywords = array_filter(explode(' ', $searchStr));
                 $q->where(function ($query) use ($keywords) {
                     foreach ($keywords as $word) {
-                        $query->where('name', 'like', '%' . $word . '%');
+                        $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($word) . '%']);
                     }
                 });
             })
