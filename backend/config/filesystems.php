@@ -49,6 +49,18 @@ return [
             'report' => false,
         ],
 
+        // Hostinger-friendly disk: writes DIRECTLY into public/storage/
+        // so no storage:link symlink is needed. Set IMAGE_DISK=public_storage
+        // in Hostinger's .env to activate.
+        'public_storage' => [
+            'driver' => 'local',
+            'root' => public_path('storage'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
