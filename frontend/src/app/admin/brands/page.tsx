@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Tag, Pencil, Trash2, Plus, ImageOff, X } from "lucide-react";
+import { Tag, Pencil, Trash2, Plus, ImageOff, X, Link2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,8 @@ export default function AdminBrandsPage() {
   const [isActive, setIsActive] = useState(true);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoMode, setLogoMode] = useState<"file" | "url">("file");
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Brand | null>(null);
@@ -106,6 +108,8 @@ export default function AdminBrandsPage() {
     setIsActive(true);
     setLogoFile(null);
     setLogoPreview(null);
+    setLogoUrl("");
+    setLogoMode("file");
     setDialogOpen(true);
   };
 
@@ -118,6 +122,8 @@ export default function AdminBrandsPage() {
     setIsActive(brand.is_active);
     setLogoFile(null);
     setLogoPreview(brand.logo?.url ?? null);
+    setLogoUrl(brand.logo?.url ?? "");
+    setLogoMode(brand.logo?.url && !brand.logo?.path ? "url" : "file");
     setDialogOpen(true);
   };
 
@@ -156,7 +162,11 @@ export default function AdminBrandsPage() {
       if (slug.trim()) fd.append("slug", slug.trim());
       if (description.trim()) fd.append("description", description.trim());
       fd.append("is_active", isActive ? "1" : "0");
-      if (logoFile) fd.append("logo", logoFile);
+      if (logoMode === "file" && logoFile) {
+        fd.append("logo", logoFile);
+      } else if (logoMode === "url" && logoUrl.trim()) {
+        fd.append("logo_url", logoUrl.trim());
+      }
 
       if (editing) {
         fd.append("_method", "PATCH");
@@ -380,18 +390,52 @@ export default function AdminBrandsPage() {
             {/* Logo */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Logo</label>
-              {logoPreview && (
+              
+              {/* Mode Toggle */}
+              <div className="flex rounded-lg border border-input overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setLogoMode("file")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+                    logoMode === "file"
+                      ? "bg-[#f47920] text-white"
+                      : "bg-transparent text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  File Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogoMode("url")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+                    logoMode === "url"
+                      ? "bg-[#f47920] text-white"
+                      : "bg-transparent text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Image URL
+                </button>
+              </div>
+
+              {/* Preview */}
+              {(logoPreview || (logoMode === "url" && logoUrl.trim())) && (
                 <div className="relative inline-block">
                   <img
-                    src={logoPreview}
+                    src={logoMode === "url" && logoUrl.trim() ? logoUrl.trim() : (logoPreview ?? "")}
                     alt="Logo preview"
                     className="h-20 w-20 rounded-md border border-input object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => {
                       setLogoFile(null);
                       setLogoPreview(null);
+                      setLogoUrl("");
                     }}
                     className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
                     aria-label="Remove logo"
@@ -400,15 +444,39 @@ export default function AdminBrandsPage() {
                   </button>
                 </div>
               )}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={onLogoChange}
-                className="block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#f47920] file:px-3 file:text-sm file:text-white"
-              />
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG or WebP, max 5 MB
-              </p>
+
+              {/* File Upload Mode */}
+              {logoMode === "file" && (
+                <>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={onLogoChange}
+                    className="block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#f47920] file:px-3 file:text-sm file:text-white"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG or WebP, max 5 MB
+                  </p>
+                </>
+              )}
+
+              {/* URL Mode */}
+              {logoMode === "url" && (
+                <>
+                  <input
+                    value={logoUrl}
+                    onChange={(e) => {
+                      setLogoUrl(e.target.value);
+                      setLogoPreview(e.target.value || null);
+                    }}
+                    placeholder="https://example.com/logo.png"
+                    className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Paste a direct image URL (JPG, PNG, WebP)
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Is Active */}

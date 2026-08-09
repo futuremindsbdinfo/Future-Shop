@@ -62,6 +62,7 @@ class BrandController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'is_active'   => ['boolean'],
             'logo'        => ['nullable', 'file', 'max:5120'],
+            'logo_url'    => ['nullable', 'url', 'max:1000'],
         ]);
 
         $slug = $this->uniqueSlug(
@@ -71,6 +72,8 @@ class BrandController extends Controller
         $logoData = null;
         if ($request->hasFile('logo')) {
             $logoData = $this->imageService->store($request->file('logo'), 'brands', 'logo');
+        } elseif (!empty($validated['logo_url'])) {
+            $logoData = ['url' => $validated['logo_url'], 'path' => null, 'disk' => null];
         }
 
         $brand = Brand::create([
@@ -93,6 +96,7 @@ class BrandController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'is_active'   => ['boolean'],
             'logo'        => ['nullable', 'file', 'max:5120'],
+            'logo_url'    => ['nullable', 'url', 'max:1000'],
         ]);
 
         $data = array_filter([
@@ -107,6 +111,11 @@ class BrandController extends Controller
                 Storage::disk($brand->logo['disk'])->delete($brand->logo['path']);
             }
             $data['logo'] = $this->imageService->store($request->file('logo'), 'brands', 'logo');
+        } elseif (!empty($validated['logo_url'])) {
+            if ($brand->logo && isset($brand->logo['path'], $brand->logo['disk'])) {
+                Storage::disk($brand->logo['disk'])->delete($brand->logo['path']);
+            }
+            $data['logo'] = ['url' => $validated['logo_url'], 'path' => null, 'disk' => null];
         }
 
         $brand->update($data);
