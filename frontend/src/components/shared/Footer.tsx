@@ -85,47 +85,43 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
           </ul>
         </div>
 
-        {/* Contact — driven by site settings only. No hardcoded fallback numbers. */}
+        {/* Contact info */}
         <div className="space-y-3">
           <h4 className="text-sm font-semibold" lang="bn">
             যোগাযোগ
           </h4>
-          {hasContact ? (
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {settings.contact_phone && (
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  <a
-                    href={`tel:${settings.contact_phone}`}
-                    className="hover:text-[#f47920]"
-                  >
-                    {settings.contact_phone}
-                  </a>
-                </li>
-              )}
-              {settings.contact_email && (
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0" />
-                  <a
-                    href={`mailto:${settings.contact_email}`}
-                    className="hover:text-[#f47920]"
-                  >
-                    {settings.contact_email}
-                  </a>
-                </li>
-              )}
-              {settings.contact_address && (
-                <li className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{settings.contact_address}</span>
-                </li>
-              )}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground" lang="bn">
-              শীঘ্রই আপডেট হবে।
-            </p>
-          )}
+          <ul className="space-y-2.5 text-sm text-muted-foreground">
+            {(settings.contact_phone || FALLBACK_SETTINGS.contact_phone) && (
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-[#f47920]" />
+                <a
+                  href={`tel:${settings.contact_phone || FALLBACK_SETTINGS.contact_phone}`}
+                  className="hover:text-[#f47920] transition-colors"
+                >
+                  {settings.contact_phone || FALLBACK_SETTINGS.contact_phone}
+                </a>
+              </li>
+            )}
+            {(settings.contact_email || FALLBACK_SETTINGS.contact_email) && (
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-[#f47920]" />
+                <a
+                  href={`mailto:${settings.contact_email || FALLBACK_SETTINGS.contact_email}`}
+                  className="hover:text-[#f47920] transition-colors break-all"
+                >
+                  {settings.contact_email || FALLBACK_SETTINGS.contact_email}
+                </a>
+              </li>
+            )}
+            {(settings.contact_address || FALLBACK_SETTINGS.contact_address) && (
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#f47920]" />
+                <span className="leading-snug">
+                  {settings.contact_address || FALLBACK_SETTINGS.contact_address}
+                </span>
+              </li>
+            )}
+          </ul>
         </div>
       </div>
 
