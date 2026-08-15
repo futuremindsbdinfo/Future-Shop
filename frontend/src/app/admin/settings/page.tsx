@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
+import { FALLBACK_SETTINGS } from "@/lib/settings";
 import type { Banner, SiteSettings } from "@/types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -117,10 +118,10 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<SiteSettings>({
     site_name: "Future Shop",
-    site_tagline: "",
-    contact_phone: "",
-    contact_email: "",
-    contact_address: "",
+    site_tagline: FALLBACK_SETTINGS.site_tagline ?? "",
+    contact_phone: FALLBACK_SETTINGS.contact_phone ?? "",
+    contact_email: FALLBACK_SETTINGS.contact_email ?? "",
+    contact_address: FALLBACK_SETTINGS.contact_address ?? "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -143,11 +144,11 @@ export default function AdminSettingsPage() {
       api.get<{ data: SiteSettings }>("/admin/settings").then((r) => {
         const d = r.data.data;
         setSettings({
-          site_name: d.site_name ?? "Future Shop",
-          site_tagline: d.site_tagline ?? "",
-          contact_phone: d.contact_phone ?? "",
-          contact_email: d.contact_email ?? "",
-          contact_address: d.contact_address ?? "",
+          site_name: d.site_name || FALLBACK_SETTINGS.site_name,
+          site_tagline: d.site_tagline || FALLBACK_SETTINGS.site_tagline,
+          contact_phone: d.contact_phone || FALLBACK_SETTINGS.contact_phone || "",
+          contact_email: d.contact_email || FALLBACK_SETTINGS.contact_email || "",
+          contact_address: d.contact_address || FALLBACK_SETTINGS.contact_address || "",
           site_logo: d.site_logo ?? "",
         });
         if (d.site_logo) setLogoPreview(d.site_logo);
@@ -426,7 +427,7 @@ export default function AdminSettingsPage() {
                   setSettings((s) => ({ ...s, contact_address: e.target.value }))
                 }
                 rows={2}
-                placeholder="শেরপুর, বগুড়া, বাংলাদেশ"
+                placeholder="Sannalpara, Behind Sonali bank Bus-stand, Sherpur - 5840, Bogura"
                 className="flex w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2.5 text-sm resize-none min-h-[64px] placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6] transition-all duration-200"
               />
             </div>
