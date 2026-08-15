@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
     : `Buy ${product.name} at Future Shop`;
 
   const imageUrl = product.images?.[0]?.url || "";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com";
   const canonicalUrl = `${siteUrl}/products/${slugs.join("/")}`;
 
   return {
@@ -68,7 +68,7 @@ export default async function ProductPage({ params }: RouteParams) {
   if (!res) notFound();
 
   const product = res.data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com";
   const canonicalUrl = `${siteUrl}/products/${slugs.join("/")}`;
 
   const price = Number(product.price);

@@ -20,14 +20,14 @@ export function Breadcrumbs({ items }: Props) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+        "item": process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com",
       },
       ...items.map((item, index) => ({
         "@type": "ListItem",
         "position": index + 2,
         "name": item.label,
         "item": item.url
-          ? `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}${item.url}`
+          ? `${process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com"}${item.url}`
           : undefined,
       })),
     ],

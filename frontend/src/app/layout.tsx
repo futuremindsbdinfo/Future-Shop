@@ -26,10 +26,58 @@ const hindSiliguri = Hind_Siliguri({
   display: "swap",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com";
+
 export const metadata: Metadata = {
-  title: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+    template: "%s | Future Shop",
+  },
   description:
-    "Future Shop — local sellers from Sherpur & Bogura, delivered to your doorstep.",
+    "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়। ঘরে বসেই সহজে অর্ডার করুন।",
+  keywords: [
+    "Future Shop",
+    "Sherpur online shop",
+    "Bogura ecommerce",
+    "অনলাইন বাজার",
+    "শেরপুর অনলাইন শপ",
+    "বগুড়া অনলাইন শপ",
+    "grocery",
+    "daily essentials",
+  ],
+  alternates: {
+    canonical: siteUrl,
+  },
+  openGraph: {
+    title: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+    description:
+      "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
+    url: siteUrl,
+    siteName: "Future Shop",
+    locale: "bn_BD",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+    description:
+      "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default async function RootLayout({
@@ -41,7 +89,7 @@ export default async function RootLayout({
 
   return (
     <html
-      lang="en"
+      lang="bn"
       className={`${geistSans.variable} ${geistMono.variable} ${hindSiliguri.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
