@@ -64,11 +64,10 @@ class ProductController extends Controller
                 $request->filled('brand_id') && ctype_digit((string) $request->input('brand_id')),
                 fn ($q) => $q->where('brand_id', (int) $request->input('brand_id'))
             )
-            // created_at has second-level precision (timestamps precision 0), so
-            // bulk/CSV-imported rows tie; add id as a stable tiebreaker so the
-            // order does not reshuffle after a delete (arbitrary heap order).
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->when($request->get('sort') === 'price_asc', fn ($q) => $q->orderBy('price', 'asc'))
+            ->when($request->get('sort') === 'price_desc', fn ($q) => $q->orderBy('price', 'desc'))
+            ->when($request->get('sort') === 'popular', fn ($q) => $q->orderByDesc('views'))
+            ->when(!in_array($request->get('sort'), ['price_asc', 'price_desc', 'popular']), fn ($q) => $q->orderByDesc('created_at')->orderByDesc('id'))
             ->paginate($perPage)
             ->withQueryString();
 
