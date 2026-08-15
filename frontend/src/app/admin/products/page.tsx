@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Download, ImageOff, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -60,19 +61,68 @@ function autoMap(header: string): string {
 }
 
 function AdminProductsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<PaginatedResponse<Product> | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
 
-  const [page, setPage] = useState(1);
+  const initialPage = Number(searchParams.get("page")) || 1;
+  const initialCategory = searchParams.get("category") || "";
+  const initialStatus = searchParams.get("status") || "";
+  const initialBrand = searchParams.get("brand_id") || "";
+  const initialSearch = searchParams.get("search") || "";
 
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [brandFilter, setBrandFilter] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [page, setPage] = useState(initialPage);
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [brandFilter, setBrandFilter] = useState(initialBrand);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [searchInput, setSearchInput] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+
+  // Sync state when URL params change (e.g. back/forward button or redirect from edit)
+  useEffect(() => {
+    const p = Number(searchParams.get("page")) || 1;
+    const cat = searchParams.get("category") || "";
+    const stat = searchParams.get("status") || "";
+    const br = searchParams.get("brand_id") || "";
+    const q = searchParams.get("search") || "";
+
+    setPage(p);
+    setCategoryFilter(cat);
+    setStatusFilter(stat);
+    setBrandFilter(br);
+    setSearchQuery(q);
+    setSearchInput(q);
+  }, [searchParams]);
+
+  const updateUrl = useCallback(
+    (newPage: number, cat: string, stat: string, brand: string, search: string) => {
+      const params = new URLSearchParams();
+      if (newPage > 1) params.set("page", String(newPage));
+      if (cat) params.set("category", cat);
+      if (stat) params.set("status", stat);
+      if (brand) params.set("brand_id", brand);
+      if (search) params.set("search", search);
+
+      const qs = params.toString();
+      router.replace(qs ? `/admin/products?${qs}` : "/admin/products", { scroll: false });
+    },
+    [router]
+  );
+
+  const getReturnParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set("page", String(page));
+    if (categoryFilter) params.set("category", categoryFilter);
+    if (statusFilter) params.set("status", statusFilter);
+    if (brandFilter) params.set("brand_id", brandFilter);
+    if (searchQuery) params.set("search", searchQuery);
+    return params.toString();
+  }, [page, categoryFilter, statusFilter, brandFilter, searchQuery]);
 
   // Bulk Mode state
   const [bulkMode, setBulkMode] = useState(false);
@@ -379,9 +429,18 @@ function AdminProductsContent() {
           >
             <Upload className="mr-2 h-4 w-4" /> Import CSV
           </Button>
-          <Button nativeButton={false} render={<Link href="/admin/products/new" />} className="h-11 bg-[#f47920] hover:bg-[#e56910]">
-            <Plus className="mr-2 h-4 w-4" /> Add Product
-          </Button>
+          {(() => {
+            const qs = getReturnParams();
+            return (
+              <Button
+                nativeButton={false}
+                render={<Link href={qs ? `/admin/products/new?${qs}` : "/admin/products/new"} />}
+                className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Product
+              </Button>
+            );
+          })()}
         </div>
       </div>
 
@@ -389,7 +448,13 @@ function AdminProductsContent() {
       <div className="flex flex-wrap gap-3">
         {/* Search */}
         <form
-          onSubmit={(e) => { e.preventDefault(); setPage(1); setSearchQuery(searchInput.trim()); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = searchInput.trim();
+            setPage(1);
+            setSearchQuery(q);
+            updateUrl(1, categoryFilter, statusFilter, brandFilter, q);
+          }}
           className="flex items-center gap-1"
         >
           <div className="relative">
@@ -399,7 +464,11 @@ function AdminProductsContent() {
               value={searchInput}
               onChange={(e) => {
                 setSearchInput(e.target.value);
-                if (e.target.value === "") { setSearchQuery(""); setPage(1); }
+                if (e.target.value === "") {
+                  setSearchQuery("");
+                  setPage(1);
+                  updateUrl(1, categoryFilter, statusFilter, brandFilter, "");
+                }
               }}
               placeholder="Search products..."
               className="h-9 w-52 rounded-md border border-input bg-transparent pl-8 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#f47920]"
@@ -415,7 +484,12 @@ function AdminProductsContent() {
 
         <select
           value={categoryFilter}
-          onChange={(e) => { setPage(1); setCategoryFilter(e.target.value); }}
+          onChange={(e) => {
+            const cat = e.target.value;
+            setPage(1);
+            setCategoryFilter(cat);
+            updateUrl(1, cat, statusFilter, brandFilter, searchQuery);
+          }}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
         >
           <option value="">All categories</option>
@@ -425,7 +499,12 @@ function AdminProductsContent() {
         </select>
         <select
           value={statusFilter}
-          onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+          onChange={(e) => {
+            const stat = e.target.value;
+            setPage(1);
+            setStatusFilter(stat);
+            updateUrl(1, categoryFilter, stat, brandFilter, searchQuery);
+          }}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
         >
           <option value="">All statuses</option>
@@ -435,7 +514,12 @@ function AdminProductsContent() {
         </select>
         <select
           value={brandFilter}
-          onChange={(e) => { setBrandFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            const br = e.target.value;
+            setPage(1);
+            setBrandFilter(br);
+            updateUrl(1, categoryFilter, statusFilter, br, searchQuery);
+          }}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
         >
           <option value="">All Brands</option>
@@ -586,16 +670,22 @@ function AdminProductsContent() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-11 w-11"
-                            nativeButton={false}
-                            render={<Link href={`/admin/products/new?id=${product.id}`} />}
-                            aria-label="Edit"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          {(() => {
+                            const qs = getReturnParams();
+                            const editUrl = `/admin/products/new?id=${product.id}${qs ? `&${qs}` : ""}`;
+                            return (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11"
+                                nativeButton={false}
+                                render={<Link href={editUrl} />}
+                                aria-label="Edit"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            );
+                          })()}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -618,11 +708,29 @@ function AdminProductsContent() {
 
       {data && data.last_page > 1 && (
         <div className="flex items-center justify-center gap-4">
-          <Button variant="outline" className="h-11" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Button
+            variant="outline"
+            className="h-11"
+            disabled={page <= 1}
+            onClick={() => {
+              const newPage = page - 1;
+              setPage(newPage);
+              updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
+            }}
+          >
             Previous
           </Button>
           <span className="text-sm text-muted-foreground">Page {data.current_page} of {data.last_page}</span>
-          <Button variant="outline" className="h-11" disabled={page >= data.last_page} onClick={() => setPage((p) => p + 1)}>
+          <Button
+            variant="outline"
+            className="h-11"
+            disabled={page >= data.last_page}
+            onClick={() => {
+              const newPage = page + 1;
+              setPage(newPage);
+              updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
+            }}
+          >
             Next
           </Button>
         </div>

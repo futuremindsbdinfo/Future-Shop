@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function AdminProductFormPage() {
+function AdminProductFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [editId, setEditId] = useState<number | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
 
@@ -71,9 +72,30 @@ export default function AdminProductFormPage() {
   const [brandName, setBrandName] = useState("");
   const [brandSaving, setBrandSaving] = useState(false);
 
+  // Helper to compute return URL preserving page and active filters
+  const getReturnUrl = (isEdit: boolean) => {
+    const returnParams = new URLSearchParams();
+    const page = searchParams.get("page");
+    const category = searchParams.get("category");
+    const status = searchParams.get("status");
+    const brand_id = searchParams.get("brand_id");
+    const search = searchParams.get("search");
+
+    if (isEdit && page) {
+      returnParams.set("page", page);
+    }
+    if (category) returnParams.set("category", category);
+    if (status) returnParams.set("status", status);
+    if (brand_id) returnParams.set("brand_id", brand_id);
+    if (search) returnParams.set("search", search);
+
+    const qs = returnParams.toString();
+    return qs ? `/admin/products?${qs}` : "/admin/products";
+  };
+
   // Load dropdowns + (optional) the product being edited.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("id");
+    const id = searchParams.get("id");
     const tasks: Promise<unknown>[] = [
       api.get<{ data: Category[] }>("/admin/categories").then((r) => setCategories(r.data.data)),
       api.get<PaginatedResponse<Vendor>>("/admin/vendors?per_page=50").then((r) => setVendors(r.data.data)),
@@ -259,11 +281,12 @@ export default function AdminProductFormPage() {
         }
         await api.post(`/admin/products/${editId}`, form);
         toast.success("পণ্য আপডেট হয়েছে");
+        router.push(getReturnUrl(true));
       } else {
         await api.post("/admin/products", form);
         toast.success("পণ্য তৈরি হয়েছে");
+        router.push("/admin/products");
       }
-      router.push("/admin/products");
     } catch (err) {
       toast.error(getErrorMessage(err, "সংরক্ষণ ব্যর্থ হয়েছে"));
     } finally {
@@ -360,7 +383,7 @@ export default function AdminProductFormPage() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push("/admin/products")}
+          onClick={() => router.push(getReturnUrl(true))}
           className="h-11"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -805,5 +828,13 @@ export default function AdminProductFormPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminProductFormPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner fullHeight />}>
+      <AdminProductFormContent />
+    </Suspense>
   );
 }
