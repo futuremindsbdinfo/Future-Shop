@@ -59,10 +59,10 @@ export default async function HomePage() {
   const brands = brandsRes.data ?? [];
   const banners = bannersRes.data ?? [];
 
-  // 2. Fetch products for the top 4 categories only (targeted & lightweight)
-  const top4Categories = categories.slice(0, 4);
+  // 2. Fetch products for candidate categories to ensure 4 full quad cards
+  const candidateCategories = categories.slice(0, 10);
   const quadCategoryProductsRes = await Promise.all(
-    top4Categories.map((cat) =>
+    candidateCategories.map((cat) =>
       apiFetchSafe<PaginatedResponse<Product>>(
         `/products?category=${cat.slug}&per_page=4`,
         EMPTY_PRODUCT_PAGE,
@@ -71,12 +71,13 @@ export default async function HomePage() {
     )
   );
 
-  const quadCategoriesWithProducts = top4Categories
+  const quadCategoriesWithProducts = candidateCategories
     .map((cat, idx) => ({
       category: cat,
       products: quadCategoryProductsRes[idx].data ?? [],
     }))
-    .filter((item) => item.products.length > 0);
+    .filter((item) => item.products.length > 0)
+    .slice(0, 4);
 
   // Best seller / Featured slice
   const bestSellers = featured.slice(0, 12);
