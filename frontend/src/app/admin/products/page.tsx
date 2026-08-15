@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Download, ImageOff, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ImageOff, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,26 @@ function autoMap(header: string): string {
   if (["size", "flavour", "flavor", "quality", "gift", "cp", "colour", "color"].some((k) => h.includes(k))) return "description";
   if (h === "profit" || h === "sl" || h === "no" || h === "#") return "ignore";
   return "ignore";
+}
+
+function getPageNumbers(currentPage: number, totalPages: number): (number | "...")[] {
+  if (totalPages <= 10) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  // If user is within the first 7 pages: show 1 to 10, then '...', then lastPage
+  if (currentPage <= 7) {
+    return [...Array.from({ length: 10 }, (_, i) => i + 1), "...", totalPages];
+  }
+
+  // If user is near the end: show 1, '...', then the last 10 pages
+  if (currentPage >= totalPages - 6) {
+    return [1, "...", ...Array.from({ length: 10 }, (_, i) => totalPages - 9 + i)];
+  }
+
+  // If in the middle: show 1, '...', 8 pages centered around current, '...', lastPage
+  const start = currentPage - 4;
+  return [1, "...", ...Array.from({ length: 8 }, (_, i) => start + i), "...", totalPages];
 }
 
 function AdminProductsContent() {
@@ -707,32 +727,75 @@ function AdminProductsContent() {
       </Card>
 
       {data && data.last_page > 1 && (
-        <div className="flex items-center justify-center gap-4">
-          <Button
-            variant="outline"
-            className="h-11"
-            disabled={page <= 1}
-            onClick={() => {
-              const newPage = page - 1;
-              setPage(newPage);
-              updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
-            }}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">Page {data.current_page} of {data.last_page}</span>
-          <Button
-            variant="outline"
-            className="h-11"
-            disabled={page >= data.last_page}
-            onClick={() => {
-              const newPage = page + 1;
-              setPage(newPage);
-              updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
-            }}
-          >
-            Next
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-4 py-2">
+          <span className="text-sm text-muted-foreground">
+            Showing {(data.from ?? 1)} to {(data.to ?? data.data.length)} of {data.total} products (Page {data.current_page} of {data.last_page})
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Previous Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 gap-1"
+              disabled={page <= 1}
+              onClick={() => {
+                const newPage = page - 1;
+                setPage(newPage);
+                updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Prev</span>
+            </Button>
+
+            {/* Page Number Buttons */}
+            {getPageNumbers(data.current_page, data.last_page).map((item, idx) => {
+              if (item === "...") {
+                return (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground select-none">
+                    ...
+                  </span>
+                );
+              }
+              const isCurrent = item === data.current_page;
+              return (
+                <Button
+                  key={item}
+                  variant={isCurrent ? "default" : "outline"}
+                  size="sm"
+                  className={`h-9 min-w-[36px] px-2.5 text-sm font-medium transition-all ${
+                    isCurrent
+                      ? "bg-[#f47920] text-white hover:bg-[#e56910] font-bold shadow-sm"
+                      : "text-foreground hover:bg-muted hover:text-[#f47920]"
+                  }`}
+                  onClick={() => {
+                    if (item !== page) {
+                      setPage(item);
+                      updateUrl(item, categoryFilter, statusFilter, brandFilter, searchQuery);
+                    }
+                  }}
+                >
+                  {item}
+                </Button>
+              );
+            })}
+
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 gap-1"
+              disabled={page >= data.last_page}
+              onClick={() => {
+                const newPage = page + 1;
+                setPage(newPage);
+                updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
+              }}
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
