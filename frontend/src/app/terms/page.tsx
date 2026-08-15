@@ -27,7 +27,7 @@ export default function TermsPage() {
           <div className="space-y-3">
             <h2 className="text-xl font-bold text-foreground font-sans" lang="bn">১. সাধারণ</h2>
             <ul className="list-disc list-inside space-y-2 pl-2">
-              <li>Future Shop একটি অনলাইন শপিং প্ল্যাটফর্ম, যা বগুড়ার শেরপুর অঞ্চলে সেবা প্রদান করে।</li>
+              <li>Future Shop একটি অনলাইন শপিং প্ল্যাটফর্ম, যা শেরপুর, বগুড়া অঞ্চলে সেবা প্রদান করে।</li>
               <li>আমাদের সেবা ব্যবহার করতে আপনার সঠিক ও সত্য তথ্য প্রদান করতে হবে।</li>
             </ul>
           </div>
@@ -52,7 +52,7 @@ export default function TermsPage() {
           <div className="space-y-3">
             <h2 className="text-xl font-bold text-foreground font-sans" lang="bn">৪. ডেলিভারি</h2>
             <p>
-              আমরা বগুড়ার শেরপুর অঞ্চলে ডেলিভারি প্রদান করি। ডেলিভারির সময় এলাকা ও পণ্যের উপর নির্ভর করে।
+              আমরা শেরপুর, বগুড়া অঞ্চলে ডেলিভারি প্রদান করি। ডেলিভারির সময় এলাকা ও পণ্যের উপর নির্ভর করে।
             </p>
           </div>
 

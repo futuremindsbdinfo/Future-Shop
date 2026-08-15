@@ -31,11 +31,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+    default: "Future Shop — শেরপুর, বগুড়ার অনলাইন বাজার",
     template: "%s | Future Shop",
   },
   description:
-    "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়। ঘরে বসেই সহজে অর্ডার করুন।",
+    "Future Shop — শেরপুর, বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়। ঘরে বসেই সহজে অর্ডার করুন।",
   keywords: [
     "Future Shop",
     "Sherpur online shop",
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
     canonical: siteUrl,
   },
   openGraph: {
-    title: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+    title: "Future Shop — শেরপুর, বগুড়ার অনলাইন বাজার",
     description:
-      "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
+      "Future Shop — শেরপুর, বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
     url: siteUrl,
     siteName: "Future Shop",
     locale: "bn_BD",
@@ -60,9 +60,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার",
+    title: "Future Shop — শেরপুর, বগুড়ার অনলাইন বাজার",
     description:
-      "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
+      "Future Shop — শেরপুর, বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
   },
   verification: {
     google:

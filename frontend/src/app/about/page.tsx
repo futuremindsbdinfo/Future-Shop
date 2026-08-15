@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "আমাদের সম্পর্কে | Future Shop",
   description:
-    "Future Shop — শেরপুর ও বগুড়ার অনলাইন বাজার। আমাদের লক্ষ্য, ভিশন ও গ্রাহকদের প্রতি আমাদের অঙ্গীকার জানুন।",
+    "Future Shop — শেরপুর, বগুড়ার অনলাইন বাজার। আমাদের লক্ষ্য, ভিশন ও গ্রাহকদের প্রতি আমাদের অঙ্গীকার জানুন।",
 };
 
 export default function AboutPage() {
@@ -34,7 +34,7 @@ export default function AboutPage() {
             বাজারে নয়, বাজার আসবে আপনার ঘরে
           </h1>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed" lang="bn">
-            প্রযুক্তির ছোঁয়ায় শেরপুর ও বগুড়া অঞ্চলের মানুষের কেনাকাটার অভিজ্ঞতাকে আরও সহজ, দ্রুত ও নির্ভরযোগ্য করে তোলাই আমাদের মূল লক্ষ্য।
+            প্রযুক্তির ছোঁয়ায় শেরপুর, বগুড়া অঞ্চলের মানুষের কেনাকাটার অভিজ্ঞতাকে আরও সহজ, দ্রুত ও নির্ভরযোগ্য করে তোলাই আমাদের মূল লক্ষ্য।
           </p>
           <div className="h-1.5 w-24 bg-gradient-to-r from-[#f47920] to-[#fb923c] mx-auto rounded-full"></div>
         </div>
@@ -46,7 +46,7 @@ export default function AboutPage() {
             আমাদের গল্প
           </h2>
           <p className="text-muted-foreground text-base md:text-lg leading-relaxed" lang="bn">
-            <strong>Future Shop</strong> হলো বগুড়া ও শেরপুর অঞ্চলের একটি আধুনিক ও নির্ভরযোগ্য ই-কমার্স প্ল্যাটফর্ম। দৈনন্দিন ব্যস্ত জীবনে বাজারের ভিড় এড়িয়ে যেন ঘরে বসেই খাঁটি, তাজা এবং মানসম্মত পণ্য পাওয়া যায় — সেই উদ্দেশ্য নিয়েই আমাদের যাত্রা শুরু।
+            <strong>Future Shop</strong> হলো শেরপুর, বগুড়া অঞ্চলের একটি আধুনিক ও নির্ভরযোগ্য ই-কমার্স প্ল্যাটফর্ম। দৈনন্দিন ব্যস্ত জীবনে বাজারের ভিড় এড়িয়ে যেন ঘরে বসেই খাঁটি, তাজা এবং মানসম্মত পণ্য পাওয়া যায় — সেই উদ্দেশ্য নিয়েই আমাদের যাত্রা শুরু।
           </p>
           <p className="text-muted-foreground text-base md:text-lg leading-relaxed" lang="bn">
             নিত্যপ্রয়োজনীয় মুদিপণ্য (Grocery), রান্নার সামগ্রী, পার্সোনাল কেয়ার, বেবি কেয়ার থেকে শুরু করে সেরা ব্র্যান্ডের বিশ্বস্ত পণ্যসমূহ ন্যায্য মূল্যে আপনার দরজায় পৌঁছে দিতে আমরা প্রতিশ্রুতিবদ্ধ।
@@ -108,7 +108,7 @@ export default function AboutPage() {
                 <h4 className="font-semibold text-base" lang="bn">দ্রুত হোম ডেলিভারি</h4>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground leading-relaxed" lang="bn">
-                শেরপুর ও বগুড়া শহরের যেকোনো স্থানে আপনার সুবিধাজনক সময়ে দ্রুততম হোম ডেলিভারি।
+                শেরপুর, বগুড়া অঞ্চলের যেকোনো স্থানে আপনার সুবিধাজনক সময়ে দ্রুততম হোম ডেলিভারি।
               </p>
             </div>
 

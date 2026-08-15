@@ -60,7 +60,7 @@ export default function ContactPage() {
         <div className="bg-muted/40 p-6 rounded-lg border text-center space-y-3 mt-8">
           <h3 className="font-semibold text-lg text-foreground" lang="bn">সেবার এলাকা</h3>
           <p className="text-2xl font-extrabold text-[#f47920]" lang="bn">
-            বগুড়ার শেরপুর অঞ্চল
+            শেরপুর, বগুড়া অঞ্চল
           </p>
           <p className="text-sm text-muted-foreground max-w-lg mx-auto" lang="bn">
             অর্ডার, ডেলিভারি, পণ্য সম্পর্কিত যেকোনো প্রশ্ন বা সমস্যায় আমাদের ফোন নম্বর অথবা ইমেইল-এর মাধ্যমে যোগাযোগ করুন। আমরা দ্রুততম সময়ে সাড়া দেওয়ার চেষ্টা করব।

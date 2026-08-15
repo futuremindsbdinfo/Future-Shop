@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CreditCard, Shield, ShoppingBag, Truck } from "lucide-react";
 
 const TRUST_ITEMS = [
-  { icon: Truck, label: "দ্রুত ডেলিভারি", sub: "বগুড়া শেরপুর" },
+  { icon: Truck, label: "দ্রুত ডেলিভারি", sub: "শেরপুর, বগুড়া" },
   { icon: CreditCard, label: "ক্যাশ অন ডেলিভারি", sub: "নিরাপদ পেমেন্ট" },
   { icon: Shield, label: "১০০% আসল পণ্য", sub: "যাচাইকৃত বিক্রেতা" },
   { icon: ShoppingBag, label: "৩,০০০+ পণ্য", sub: "সব ক্যাটাগরি" },
@@ -26,7 +26,7 @@ export function HeroBanner() {
               lang="bn"
               className="mb-4 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white"
             >
-              🛒 বগুড়া শেরপুর এর সেরা অনলাইন বাজার
+              🛒 শেরপুর, বগুড়ার সেরা অনলাইন বাজার
             </span>
             {/* Headline */}
             <h1

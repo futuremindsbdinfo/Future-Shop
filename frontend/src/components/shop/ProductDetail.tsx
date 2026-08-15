@@ -435,7 +435,7 @@ export function ProductDetail({ product }: { product: Product }) {
             </h3>
             <ul className="list-disc pl-5 text-xs text-slate-600 space-y-1.5 leading-relaxed">
               <li>100% Genuine and Official Product Guarantee.</li>
-              <li>Fast home delivery in Bogura, Sherpur.</li>
+              <li>Fast home delivery in Sherpur, Bogura.</li>
               <li>Cash on Delivery (COD) payment upon receiving the product.</li>
               {product.description && (
                 <li className="list-none -ml-5 whitespace-pre-line text-slate-600 pt-2">
@@ -465,7 +465,7 @@ export function ProductDetail({ product }: { product: Product }) {
                   </p>
                   <p className="text-[11px]">
                     {isGrocery 
-                      ? "Home delivery in Bogura, Sherpur within 2-3 days." 
+                      ? "Home delivery in Sherpur, Bogura within 2-3 days." 
                       : "Courier/Home delivery nationwide within 2-4 days."}
                   </p>
                 </div>
