@@ -27,9 +27,9 @@ export default function ContactPage() {
               <MapPin className="h-6 w-6" />
             </div>
             <h3 className="font-semibold text-lg" lang="bn">ঠিকানা</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed" lang="bn">
-              Sannalpara, Behind Sonali Bank Bus-stand, <br />
-              Sherpur, Bogura
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Sannalpara, Behind Sonali bank Bus-stand, <br />
+              Sherpur - 5840, Bogura
             </p>
           </div>
 

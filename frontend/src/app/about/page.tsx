@@ -55,7 +55,7 @@ export default function AboutPage() {
 
           <div className="pt-6 border-t">
             <p className="text-sm font-medium text-foreground">
-              📍 যোগাযোগ: Sannalpara, Behind Sonali Bank Bus-stand, Sherpur, Bogura
+              📍 যোগাযোগ: Sannalpara, Behind Sonali bank Bus-stand, Sherpur - 5840, Bogura
             </p>
           </div>
         </div>
