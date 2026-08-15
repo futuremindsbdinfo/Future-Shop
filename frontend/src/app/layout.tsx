@@ -65,7 +65,9 @@ export const metadata: Metadata = {
       "Future Shop — শেরপুর ও বগুড়ার স্থানীয় সেরা বিক্রেতাদের পণ্য সরাসরি আপনার দরজায়।",
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    google:
+      process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+      "qZt00iOAvIAYN82n6USua6_Nriprwc644uiVMrEByaw",
   },
   robots: {
     index: true,
