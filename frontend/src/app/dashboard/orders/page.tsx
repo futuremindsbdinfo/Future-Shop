@@ -6,5 +6,5 @@ import { useDashboardAuth } from "@/hooks/useDashboardAuth";
 export default function DashboardOrdersPage() {
   const { hydrated } = useDashboardAuth();
   if (!hydrated) return null;
-  return <OrdersView heading="My Orders" defaultStatus="all" />;
+  return <OrdersView heading="আমার সকল অর্ডার" defaultStatus="all" />;
 }
