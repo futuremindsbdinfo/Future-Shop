@@ -1,34 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
+  User as UserIcon,
+  Mail,
+  Phone,
+  Lock,
+  ShieldCheck,
+  Save,
+  KeyRound,
   CheckCircle2,
-  ChevronDown,
   MapPin,
-  Pencil,
-  Plus,
-  Star,
-  Trash2,
+  Package,
+  Calendar,
+  Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { useDashboardAuth } from "@/hooks/useDashboardAuth";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/api";
-import type { Address, User } from "@/types";
+import type { User } from "@/types";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -42,37 +38,18 @@ export default function PersonalInfoPage() {
   const { hydrated, user, isAuthenticated } = useDashboardAuth();
   const setUser = useAuthStore((s) => s.setUser);
 
-  // --- Account details ---------------------------------------------------
+  // Profile fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // --- Change password -----------------------------------------------------
+  // Password fields
   const [pwd, setPwd] = useState({
     current_password: "",
     password: "",
     password_confirmation: "",
   });
   const [savingPwd, setSavingPwd] = useState(false);
-
-  // --- Address Book (collapsible section — was its own page) ---------------
-  const [addressOpen, setAddressOpen] = useState(false);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loadingAddresses, setLoadingAddresses] = useState(true);
-
-  const [formOpen, setFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Address | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const [fLabel, setFLabel] = useState("");
-  const [fName, setFName] = useState("");
-  const [fPhone, setFPhone] = useState("");
-  const [fAddress, setFAddress] = useState("");
-  const [fDivision, setFDivision] = useState("");
-  const [fDistrict, setFDistrict] = useState("");
-
-  const [deleteTarget, setDeleteTarget] = useState<Address | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -81,37 +58,25 @@ export default function PersonalInfoPage() {
     }
   }, [user]);
 
-  const loadAddresses = useCallback(async () => {
-    setLoadingAddresses(true);
-    try {
-      // AddressController::index returns { data: Address[] } (not paginated)
-      const res = await api.get<{ data: Address[] }>("/addresses");
-      setAddresses(res.data.data);
-    } catch {
-      /* 401 handled by axios interceptor */
-    } finally {
-      setLoadingAddresses(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (hydrated && isAuthenticated) loadAddresses();
-  }, [hydrated, isAuthenticated, loadAddresses]);
-
   if (!hydrated || !user) return null;
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) {
+      toast.error("অনুগ্রহ করে আপনার পুরো নাম লিখুন।");
+      return;
+    }
+
     setSavingProfile(true);
     try {
       const res = await api.put<{ user: User }>("/auth/profile", {
-        name,
+        name: name.trim(),
         email: email.trim() || undefined,
       });
       setUser(res.data.user);
-      toast.success("Profile updated");
+      toast.success("প্রোফাইলের তথ্য সফলভাবে আপডেট হয়েছে!");
     } catch (error) {
-      toast.error(getErrorMessage(error, "Update failed"));
+      toast.error(getErrorMessage(error, "প্রোফাইল আপডেট ব্যর্থ হয়েছে"));
     } finally {
       setSavingProfile(false);
     }
@@ -119,464 +84,224 @@ export default function PersonalInfoPage() {
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!pwd.current_password || !pwd.password) {
+      toast.error("বর্তমান ও নতুন পাসওয়ার্ড পূরণ করুন।");
+      return;
+    }
+    if (pwd.password.length < 6) {
+      toast.error("নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+      return;
+    }
+    if (pwd.password !== pwd.password_confirmation) {
+      toast.error("নতুন পাসওয়ার্ড ও নিশ্চিতকরণ পাসওয়ার্ড মিলছে না।");
+      return;
+    }
+
     setSavingPwd(true);
     try {
       await api.put("/auth/password", pwd);
       setPwd({ current_password: "", password: "", password_confirmation: "" });
-      toast.success("Password changed");
+      toast.success("পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!");
     } catch (error) {
-      toast.error(getErrorMessage(error, "Password change failed"));
+      toast.error(getErrorMessage(error, "পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে"));
     } finally {
       setSavingPwd(false);
     }
   };
 
-  const openCreate = () => {
-    setEditTarget(null);
-    setFLabel("");
-    setFName("");
-    setFPhone("");
-    setFAddress("");
-    setFDivision("");
-    setFDistrict("");
-    setFormOpen(true);
-  };
-
-  const openEdit = (a: Address) => {
-    setEditTarget(a);
-    setFLabel(a.label ?? "");
-    setFName(a.recipient_name);
-    setFPhone(a.phone);
-    setFAddress(a.address);
-    setFDivision(a.division ?? "");
-    setFDistrict(a.district ?? "");
-    setFormOpen(true);
-  };
-
-  const saveAddress = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fName.trim() || !fPhone.trim() || !fAddress.trim()) {
-      toast.error("Recipient, phone, and address are required");
-      return;
-    }
-    setSaving(true);
-    const payload = {
-      label: fLabel.trim() || null,
-      recipient_name: fName.trim(),
-      phone: fPhone.trim(),
-      address: fAddress.trim(),
-      division: fDivision.trim() || null,
-      district: fDistrict.trim() || null,
-    };
-    try {
-      if (editTarget) {
-        const res = await api.put<Address>(`/addresses/${editTarget.id}`, payload);
-        setAddresses((prev) =>
-          prev.map((a) => (a.id === editTarget.id ? res.data : a)),
-        );
-        toast.success("Address updated");
-      } else {
-        const res = await api.post<{ data: Address }>("/addresses", payload);
-        setAddresses((prev) => [res.data.data, ...prev]);
-        toast.success("Address added");
-      }
-      setFormOpen(false);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Save failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const setDefaultAddress = async (a: Address) => {
-    // Optimistic UI: flip flags locally, then reconcile with server.
-    setAddresses((prev) =>
-      prev.map((x) => ({ ...x, is_default: x.id === a.id })),
-    );
-    try {
-      await api.patch<Address>(`/addresses/${a.id}/default`);
-      // Re-load to confirm server state (covers any race).
-      loadAddresses();
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Could not set default"));
-      loadAddresses(); // revert by reloading truth
-    }
-  };
-
-  const confirmDeleteAddress = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/addresses/${deleteTarget.id}`);
-      setAddresses((prev) => prev.filter((a) => a.id !== deleteTarget.id));
-      toast.success("Address deleted");
-      setDeleteTarget(null);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Delete failed"));
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-bold md:text-2xl">Personal Info</h1>
+    <div className="space-y-8 max-w-4xl">
+      
+      {/* Header */}
+      <div className="pb-4 border-b border-gray-200">
+        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2" lang="bn">
+          <UserIcon className="w-6 h-6 text-[#f47920]" />
+          <span>প্রোফাইল সেটিংস ও নিরাপত্তা (Personal Info)</span>
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" lang="bn">
+          আপনার নাম, ইমেইল এবং একাউন্টের পাসওয়ার্ড পরিবর্তন ও নিয়ন্ত্রণ করুন
+        </p>
+      </div>
 
-      {/* Personal info card */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Account Details</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* User Info Overview Banner Card */}
+      <div className="rounded-3xl bg-white border border-gray-100 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f47920] to-[#d46212] text-2xl font-black text-white shadow-sm">
+            {user.name?.charAt(0).toUpperCase() ?? "U"}
+          </span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-900">{user.name}</h2>
+              <Badge className="bg-orange-50 text-[#f47920] border-orange-200 text-[10px] font-bold">
+                সম্মানিত গ্রাহক
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-mono">
+              <Phone className="w-3.5 h-3.5 text-gray-400" />
+              <span>{user.phone || "—"}</span>
+              {user.phone && <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />}
+            </p>
+            {user.email && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-mono">
+                <Mail className="w-3.5 h-3.5 text-gray-400" />
+                <span>{user.email}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex sm:flex-col gap-2 shrink-0">
+          <Link
+            href="/dashboard/address-book"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-bold text-gray-700 hover:text-[#f47920] hover:border-[#f47920] transition-colors"
+          >
+            <MapPin className="w-3.5 h-3.5 text-[#f47920]" />
+            <span>ঠিকানা বই</span>
+          </Link>
+          <Link
+            href="/dashboard/orders"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-bold text-gray-700 hover:text-[#f47920] hover:border-[#f47920] transition-colors"
+          >
+            <Package className="w-3.5 h-3.5 text-[#f47920]" />
+            <span>আমার অর্ডার</span>
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Profile Edit Card */}
+        <div className="rounded-3xl bg-white border border-gray-100 p-6 shadow-xs space-y-5">
+          <div className="pb-3 border-b border-gray-100 flex items-center gap-2">
+            <UserIcon className="w-4 h-4 text-[#f47920]" />
+            <h3 className="text-base font-bold text-gray-900" lang="bn">
+              ব্যক্তিগত তথ্য হালনাগাদ
+            </h3>
+          </div>
+
           <form onSubmit={saveProfile} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="p-name">Name</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="prof-name" className="text-xs font-bold text-gray-700" lang="bn">
+                আপনার পুরো নাম *
+              </Label>
               <Input
-                id="p-name"
-                className="h-11"
+                id="prof-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="যেমন: মোঃ কামরুল ইসলাম"
+                className="h-10 rounded-xl text-xs"
                 required
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="p-phone">Phone (not editable)</Label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="prof-email" className="text-xs font-bold text-gray-700" lang="bn">
+                ইমেইল ঠিকানা (ঐচ্ছিক)
+              </Label>
               <Input
-                id="p-phone"
-                className="h-11"
-                value={user.phone ?? ""}
-                readOnly
-                disabled
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="p-email">Email</Label>
-              <Input
-                id="p-email"
-                className="h-11"
+                id="prof-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="example@mail.com"
+                className="h-10 rounded-xl text-xs font-mono"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="prof-phone" className="text-xs font-bold text-gray-700" lang="bn">
+                মোবাইল নম্বর (লগইন আইডি)
+              </Label>
+              <Input
+                id="prof-phone"
+                value={user.phone ?? "ফোন নম্বর নেই"}
+                disabled
+                className="h-10 rounded-xl text-xs font-mono bg-gray-50 text-muted-foreground cursor-not-allowed"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                * মোবাইল নম্বর পরিবর্তনের জন্য হেল্পলাইনে যোগাযোগ করুন।
+              </p>
+            </div>
+
             <Button
               type="submit"
               disabled={savingProfile}
-              className="h-11 w-full bg-[#f47920] hover:bg-[#e56910] sm:w-auto"
+              className="w-full h-11 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 mt-2"
             >
-              {savingProfile ? "Saving..." : "Save Changes"}
+              <Save className="w-3.5 h-3.5" />
+              <span>{savingProfile ? "সংরক্ষণ হচ্ছে..." : "তথ্য সংরক্ষণ করুন"}</span>
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Change password card */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Change Password</CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* Change Password Card */}
+        <div className="rounded-3xl bg-white border border-gray-100 p-6 shadow-xs space-y-5">
+          <div className="pb-3 border-b border-gray-100 flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-[#f47920]" />
+            <h3 className="text-base font-bold text-gray-900" lang="bn">
+              পাসওয়ার্ড পরিবর্তন ও নিরাপত্তা
+            </h3>
+          </div>
+
           <form onSubmit={changePassword} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="cur-pwd">Current password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-curr" className="text-xs font-bold text-gray-700" lang="bn">
+                বর্তমান পাসওয়ার্ড *
+              </Label>
               <Input
-                id="cur-pwd"
-                className="h-11"
+                id="pwd-curr"
                 type="password"
                 value={pwd.current_password}
-                onChange={(e) =>
-                  setPwd({ ...pwd, current_password: e.target.value })
-                }
+                onChange={(e) => setPwd({ ...pwd, current_password: e.target.value })}
+                placeholder="••••••••"
+                className="h-10 rounded-xl text-xs"
                 required
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="new-pwd">New password</Label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-new" className="text-xs font-bold text-gray-700" lang="bn">
+                নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর) *
+              </Label>
               <Input
-                id="new-pwd"
-                className="h-11"
+                id="pwd-new"
                 type="password"
                 value={pwd.password}
                 onChange={(e) => setPwd({ ...pwd, password: e.target.value })}
+                placeholder="••••••••"
+                className="h-10 rounded-xl text-xs"
                 required
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="conf-pwd">Confirm new password</Label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-conf" className="text-xs font-bold text-gray-700" lang="bn">
+                নতুন পাসওয়ার্ড নিশ্চিত করুন *
+              </Label>
               <Input
-                id="conf-pwd"
-                className="h-11"
+                id="pwd-conf"
                 type="password"
                 value={pwd.password_confirmation}
-                onChange={(e) =>
-                  setPwd({ ...pwd, password_confirmation: e.target.value })
-                }
+                onChange={(e) => setPwd({ ...pwd, password_confirmation: e.target.value })}
+                placeholder="••••••••"
+                className="h-10 rounded-xl text-xs"
                 required
               />
             </div>
+
             <Button
               type="submit"
               disabled={savingPwd}
-              className="h-11 w-full bg-[#f47920] hover:bg-[#e56910] sm:w-auto"
+              className="w-full h-11 rounded-xl bg-gray-900 hover:bg-black text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 mt-2"
             >
-              {savingPwd ? "Saving..." : "Change Password"}
+              <Lock className="w-3.5 h-3.5" />
+              <span>{savingPwd ? "পরিবর্তন হচ্ছে..." : "পাসওয়ার্ড পরিবর্তন করুন"}</span>
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Address Book — collapsible section (was its own /dashboard/address-book
-          page). Custom disclosure (no accordion library): a toggle header button
-          + conditional CardContent, mirroring the pattern used in the admin
-          sidebar (admin/layout.tsx RightPanel's expandedGroups). */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <button
-          type="button"
-          onClick={() => setAddressOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 p-6 text-left"
-          aria-expanded={addressOpen}
-        >
-          <span className="flex items-center gap-2 text-base font-semibold">
-            <MapPin className="h-4 w-4 text-[#f47920]" />
-            Address Book
-          </span>
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-              addressOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
+      </div>
 
-        {addressOpen && (
-          <CardContent className="space-y-4 border-t pt-4">
-            <div className="flex justify-end">
-              <Button
-                onClick={openCreate}
-                className="h-11 min-w-[44px] bg-[#f47920] hover:bg-[#e56910]"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add New
-              </Button>
-            </div>
-
-            {loadingAddresses ? (
-              <LoadingSpinner />
-            ) : addresses.length === 0 ? (
-              <EmptyState
-                icon={<MapPin className="h-7 w-7" />}
-                title="No saved addresses"
-                description="Add an address to speed up future checkouts."
-                action={
-                  <Button
-                    onClick={openCreate}
-                    className="h-11 bg-[#f47920] hover:bg-[#e56910]"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Address
-                  </Button>
-                }
-              />
-            ) : (
-              <div className="space-y-3">
-                {addresses.map((a) => (
-                  <Card
-                    key={a.id}
-                    className="rounded-xl border border-[#f1f5f9] shadow-sm"
-                  >
-                    <CardContent className="space-y-3 p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold">{a.recipient_name}</p>
-                        <span className="text-sm text-muted-foreground">
-                          · {a.phone}
-                        </span>
-                        {a.is_default && (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Default
-                          </Badge>
-                        )}
-                        {a.label && (
-                          <Badge variant="outline" className="text-xs">
-                            {a.label}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {a.address}
-                        {a.district ? `, ${a.district}` : ""}
-                        {a.division ? `, ${a.division}` : ""}
-                      </p>
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {!a.is_default && (
-                          <Button
-                            variant="outline"
-                            className="h-11 border-[#f47920] text-[#f47920] hover:bg-orange-50 hover:text-[#e56910]"
-                            onClick={() => setDefaultAddress(a)}
-                          >
-                            <Star className="mr-2 h-4 w-4" />
-                            Set Default
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          className="h-11 min-w-[44px]"
-                          onClick={() => openEdit(a)}
-                          aria-label={`Edit address ${a.recipient_name}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="h-11 min-w-[44px] text-red-600 hover:bg-red-50 hover:text-red-700"
-                          onClick={() => setDeleteTarget(a)}
-                          aria-label={`Delete address ${a.recipient_name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Create / Edit Address Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editTarget ? "Edit Address" : "Add New Address"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={saveAddress} className="space-y-3 py-2">
-            <div className="space-y-1">
-              <Label htmlFor="a-label">Label (optional)</Label>
-              <Input
-                id="a-label"
-                className="h-11"
-                placeholder="বাসা / অফিস / ..."
-                value={fLabel}
-                onChange={(e) => setFLabel(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="a-name">
-                Recipient Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="a-name"
-                className="h-11"
-                value={fName}
-                onChange={(e) => setFName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="a-phone">
-                Phone <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="a-phone"
-                className="h-11"
-                type="tel"
-                value={fPhone}
-                onChange={(e) => setFPhone(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="a-address">
-                Address <span className="text-red-500">*</span>
-              </Label>
-              <textarea
-                id="a-address"
-                rows={2}
-                className="min-h-[44px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={fAddress}
-                onChange={(e) => setFAddress(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="a-division">Division</Label>
-                <Input
-                  id="a-division"
-                  className="h-11"
-                  value={fDivision}
-                  onChange={(e) => setFDivision(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="a-district">District</Label>
-                <Input
-                  id="a-district"
-                  className="h-11"
-                  value={fDistrict}
-                  onChange={(e) => setFDistrict(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-2 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-11"
-                onClick={() => setFormOpen(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="h-11 bg-[#f47920] hover:bg-[#e56910]"
-                disabled={saving}
-              >
-                {saving
-                  ? "Saving..."
-                  : editTarget
-                    ? "Update Address"
-                    : "Save Address"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Address Confirm */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete address?</DialogTitle>
-          </DialogHeader>
-          <p className="py-2 text-sm text-muted-foreground">
-            This action can&apos;t be undone.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="ghost"
-              className="h-11"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="h-11 bg-red-600 text-white hover:bg-red-700"
-              onClick={confirmDeleteAddress}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
