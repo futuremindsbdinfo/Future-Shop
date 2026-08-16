@@ -61,7 +61,7 @@ export default function WishlistPage() {
       image: item.image,
       stock: item.stock,
     });
-    toast.success("কার্টে যোগ হয়েছে");
+    toast.success(`${item.name} - Added to Cart!`);
   };
 
   const remove = (item: WishlistItem) => {
@@ -172,8 +172,8 @@ export default function WishlistPage() {
                       disabled={outOfStock}
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
-                      <span lang="bn">
-                        {outOfStock ? "স্টকে নেই" : "কার্টে যোগ করুন"}
+                      <span>
+                        {outOfStock ? "স্টকে নেই" : "Add to Cart"}
                       </span>
                     </Button>
                     <Button
