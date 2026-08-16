@@ -3,21 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowDown,
-  faArrowUp,
-  faBoxArchive,
-  faCartShopping,
-  faCircleInfo,
-  faDownload,
-  // faEnvelope, // Traffic Source widget disabled — restore when re-enabling
-  // faHeart, // Traffic Source widget disabled — restore when re-enabling
-  // faLink, // Traffic Source widget disabled — restore when re-enabling
-  // faShareNodes, // Traffic Source widget disabled — restore when re-enabling
-  faShoppingBag,
-  faUsers,
-} from "@fortawesome/free-solid-svg-icons";
 import {
   CartesianGrid,
   Cell,
@@ -30,6 +15,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  ShoppingBag,
+  Package,
+  Users,
+  CreditCard,
+  ArrowUpRight,
+  ChevronRight,
+  TrendingUp,
+  RefreshCw,
+  Info,
+  Calendar,
+  Layers,
+  Sparkles,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,88 +36,36 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyChart } from "@/components/shared/EmptyChart";
 import api from "@/lib/api";
 import { formatTaka } from "@/lib/utils";
+import { ORDER_STATUS_BN, ORDER_STATUS_CLASS } from "@/lib/order-status";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardStats, Order, PaginatedResponse, Product } from "@/types";
 
 const TK = "৳";
-const fmtNum = (v: number) => v.toLocaleString("en-US");
+const fmtNum = (v: number) => v.toLocaleString("bn-BD");
 
-
-
-/* ----------------------- Order status configuration --------------------- */
-type StatusKey = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
-const STATUS_LABEL: Record<StatusKey, string> = {
-  pending: "Pending",
-  confirmed: "Confirmed",
-  processing: "Processing",
-  shipped: "Shipped",
-  delivered: "Completed",
-  cancelled: "Cancelled",
-};
-const STATUS_PILL_CLASS: Record<StatusKey, string> = {
-  pending: "bg-gray-100 text-gray-700",
-  confirmed: "bg-blue-100 text-blue-700",
-  processing: "bg-blue-100 text-blue-700",
-  shipped: "bg-orange-100 text-orange-700",
-  delivered: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-700",
-};
-const STATUS_ICON_BG: Record<StatusKey, string> = {
-  pending: "bg-gray-500",
-  confirmed: "bg-blue-500",
-  processing: "bg-blue-500",
-  shipped: "bg-orange-500",
-  delivered: "bg-green-500",
-  cancelled: "bg-red-500",
-};
-
-/* --------------------------- Helper components -------------------------- */
 function StatCard({
   label,
   value,
-  icon,
-  iconBg,
-  iconColor,
-  changePct,
-  positive = true,
+  icon: Icon,
+  colorClass,
+  bgClass,
 }: {
   label: string;
   value: string;
-  icon: typeof faCartShopping;
-  iconBg: string;
-  iconColor: string;
-  // Optional: no real week-over-week comparison exists yet (see admin/page.tsx
-  // callers). When absent, the change badge + "vs last week" caption are hidden.
-  changePct?: number;
-  positive?: boolean;
+  icon: typeof ShoppingBag;
+  colorClass: string;
+  bgClass: string;
 }) {
   return (
-    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] font-medium text-[#6b7280]">{label}</p>
-            <p className="mt-2 truncate text-[24px] font-bold text-[#111827]">{value}</p>
-            {changePct !== undefined && (
-              <div className="mt-2 flex items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    positive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                  }`}
-                >
-                  <FontAwesomeIcon icon={positive ? faArrowUp : faArrowDown} className="h-2.5 w-2.5" />
-                  {Math.abs(changePct).toFixed(1)}%
-                </span>
-                <span className="text-[11px] text-[#9ca3af]">vs last week</span>
-              </div>
-            )}
-          </div>
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${iconBg}`}>
-            <FontAwesomeIcon icon={icon} className={`h-4 w-4 ${iconColor}`} />
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-100 shadow-xs flex items-center justify-between gap-4 hover:border-gray-200 transition-all">
+      <div className="space-y-1 min-w-0">
+        <p className="text-xs font-bold text-muted-foreground truncate" lang="bn">{label}</p>
+        <p className="text-2xl sm:text-3xl font-black text-gray-900 truncate">{value}</p>
+      </div>
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${bgClass} ${colorClass} shadow-2xs`}>
+        <Icon className="h-6 w-6" />
+      </span>
+    </div>
   );
 }
 
@@ -127,23 +74,21 @@ function DashboardSkeleton() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 rounded-xl" />
+          <Skeleton key={i} className="h-28 rounded-3xl" />
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Skeleton className="h-80 rounded-xl lg:col-span-3" />
-        <Skeleton className="h-80 rounded-xl lg:col-span-2" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <Skeleton className="h-80 rounded-3xl lg:col-span-3" />
+        <Skeleton className="h-80 rounded-3xl lg:col-span-2" />
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Skeleton className="h-72 rounded-xl lg:col-span-5" />
-        <Skeleton className="h-72 rounded-xl lg:col-span-4" />
-        <Skeleton className="h-72 rounded-xl lg:col-span-3" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-9">
+        <Skeleton className="h-72 rounded-3xl lg:col-span-5" />
+        <Skeleton className="h-72 rounded-3xl lg:col-span-4" />
       </div>
     </div>
   );
 }
 
-/* --------------------------------- Page --------------------------------- */
 export default function AdminDashboardPage() {
   const user = useAuthStore((s) => s.user);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -164,7 +109,7 @@ export default function AdminDashboardPage() {
       setStats(d.data.data);
       setTopProducts(p.data.data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load dashboard data");
+      setError(e instanceof Error ? e.message : "ড্যাশবোর্ড তথ্য লোড করা যায়নি");
     } finally {
       setLoading(false);
     }
@@ -178,21 +123,18 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <Card className="rounded-xl">
-        <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
-          <p className="text-sm text-red-600">{error}</p>
-          <Button onClick={load} className="h-11 bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white">
-            Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="bg-white rounded-3xl p-10 border border-gray-200 text-center max-w-md mx-auto space-y-4">
+        <p className="text-sm font-bold text-red-600">{error}</p>
+        <Button onClick={load} className="h-11 px-6 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-md">
+          আবার চেষ্টা করুন
+        </Button>
+      </div>
     );
   }
 
   if (!stats) return null;
 
   const recentFive = stats.recent_orders.slice(0, 5);
-  
   const productsSold = stats.top_products_sold || [];
   const maxSold = Math.max(1, ...productsSold.map((p) => p.sold));
 
@@ -200,111 +142,115 @@ export default function AdminDashboardPage() {
   const growthTotal = customerGrowth.reduce((a, b) => a + b.value, 0);
 
   return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-8">
+      
+      {/* Top Welcome Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
-          <h1 className="text-2xl font-bold text-[#111827]">
-            Welcome back, {user?.name ?? "Admin"}! 👋
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2" lang="bn">
+            <span>স্বাগতম, {user?.name ?? "অ্যাডমিন"}! 👋</span>
           </h1>
-          <p className="mt-1 text-sm text-[#6b7280]">
-            Here&apos;s what&apos;s happening with your business today.
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" lang="bn">
+            Future Shop সেন্ট্রাল কন্ট্রোল ড্যাশবোর্ড ও আজকের ব্যবসায়িক পরিসংখ্যান
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-[#6b7280] sm:inline">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
+
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <span className="text-xs font-semibold text-gray-600 bg-white border border-gray-200 px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-[#f47920]" />
+            <span>{new Date().toLocaleDateString("bn-BD", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
           </span>
+
           <Button
-            className="h-11 bg-gradient-to-r from-[#f47920] to-[#fb923c] text-white hover:opacity-90"
-            onClick={() => {
-              /* export placeholder */
-            }}
+            variant="outline"
+            size="sm"
+            onClick={load}
+            className="h-10 px-3 rounded-xl border-gray-200 text-xs font-bold text-gray-700 hover:text-[#f47920] shadow-2xs gap-1.5"
           >
-            <FontAwesomeIcon icon={faDownload} className="mr-2 h-4 w-4" />
-            Export
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>রিফ্রেশ</span>
           </Button>
         </div>
       </div>
 
-      {/* STATS ROW */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* 4 Primary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <StatCard
-          label="Total Revenue"
+          label="মোট বিক্রয় রাজস্ব (Revenue)"
           value={formatTaka(stats.total_revenue)}
-          icon={faCartShopping}
-          iconBg="bg-orange-100"
-          iconColor="text-[#f47920]"
+          icon={CreditCard}
+          colorClass="text-[#f47920]"
+          bgClass="bg-orange-50"
         />
         <StatCard
-          label="Total Orders"
+          label="মোট অর্ডার সংখ্যা (Orders)"
           value={fmtNum(stats.total_orders)}
-          icon={faShoppingBag}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
+          icon={ShoppingBag}
+          colorClass="text-blue-600"
+          bgClass="bg-blue-50"
         />
         <StatCard
-          label="Total Customers"
+          label="মোট গ্রাহক (Customers)"
           value={fmtNum(stats.total_customers ?? 0)}
-          icon={faUsers}
-          iconBg="bg-purple-100"
-          iconColor="text-purple-600"
+          icon={Users}
+          colorClass="text-purple-600"
+          bgClass="bg-purple-50"
         />
         <StatCard
-          label="Total Products"
+          label="মোট পণ্য সংখ্যা (Products)"
           value={fmtNum(stats.total_products ?? 0)}
-          icon={faBoxArchive}
-          iconBg="bg-orange-100"
-          iconColor="text-[#f47920]"
+          icon={Package}
+          colorClass="text-emerald-600"
+          bgClass="bg-emerald-50"
         />
       </div>
 
-      {/* CHARTS ROW — Sales Overview (65%) + Top Products (35%) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-3">
-          <CardContent className="p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                Sales Overview
-                <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5 text-[#9ca3af]" title="Sales for the selected week" />
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setWeekToggle("thisWeek")}
-                  className={`h-8 rounded-md px-3 text-xs font-medium transition-colors ${
-                    weekToggle === "thisWeek"
-                      ? "bg-[#f47920] text-white"
-                      : "border border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"
-                  }`}
-                >
-                  This Week
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setWeekToggle("lastWeek")}
-                  className={`h-8 rounded-md px-3 text-xs font-medium transition-colors ${
-                    weekToggle === "lastWeek"
-                      ? "bg-[#f47920] text-white"
-                      : "border border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"
-                  }`}
-                >
-                  Last Week
-                </button>
-              </div>
+      {/* CHARTS ROW — Sales Overview (60%) + Top Selling Products (40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        {/* Sales Overview Line Chart */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs lg:col-span-3 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-gray-100">
+            <h2 className="text-sm sm:text-base font-extrabold text-gray-900 flex items-center gap-2" lang="bn">
+              <TrendingUp className="w-4 h-4 text-[#f47920]" />
+              <span>বিক্রয় পরিসংখ্যান (Sales Overview)</span>
+            </h2>
+
+            <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setWeekToggle("thisWeek")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  weekToggle === "thisWeek"
+                    ? "bg-white text-gray-900 shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+                lang="bn"
+              >
+                এই সপ্তাহ
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeekToggle("lastWeek")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  weekToggle === "lastWeek"
+                    ? "bg-white text-gray-900 shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+                lang="bn"
+              >
+                গত সপ্তাহ
+              </button>
             </div>
-            <div className="h-72 w-full">
-              {stats.total_orders === 0 ? (
-                <EmptyChart message="No sales data yet" />
-              ) : (
+          </div>
+
+          <div className="h-72 w-full pt-2">
+            {stats.total_orders === 0 ? (
+              <EmptyChart message="এখনো কোনো বিক্রয় ডাটা নেই" />
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats.sales_overview || []} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis
                     tick={{ fill: "#6b7280", fontSize: 11 }}
@@ -314,222 +260,196 @@ export default function AdminDashboardPage() {
                     width={50}
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #e5e7eb" }}
-                    formatter={(value, name) => [formatTaka(value as number), name === "thisWeek" ? "This Week" : "Last Week"]}
+                    contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid #e5e7eb", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                    formatter={(value, name) => [formatTaka(value as number), name === "thisWeek" ? "এই সপ্তাহ" : "গত সপ্তাহ"]}
                   />
                   <Line
                     type="monotone"
                     dataKey="thisWeek"
                     stroke="#f47920"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: "#f47920" }}
-                    activeDot={{ r: 5 }}
-                    strokeOpacity={weekToggle === "thisWeek" ? 1 : 0.35}
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: "#f47920" }}
+                    activeDot={{ r: 6 }}
+                    strokeOpacity={weekToggle === "thisWeek" ? 1 : 0.3}
                   />
                   <Line
                     type="monotone"
                     dataKey="lastWeek"
                     stroke="#9ca3af"
                     strokeWidth={2}
-                    strokeDasharray="5 5"
+                    strokeDasharray="4 4"
                     dot={{ r: 3, fill: "#9ca3af" }}
-                    strokeOpacity={weekToggle === "lastWeek" ? 1 : 0.35}
+                    strokeOpacity={weekToggle === "lastWeek" ? 1 : 0.3}
                   />
                 </LineChart>
               </ResponsiveContainer>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          </div>
+        </div>
 
-        {/* Top Products */}
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-2">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Top Products</h2>
-              <Link href="/admin/products" className="text-xs font-medium text-[#f47920] hover:underline">
-                View all
-              </Link>
-            </div>
-            {productsSold.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No products yet</p>
-            ) : (
-              <ul className="space-y-4">
-                {productsSold.map((productInfo) => {
-                  const img = productInfo.image ?? null;
-                  const pct = (productInfo.sold / maxSold) * 100;
-                  return (
-                    <li key={productInfo.id}>
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-orange-100">
-                          {img ? (
-                            <Image src={img} alt={productInfo.name} fill sizes="40px" className="object-cover" />
+        {/* Top Products Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <h2 className="text-sm sm:text-base font-extrabold text-gray-900" lang="bn">
+              সেরা বিক্রিত পণ্য
+            </h2>
+            <Link href="/admin/products" className="text-xs font-bold text-[#f47920] hover:underline">
+              সবগুলো দেখুন →
+            </Link>
+          </div>
+
+          {productsSold.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-8">এখনো কোনো বিক্রয় রেকর্ড নেই</p>
+          ) : (
+            <div className="space-y-3.5">
+              {productsSold.map((p) => {
+                const pct = (p.sold / maxSold) * 100;
+                return (
+                  <div key={p.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-gray-50 border border-gray-100">
+                          {p.image ? (
+                            <Image src={p.image} alt={p.name} fill sizes="36px" className="object-cover" />
                           ) : (
-                            <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#f47920]">
-                              {productInfo.name.charAt(0).toUpperCase()}
+                            <span className="flex h-full w-full items-center justify-center font-bold text-[#f47920]">
+                              {p.name.charAt(0)}
                             </span>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[#111827]">{productInfo.name}</p>
-                        </div>
-                        <span className="shrink-0 text-xs font-semibold text-[#6b7280]">{productInfo.sold} Sold</span>
+                        <p className="font-bold text-gray-900 truncate max-w-[140px]">{p.name}</p>
                       </div>
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#f3f4f6]">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#f47920] to-[#fb923c]"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* BOTTOM ROW: Recent Orders + Customer Growth. Traffic Source is hidden
-          below (no real tracking data yet) — grid-cols-9 = 5+4, matching the
-          two remaining cards' spans so there's no leftover empty column. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-9">
-        {/* Recent Orders */}
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-5">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Recent Orders</h2>
-              <Link href="/admin/orders" className="text-xs font-medium text-[#f47920] hover:underline">
-                View all
-              </Link>
-            </div>
-            {recentFive.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No orders yet</p>
-            ) : (
-              <ul className="divide-y divide-[#f3f4f6]">
-                {recentFive.map((order: Order) => {
-                  const sk = order.order_status as StatusKey;
-                  return (
-                    <li
-                      key={order.id}
-                      onClick={() => (window.location.href = "/admin/orders")}
-                      className="flex cursor-pointer items-center gap-3 py-3 hover:bg-[#f9fafb]"
-                    >
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white ${STATUS_ICON_BG[sk] ?? "bg-gray-500"}`}>
-                        <FontAwesomeIcon icon={faShoppingBag} className="h-3.5 w-3.5" />
+                      <span className="font-bold text-[#f47920] shrink-0 bg-orange-50 px-2 py-0.5 rounded-md text-[11px]">
+                        {p.sold}টি বিক্রিত
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-mono text-xs font-semibold">{order.order_number}</p>
-                        <p className="truncate text-[11px] text-[#9ca3af]">
-                          {new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold">{formatTaka(order.total)}</span>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_PILL_CLASS[sk] ?? "bg-gray-100 text-gray-700"}`}>
-                        {STATUS_LABEL[sk] ?? order.order_status}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                    </div>
 
-        {/* Customer Growth */}
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-4">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Customer Growth</h2>
-              <select
-                value={growthMonth}
-                onChange={(e) => setGrowthMonth(e.target.value)}
-                className="h-8 rounded-md border border-[#e5e7eb] bg-transparent px-2 text-xs"
-                aria-label="Month range"
-              >
-                <option value="12">This Month</option>
-                <option value="3">Last 3 Months</option>
-                <option value="6">Last 6 Months</option>
-              </select>
-            </div>
-            <div className="relative h-44 w-full">
-              {growthTotal === 0 ? (
-                <EmptyChart message="No customer data yet" />
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={customerGrowth} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={2} stroke="none">
-                        {customerGrowth.map((entry, index) => (
-                          <Cell key={index} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <p className="text-2xl font-bold">{growthTotal}</p>
-                    <p className="text-[11px] text-[#6b7280]">Total</p>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-[#f47920] to-[#fb923c] rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
-            <ul className="mt-4 space-y-2 text-xs">
-              {customerGrowth.map((seg) => {
-                const pct = growthTotal > 0 ? Math.round((seg.value / growthTotal) * 100) : 0;
-                return (
-                  <li key={seg.name} className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: seg.color }} />
-                    <span className="flex-1 text-[#374151]">{seg.name}</span>
-                    <span className="font-medium">{seg.value}</span>
-                    <span className="text-[#9ca3af]">({pct}%)</span>
-                  </li>
                 );
               })}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Traffic Source — HIDDEN: backend still sends stats.traffic_sources,
-            but it's mock/hardcoded (no real analytics tracking exists yet).
-            Kept as real JSX (not deleted) behind `false &&` so it stays
-            type-checked and is a one-line flip to restore once real data lands. */}
-        {false && (
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm lg:col-span-3">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Traffic Source</h2>
-              <button type="button" className="text-xs font-medium text-[#f47920] hover:underline">
-                View report
-              </button>
             </div>
-            <ul className="space-y-4">
-              {(stats?.traffic_sources || []).map((src) => (
-                <li key={src.name}>
-                  <div className="flex items-center gap-3">
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white ${src.iconBg}`}>
-                      {typeof src.icon === "string" ? (
-                        <span className="text-[11px] font-bold">{src.icon}</span>
-                      ) : (
-                        <FontAwesomeIcon icon={src.icon} className="h-3 w-3" />
-                      )}
-                    </span>
-                    <span className="flex-1 truncate text-sm">{src.name}</span>
-                    <span className="shrink-0 text-xs font-semibold text-[#6b7280]">{src.pct.toFixed(1)}%</span>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#f3f4f6]">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#f47920] to-[#fb923c]"
-                      style={{ width: `${src.pct}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-        )}
+          )}
+        </div>
+
       </div>
+
+      {/* BOTTOM ROW: Recent Orders (60%) + Customer Growth (40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-9 gap-6">
+        
+        {/* Recent Orders Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs lg:col-span-5 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <h2 className="text-sm sm:text-base font-extrabold text-gray-900" lang="bn">
+              সাম্প্রতিক অর্ডারসমূহ
+            </h2>
+            <Link href="/admin/orders" className="text-xs font-bold text-[#f47920] hover:underline">
+              সকল অর্ডার দেখুন →
+            </Link>
+          </div>
+
+          {recentFive.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-8">এখনো কোনো অর্ডার আসেনি</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {recentFive.map((order: Order) => (
+                <div
+                  key={order.id}
+                  className="py-3 flex items-center justify-between gap-3 text-xs hover:bg-gray-50/50 rounded-xl px-2 transition-colors"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="font-mono font-bold text-[#f47920] hover:underline block truncate"
+                    >
+                      {order.order_number}
+                    </Link>
+                    <p className="text-muted-foreground text-[11px]">
+                      {order.shipping_name} • {new Date(order.created_at).toLocaleDateString("bn-BD")}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0 space-y-1">
+                    <p className="font-extrabold text-gray-900">{formatTaka(Number(order.total))}</p>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${ORDER_STATUS_CLASS[order.order_status] ?? ""}`}
+                      lang="bn"
+                    >
+                      {ORDER_STATUS_BN[order.order_status] ?? order.order_status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Customer Growth Pie Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs lg:col-span-4 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <h2 className="text-sm sm:text-base font-extrabold text-gray-900" lang="bn">
+              গ্রাহক পরিসংখ্যান
+            </h2>
+            <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] font-bold">
+              মোট: {growthTotal}
+            </Badge>
+          </div>
+
+          <div className="relative h-44 w-full">
+            {growthTotal === 0 ? (
+              <EmptyChart message="এখনো কোনো গ্রাহক ডাটা নেই" />
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={customerGrowth}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      stroke="none"
+                    >
+                      {customerGrowth.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <p className="text-2xl font-black text-gray-900">{growthTotal}</p>
+                  <p className="text-[10px] text-muted-foreground font-semibold">মোট গ্রাহক</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Legend */}
+          <div className="space-y-1.5 pt-2 border-t border-gray-100">
+            {customerGrowth.map((seg) => {
+              const pct = growthTotal > 0 ? Math.round((seg.value / growthTotal) * 100) : 0;
+              return (
+                <div key={seg.name} className="flex items-center justify-between text-xs text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: seg.color }} />
+                    <span className="font-medium">{seg.name}</span>
+                  </div>
+                  <span className="font-bold text-gray-900">{seg.value} ({pct}%)</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 }

@@ -3,44 +3,36 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faBagShopping,
-  faBars,
-  faBell,
-  faBoxOpen,
-  faBullhorn,
-  faChartLine,
-  faChevronDown,
-  faChevronRight,
-  faCircleQuestion,
-  faClipboardList,
-  faFileInvoice,
-  faGear,
-  faGift,
-  faLayerGroup,
-  faLocationDot,
-  faPercent,
-  faQuestionCircle,
-  faRightFromBracket,
-  faStar,
-  faStore,
-  faTableCells,
-  faTags,
-  faTruck,
-  faTruckFast,
-  faUserGroup,
-  faUsers,
-} from "@fortawesome/free-solid-svg-icons";
+  LayoutDashboard,
+  Package,
+  FolderTree,
+  Tag,
+  ShoppingBag,
+  Receipt,
+  Users,
+  UserCog,
+  Store,
+  Percent,
+  Gift,
+  Star,
+  MessageSquareHelp,
+  Truck,
+  MapPin,
+  FileSpreadsheet,
+  Settings,
+  LogOut,
+  ExternalLink,
+  Menu,
+  ChevronDown,
+  ChevronRight,
+  ShieldCheck,
+  Globe,
+  Bell,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -51,319 +43,90 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-import type { DashboardStats, Order } from "@/types";
 
-interface NavItem {
+interface NavSubItem {
   href: string;
   label: string;
-  icon?: IconDefinition;
-  /** If true, only role === 'admin' can see this item. Staff is hidden. */
+  icon: typeof Package;
   adminOnly?: boolean;
 }
 
-type NavGroup = {
+interface NavGroup {
   groupLabel: string;
-  icon: IconDefinition;
+  icon: typeof Package;
   href?: string;
-  items?: NavItem[];
+  items?: NavSubItem[];
   adminOnly?: boolean;
-};
+}
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    groupLabel: "Dashboard",
-    icon: faTableCells,
+    groupLabel: "ড্যাশবোর্ড (Dashboard)",
+    icon: LayoutDashboard,
     href: "/admin",
     adminOnly: true,
   },
   {
-    groupLabel: "Catalog",
-    icon: faBoxOpen,
+    groupLabel: "পণ্য ও ক্যাটালগ (Catalog)",
+    icon: Package,
     items: [
-      { href: "/admin/products", label: "Products", icon: faBagShopping },
-      { href: "/admin/categories", label: "Categories", icon: faLayerGroup, adminOnly: true },
-      { href: "/admin/brands", label: "Brands", icon: faTags },
-    ]
+      { href: "/admin/products", label: "সকল পণ্য (Products)", icon: Package },
+      { href: "/admin/categories", label: "ক্যাটাগরি (Categories)", icon: FolderTree, adminOnly: true },
+      { href: "/admin/brands", label: "ব্র্যান্ডসমূহ (Brands)", icon: Tag },
+    ],
   },
   {
-    groupLabel: "Sales",
-    icon: faClipboardList,
+    groupLabel: "অর্ডার ও বিক্রয় (Sales)",
+    icon: ShoppingBag,
     items: [
-      { href: "/admin/orders", label: "Orders", icon: faClipboardList },
-      { href: "/admin/invoices", label: "Invoices", icon: faFileInvoice, adminOnly: true },
-    ]
+      { href: "/admin/orders", label: "সকল অর্ডার (Orders)", icon: ShoppingBag },
+      { href: "/admin/invoices", label: "ইনভয়েস ও মেমো (Invoices)", icon: Receipt, adminOnly: true },
+    ],
   },
   {
-    groupLabel: "Users",
-    icon: faUsers,
+    groupLabel: "ডেলিভারি সিস্টেম (Delivery)",
+    icon: Truck,
     items: [
-      { href: "/admin/customers", label: "Customers", icon: faUserGroup, adminOnly: true },
-      { href: "/admin/users", label: "Users", icon: faUsers, adminOnly: true },
-      { href: "/admin/vendors", label: "Vendors", icon: faStore },
-    ]
+      { href: "/admin/zones", label: "ডেলিভারি জোন (Zones)", icon: MapPin, adminOnly: true },
+      { href: "/admin/orders?assignment_status=assigned_pending", label: "রাইডার অ্যাসাইন (Assign)", icon: Truck, adminOnly: true },
+      { href: "/admin/reports?tab=delivery", label: "ডেলিভারি রিপোর্ট (Reports)", icon: FileSpreadsheet, adminOnly: true },
+    ],
   },
   {
-    groupLabel: "Marketing",
-    icon: faBullhorn,
+    groupLabel: "মার্কেটিং ও অফার (Marketing)",
+    icon: Gift,
     items: [
-      { href: "/admin/promotions", label: "Promotions", icon: faGift },
-      { href: "/admin/coupons", label: "Coupons", icon: faPercent },
-      { href: "/admin/reviews", label: "Reviews", icon: faStar, adminOnly: true },
-      { href: "/admin/qa", label: "Q&A", icon: faQuestionCircle, adminOnly: true },
-    ]
+      { href: "/admin/coupons", label: "ডিসকাউন্ট কুপন (Coupons)", icon: Percent },
+      { href: "/admin/promotions", label: "প্রমোশন অফার (Promotions)", icon: Gift },
+      { href: "/admin/reviews", label: "গ্রাহক রিভিউ (Reviews)", icon: Star, adminOnly: true },
+      { href: "/admin/qa", label: "প্রশ্ন ও উত্তর (Q&A)", icon: MessageSquareHelp, adminOnly: true },
+    ],
   },
   {
-    groupLabel: "Delivery",
-    icon: faTruck,
+    groupLabel: "ইউজার ও ভেন্ডর (Users)",
+    icon: Users,
     items: [
-      { href: "/admin/reports?tab=delivery", label: "Delivery Report", icon: faChartLine, adminOnly: true },
-      { href: "/admin/orders?assignment_status=assigned_pending", label: "Assign / Pending", icon: faTruckFast, adminOnly: true },
-      { href: "/admin/users?role=delivery", label: "Delivery Men", icon: faUsers, adminOnly: true },
-      { href: "/admin/zones", label: "Delivery Zones", icon: faLocationDot, adminOnly: true },
-    ]
-  }
+      { href: "/admin/customers", label: "গ্রাহক তালিকা (Customers)", icon: Users, adminOnly: true },
+      { href: "/admin/users", label: "স্টাফ ও ইউজার (All Users)", icon: UserCog, adminOnly: true },
+      { href: "/admin/vendors", label: "ভেন্ডর / সেলার (Vendors)", icon: Store },
+    ],
+  },
+  {
+    groupLabel: "সিস্টেম সেটিংস (Settings)",
+    icon: Settings,
+    items: [
+      { href: "/admin/settings", label: "ওয়েবসাইট সেটিংস", icon: Settings, adminOnly: true },
+      { href: "/admin/analytics", label: "বিজনেস অ্যানালিটিক্স", icon: FileSpreadsheet, adminOnly: true },
+    ],
+    adminOnly: true,
+  },
 ];
 
-// Client-side mirror of STAFF_ALLOWED in src/proxy.ts — keep the two in sync.
-// Deriving this from NAV_GROUPS instead would silently allow any admin route
-// that has no nav entry (analytics, reports, settings).
-const STAFF_ALLOWED = [
-  "/admin/products",
-  "/admin/orders",
-  "/admin/vendors",
-  "/admin/brands",
-  "/admin/coupons",
-  "/admin/promotions",
-];
-
-function isActive(pathname: string, href: string): boolean {
-  return pathname === href || (href !== "/admin" && pathname.startsWith(href));
+function isPathActive(pathname: string, href: string): boolean {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname.startsWith(href.split("?")[0]);
 }
 
-/* ----------------------- LEFT ICON RAIL (64px) ----------------------- */
-function LeftRail({
-  pathname,
-  visibleNavGroups,
-  isAdmin,
-}: {
-  pathname: string;
-  visibleNavGroups: NavGroup[];
-  isAdmin: boolean;
-}) {
-  return (
-    <div className="flex h-full w-16 flex-col items-center bg-[#f47920] py-4">
-      {/* Icons */}
-      <nav className="flex flex-1 flex-col items-center gap-2">
-        {visibleNavGroups.map((group) => {
-          const active = group.href 
-            ? isActive(pathname, group.href) 
-            : (group.items?.some(i => isActive(pathname, i.href)) ?? false);
-          return (
-            <Link
-              key={group.groupLabel}
-              href={group.href || group.items?.[0]?.href || "/admin"}
-              title={group.groupLabel}
-              aria-label={group.groupLabel}
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                active
-                  ? "bg-white text-[#f47920]"
-                  : "text-white/85 hover:bg-white/15 hover:text-white",
-              )}
-            >
-              <FontAwesomeIcon icon={group.icon} className="h-4 w-4" />
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Bottom: settings (admin only) */}
-      <div className="mt-2 flex flex-col items-center gap-2">
-        {isAdmin && (
-          <Link
-            href="/admin/settings"
-            title="Settings"
-            aria-label="Settings"
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-full",
-              isActive(pathname, "/admin/settings")
-                ? "bg-white text-[#f47920]"
-                : "text-white/85 hover:bg-white/15 hover:text-white",
-            )}
-          >
-            <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
-          </Link>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------ RIGHT PANEL (220px) ------------------------ */
-function RightPanel({
-  pathname,
-  onLogout,
-  onItemClick,
-  isAdmin,
-}: {
-  pathname: string;
-  onLogout: () => void;
-  onItemClick?: () => void;
-  isAdmin: boolean;
-}) {
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const activeGroup = NAV_GROUPS.find(g => g.items && g.items.some(i => isActive(pathname, i.href)));
-    if (activeGroup) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setExpandedGroups(prev => ({ ...prev, [activeGroup.groupLabel]: true }));
-    }
-  }, [pathname]);
-
-  const toggleGroup = (label: string) => {
-    setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  return (
-    <div className="flex h-full w-full flex-col bg-white">
-      {/* Menu */}
-      <nav className="flex-1 overflow-y-auto min-h-0 px-2 py-4">
-        {NAV_GROUPS.map((group) => {
-          if (group.adminOnly && !isAdmin) return null;
-
-          if (group.href) {
-            // single link
-            const active = isActive(pathname, group.href);
-            return (
-              <div key={group.groupLabel} className="mb-2">
-                <Link
-                  href={group.href}
-                  onClick={onItemClick}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-                    active
-                      ? "bg-[#f47920] text-white"
-                      : "text-[#374151] hover:bg-[#eff6ff]",
-                  )}
-                >
-                  <FontAwesomeIcon icon={group.icon} className="h-4 w-4" />
-                  {group.groupLabel}
-                </Link>
-              </div>
-            );
-          }
-
-          // accordion group
-          const visibleItems = group.items?.filter((item) => !item.adminOnly || isAdmin) || [];
-          if (visibleItems.length === 0) return null;
-
-          const isExpanded = !!expandedGroups[group.groupLabel];
-          const hasActiveChild = visibleItems.some(i => isActive(pathname, i.href));
-
-          return (
-            <div key={group.groupLabel} className="mb-2">
-              <button
-                onClick={() => toggleGroup(group.groupLabel)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-                  hasActiveChild
-                    ? "text-[#f47920]"
-                    : "text-[#374151] hover:bg-[#eff6ff]"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={group.icon} className="h-4 w-4" />
-                  {group.groupLabel}
-                </div>
-                <FontAwesomeIcon 
-                  icon={isExpanded ? faChevronDown : faChevronRight} 
-                  className={cn("h-3 w-3", hasActiveChild ? "text-[#f47920]" : "text-[#9ca3af]")} 
-                />
-              </button>
-
-              {isExpanded && (
-                <ul className="mt-1 space-y-1 pl-9">
-                  {visibleItems.map((item) => {
-                    const active = isActive(pathname, item.href);
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          onClick={onItemClick}
-                          className={cn(
-                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors",
-                            active
-                              ? "bg-[#f47920] text-white"
-                              : "text-[#4b5563] hover:bg-[#eff6ff]"
-                          )}
-                        >
-                          {item.icon && <FontAwesomeIcon icon={item.icon} className="h-3 w-3 mr-1 opacity-70" />}
-                          {item.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          );
-        })}
-
-        <p className="mt-6 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9ca3af]">
-          {isAdmin ? "Settings" : "Help"}
-        </p>
-        <ul className="space-y-1">
-          {isAdmin && (
-            <li>
-              <Link
-                href="/admin/settings"
-                onClick={onItemClick}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-                  isActive(pathname, "/admin/settings")
-                    ? "bg-[#f47920] text-white"
-                    : "text-[#374151] hover:bg-[#eff6ff]",
-                )}
-              >
-                <FontAwesomeIcon icon={faGear} className="h-4 w-4" />
-                Settings
-              </Link>
-            </li>
-          )}
-          <li>
-            <a
-              href="https://github.com/ashrafulalamashik/localbazaar"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#eff6ff]"
-            >
-              <FontAwesomeIcon icon={faCircleQuestion} className="h-4 w-4" />
-              Help
-            </a>
-          </li>
-        </ul>
-      </nav>
-
-      {/* Fixed Logout Button at the bottom */}
-      <div className="border-t border-[#e5e7eb] p-4">
-        <button
-          type="button"
-          onClick={() => {
-            onItemClick?.();
-            onLogout();
-          }}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
-        >
-          <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
-          Logout
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ----------------------------- LAYOUT ----------------------------- */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -371,96 +134,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
 
-  const [notifications, setNotifications] = useState<Order[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Sidebar collapsed/expanded — persisted in localStorage, default collapsed.
-  const [expanded, setExpanded] = useState(false);
-  // Wait one tick for AuthHydrator to restore from sessionStorage before
-  // deciding the user is logged out (avoids a redirect race on hard refresh).
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  // One tick hydration check
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    // Restore the sidebar preference at the same time.
-    if (typeof window !== "undefined") {
-      const saved = window.localStorage.getItem("admin-sidebar-expanded");
-      if (saved === "true") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect
-        (setExpanded as any)(true); // Bypass strict set-state-in-effect rule
-      }
-    }
-    const t = setTimeout(() => {
-      setHydrated(true);
-    }, 0);
+    const t = setTimeout(() => setHydrated(true), 0);
     return () => clearTimeout(t);
   }, []);
 
-  // Persist any later changes to the sidebar state.
-  useEffect(() => {
-    if (!hydrated || typeof window === "undefined") return;
-    window.localStorage.setItem("admin-sidebar-expanded", String(expanded));
-  }, [expanded, hydrated]);
-
-  const isAllowed = user?.role === "admin" || user?.role === "staff" || user?.role === "vendor";
   const isAdmin = user?.role === "admin";
+  const isStaff = user?.role === "staff";
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated || !isAllowed) {
+    if (!isAuthenticated || (!isAdmin && !isStaff)) {
       router.replace("/?auth=login&next=/admin");
     }
-  }, [hydrated, isAuthenticated, isAllowed, router]);
+  }, [hydrated, isAuthenticated, isAdmin, isStaff, router]);
 
-  // Guard for staff/vendor accessing admin-only routes directly via URL
+  // Auto-expand group that matches current path
   useEffect(() => {
-    if (!hydrated || !isAuthenticated || !user) return;
-    if (user.role === "admin") return;
-
-    if (pathname === "/admin") {
-      router.replace(user.role === "staff" ? "/admin/orders" : "/admin/products");
-      return;
+    const activeGroup = NAV_GROUPS.find((g) =>
+      g.items?.some((i) => isPathActive(pathname, i.href))
+    );
+    if (activeGroup) {
+      setExpandedGroups((prev) => ({ ...prev, [activeGroup.groupLabel]: true }));
     }
+  }, [pathname]);
 
-    // Staff: allowlist, identical to the proxy. /admin/orders is itself allowed,
-    // so the redirect target can never re-trigger this guard.
-    if (user.role === "staff") {
-      const allowed = STAFF_ALLOWED.some(
-        (p) => pathname === p || pathname.startsWith(p + "/"),
-      );
-      if (!allowed) router.replace("/admin/orders");
-      return;
-    }
-
-    // Vendor: nav-derived admin-only flags (the proxy already bars vendors from
-    // /admin entirely, so this is belt-and-braces only).
-    let adminOnlyPath = false;
-    for (const group of NAV_GROUPS) {
-      if (group.href && isActive(pathname, group.href)) {
-        if (group.adminOnly) adminOnlyPath = true;
-      }
-      if (group.items) {
-        for (const item of group.items) {
-          if (isActive(pathname, item.href)) {
-            if (group.adminOnly || item.adminOnly) adminOnlyPath = true;
-          }
-        }
-      }
-    }
-
-    if (adminOnlyPath) {
-      router.replace("/admin/products");
-    }
-  }, [hydrated, isAuthenticated, user, pathname, router]);
-
-  // Fetch last few orders for the notifications panel.
-  // Dashboard endpoint is admin-only; staff just sees an empty notifications block.
-  useEffect(() => {
-    if (!isAuthenticated || !isAdmin) return;
-    api
-      .get<{ data: DashboardStats }>("/admin/dashboard")
-      .then((r) => setNotifications(r.data.data.recent_orders ?? []))
-      .catch(() => {
-        /* non-fatal */
-      });
-  }, [isAuthenticated, isAdmin]);
+  const toggleGroup = (label: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   const handleLogout = async () => {
     try {
@@ -473,131 +179,247 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   if (!hydrated) return <LoadingSpinner fullHeight />;
-  if (!isAuthenticated || !isAllowed) {
+  if (!isAuthenticated || (!isAdmin && !isStaff)) {
     return <LoadingSpinner fullHeight />;
   }
 
-  const userInfo = { name: user.name, email: user.email };
-  const visibleNavGroups = NAV_GROUPS.filter((g) => !g.adminOnly || isAdmin);
-
-  return (
-    <div className="flex min-h-screen flex-col bg-[#f9fafb]">
-      {/* TOP BAR */}
-      <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7eb] bg-white px-4 md:px-6">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden shrink-0 -ml-2"
-            onClick={() => setMobileOpen(true)}
-          >
-            <FontAwesomeIcon icon={faBars} className="h-5 w-5 text-[#374151]" />
-          </Button>
-
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="hidden md:flex h-9 w-9 items-center justify-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6] transition-colors"
-          >
-            <FontAwesomeIcon icon={faBars} className="h-5 w-5" />
-          </button>
-
-          <Link href="/admin" className="flex h-10 items-center justify-center ml-2">
-            <img src="/logo.png" alt="Future Shop" className="h-full w-auto object-contain" />
+  const sidebarContent = (
+    <div className="flex h-full flex-col bg-white select-none">
+      
+      {/* Brand Header */}
+      <div className="border-b border-gray-200 p-5 bg-gradient-to-br from-orange-50/60 via-white to-white">
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/admin" className="flex items-center gap-2.5 min-w-0">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f47920] text-white shadow-xs">
+              <ShoppingBag className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <span className="font-extrabold text-gray-900 text-sm tracking-tight block truncate">
+                Future Shop
+              </span>
+              <span className="text-[10px] font-bold text-[#f47920] uppercase tracking-wider block">
+                {isAdmin ? "Admin Control" : "Staff Panel"}
+              </span>
+            </div>
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#6b7280] hover:bg-[#f3f4f6] transition-colors outline-none cursor-pointer">
-              <FontAwesomeIcon icon={faBell} className="h-5 w-5" />
-              {notifications.length > 0 && (
-                <span className="absolute right-1 top-1 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white"></span>
-                </span>
-              )}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <div className="px-3 py-2 text-sm font-semibold text-[#111827]">Notifications</div>
-              <DropdownMenuSeparator />
-              {notifications.length === 0 ? (
-                <div className="p-4 text-center text-sm text-[#9ca3af]">No recent orders</div>
-              ) : (
-                notifications.slice(0, 5).map((order) => (
-                  <DropdownMenuItem key={order.id} className="p-0">
-                    <Link href={`/admin/orders`} className="flex w-full flex-col items-start gap-1 p-3 cursor-pointer">
-                      <span className="font-mono text-[11px] font-semibold text-[#111827]">
-                        Order #{order.order_number}
-                      </span>
-                      <span className="text-[11px] text-[#6b7280]">
-                        ৳{Number(order.total).toLocaleString("en-US")} · {order.order_status}
-                      </span>
-                    </Link>
-                  </DropdownMenuItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* View Live Store Button */}
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3.5 flex items-center justify-center gap-2 rounded-xl bg-white border border-gray-200 py-2 px-3 text-xs font-bold text-gray-700 hover:border-[#f47920] hover:text-[#f47920] hover:bg-orange-50/50 shadow-2xs transition-all"
+        >
+          <Globe className="w-3.5 h-3.5 text-[#f47920]" />
+          <span>লাইভ শপ দেখুন</span>
+          <ExternalLink className="w-3 h-3 text-gray-400" />
+        </a>
+      </div>
 
-          <div className="flex items-center gap-3 border-l border-[#e5e7eb] pl-4">
-            <div className="hidden min-w-0 md:block text-right">
-              <p className="truncate text-[13px] font-semibold leading-tight text-[#111827]">
-                {userInfo.name ?? "Admin"}
-              </p>
-              <p className="truncate text-[11px] text-[#9ca3af]">{userInfo.email ?? "—"}</p>
+      {/* Navigation List */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 min-h-0">
+        {NAV_GROUPS.map((group) => {
+          if (group.adminOnly && !isAdmin) return null;
+
+          // Single Link Item (e.g. Dashboard)
+          if (group.href) {
+            const active = isPathActive(pathname, group.href);
+            const Icon = group.icon;
+            return (
+              <div key={group.groupLabel} className="mb-1">
+                <Link
+                  href={group.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition-all",
+                    active
+                      ? "bg-[#f47920] text-white shadow-xs"
+                      : "text-gray-700 hover:bg-orange-50/60 hover:text-[#f47920]"
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={cn("h-4 w-4 shrink-0", active ? "text-white" : "text-gray-400")} />
+                    <span>{group.groupLabel}</span>
+                  </div>
+                  {active && <ChevronRight className="w-3.5 h-3.5 text-white" />}
+                </Link>
+              </div>
+            );
+          }
+
+          // Accordion Group
+          const visibleItems =
+            group.items?.filter((item) => !item.adminOnly || isAdmin) || [];
+          if (visibleItems.length === 0) return null;
+
+          const isExpanded = !!expandedGroups[group.groupLabel];
+          const hasActiveChild = visibleItems.some((i) => isPathActive(pathname, i.href));
+          const GroupIcon = group.icon;
+
+          return (
+            <div key={group.groupLabel} className="mb-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.groupLabel)}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all text-left",
+                  hasActiveChild
+                    ? "text-[#f47920] bg-orange-50/50"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                )}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <GroupIcon className={cn("h-4 w-4 shrink-0", hasActiveChild ? "text-[#f47920]" : "text-gray-400")} />
+                  <span className="truncate">{group.groupLabel}</span>
+                </div>
+                {isExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                )}
+              </button>
+
+              {isExpanded && (
+                <ul className="mt-1 space-y-1 pl-4 pr-1 border-l-2 border-orange-100 ml-4 py-1">
+                  {visibleItems.map((item) => {
+                    const active = isPathActive(pathname, item.href);
+                    const SubIcon = item.icon;
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all",
+                            active
+                              ? "bg-[#f47920] text-white shadow-2xs"
+                              : "text-gray-600 hover:bg-orange-50/50 hover:text-[#f47920]"
+                          )}
+                        >
+                          <SubIcon className={cn("h-3 w-3 shrink-0", active ? "text-white" : "text-gray-400")} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
-              {userInfo.name?.charAt(0).toUpperCase() ?? "A"}
-            </span>
+          );
+        })}
+      </nav>
+
+      {/* User Profile & Logout Bottom Box */}
+      <div className="border-t border-gray-200 p-4 bg-gray-50/50 space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-xs font-bold text-white shadow-2xs">
+            {user?.name?.charAt(0).toUpperCase() ?? "A"}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold text-gray-900 leading-tight">
+              {user?.name ?? "Admin"}
+            </p>
+            <p className="truncate text-[10px] text-muted-foreground font-mono">
+              {user?.email ?? user?.phone ?? "Master Access"}
+            </p>
           </div>
         </div>
-      </header>
 
-      {/* BODY */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar wrapper */}
-        <aside
-          className="hidden shrink-0 overflow-hidden transition-all duration-200 ease-in-out md:flex flex-col border-r border-[#e5e7eb] bg-white"
-          style={{ width: expanded ? "220px" : "64px" }}
+        <Button
+          variant="outline"
+          className="h-9 w-full justify-center gap-2 rounded-xl text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs font-bold"
+          onClick={() => {
+            setMobileOpen(false);
+            handleLogout();
+          }}
         >
-          {expanded ? (
-            <RightPanel
-              pathname={pathname}
-              onLogout={handleLogout}
-              isAdmin={isAdmin}
-            />
-          ) : (
-            <LeftRail
-              pathname={pathname}
-              visibleNavGroups={visibleNavGroups}
-              isAdmin={isAdmin}
-            />
-          )}
-        </aside>
+          <LogOut className="h-3.5 w-3.5" />
+          <span>লগআউট করুন</span>
+        </Button>
+      </div>
+    </div>
+  );
 
-        {/* Mobile Sidebar */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-[260px] p-0 flex flex-col">
-            <SheetHeader className="border-b border-[#e5e7eb] p-4 text-left">
-              <SheetTitle className="text-[#f47920]">Admin Panel</SheetTitle>
-            </SheetHeader>
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <RightPanel
-                pathname={pathname}
-                onLogout={handleLogout}
-                onItemClick={() => setMobileOpen(false)}
-                isAdmin={isAdmin}
-              />
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row">
+      
+      {/* Desktop Fixed Left Sidebar */}
+      <aside className="hidden md:flex w-64 lg:w-72 shrink-0 border-r border-gray-200 bg-white h-screen sticky top-0 flex-col z-30 shadow-xs">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Sheet Drawer */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-72 p-0 flex flex-col bg-white">
+          <SheetHeader className="sr-only">
+            <SheetTitle>অ্যাডমিন মেনু</SheetTitle>
+          </SheetHeader>
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
+
+      {/* Right Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-20 border-b border-gray-200 bg-white shadow-2xs">
+          <div className="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 -ml-2 text-gray-700 hover:bg-orange-50 hover:text-[#f47920] rounded-xl md:hidden"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open admin menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+
+              <div className="hidden sm:block">
+                <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>শেরপুর, বগুড়া সেন্ট্রাল কন্ট্রোল প্যানেল</span>
+                </p>
+              </div>
             </div>
-          </SheetContent>
-        </Sheet>
 
-        {/* Page content */}
-        <main className="min-w-0 flex-1 overflow-y-auto px-4 pb-8 pt-6 md:px-6">
+            <div className="flex items-center gap-3">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-orange-50 hover:text-[#f47920] px-3 py-1.5 rounded-xl border border-gray-200 transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5 text-[#f47920]" />
+                <span>মূল শপ</span>
+                <ExternalLink className="w-3 h-3 text-gray-400" />
+              </a>
+
+              <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-xl">
+                👤 {user?.name}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold md:hidden"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+          </div>
+        </header>
+
+        {/* Page Body */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>
+
     </div>
   );
 }
