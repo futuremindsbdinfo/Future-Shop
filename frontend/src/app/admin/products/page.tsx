@@ -4,10 +4,28 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Download, ImageOff, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ImageOff,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  Package,
+  Layers,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  FileSpreadsheet,
+} from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -26,34 +44,33 @@ import {
 } from "@/components/ui/table";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
+import { formatTaka } from "@/lib/utils";
 import type { Brand, Category, PaginatedResponse, Product } from "@/types";
 
 const TK = "৳";
 
-// Canonical fields a CSV column can map to. Must match the server-side allowlist
-// in AdminMappedImportController::ALLOWED_FIELDS.
 const FIELD_OPTIONS = [
-  { value: "ignore", label: "Ignore (skip)" },
-  { value: "name", label: "Product Name *" },
-  { value: "category", label: "Category *" },
-  { value: "price", label: "Selling Price *" },
-  { value: "cost_price", label: "Trade / Cost Price" },
-  { value: "sale_price", label: "Sale Price (Discount)" },
-  { value: "stock_quantity", label: "Quantity / Stock" },
-  { value: "weight", label: "Weight" },
-  { value: "sku", label: "SKU / Item Code" },
-  { value: "description", label: "Add to Description" },
+  { value: "ignore", label: "বাদ দিন (Skip)" },
+  { value: "name", label: "পণ্যের নাম (Name) *" },
+  { value: "category", label: "ক্যাটাগরি (Category) *" },
+  { value: "price", label: "বিক্রয় মূল্য (MRP) *" },
+  { value: "cost_price", label: "ক্রয় / পাইকারি মূল্য (Cost Price)" },
+  { value: "sale_price", label: "অফার / ডিসকাউন্ট মূল্য (Sale Price)" },
+  { value: "stock_quantity", label: "স্টক পরিমাণ (Stock Quantity)" },
+  { value: "weight", label: "ওজন (Weight)" },
+  { value: "sku", label: "এসকেইউ কোড (SKU)" },
+  { value: "description", label: "বিবরণ (Description)" },
 ] as const;
 
 function autoMap(header: string): string {
   const h = header.toLowerCase().trim();
-  if (h.includes("product name") || h === "item name" || h === "name") return "name";
-  if (h.includes("category")) return "category";
-  if (h.includes("selling price") || h === "mrp") return "price";
-  if (h.includes("trade price") || h.includes("trade") || h.includes("cost")) return "cost_price";
-  if (h.includes("sale price") || h.includes("discount")) return "sale_price";
-  if (h.includes("qtn") || h.includes("qty") || h.includes("quantity") || h.includes("stock")) return "stock_quantity";
-  if (h === "weight") return "weight";
+  if (h.includes("product name") || h === "item name" || h === "name" || h === "পণ্য") return "name";
+  if (h.includes("category") || h === "ক্যাটাগরি") return "category";
+  if (h.includes("selling price") || h === "mrp" || h === "price" || h === "মূল্য") return "price";
+  if (h.includes("trade price") || h.includes("trade") || h.includes("cost") || h === "কেনা দাম") return "cost_price";
+  if (h.includes("sale price") || h.includes("discount") || h === "অফার দাম") return "sale_price";
+  if (h.includes("qtn") || h.includes("qty") || h.includes("quantity") || h.includes("stock") || h === "স্টক") return "stock_quantity";
+  if (h === "weight" || h === "ওজন") return "weight";
   if (h === "sku" || h.includes("item code")) return "sku";
   if (["size", "flavour", "flavor", "quality", "gift", "cp", "colour", "color"].some((k) => h.includes(k))) return "description";
   if (h === "profit" || h === "sl" || h === "no" || h === "#") return "ignore";
@@ -64,18 +81,12 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | "...
   if (totalPages <= 10) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
-
-  // If user is within the first 7 pages: show 1 to 10, then '...', then lastPage
   if (currentPage <= 7) {
     return [...Array.from({ length: 10 }, (_, i) => i + 1), "...", totalPages];
   }
-
-  // If user is near the end: show 1, '...', then the last 10 pages
   if (currentPage >= totalPages - 6) {
     return [1, "...", ...Array.from({ length: 10 }, (_, i) => totalPages - 9 + i)];
   }
-
-  // If in the middle: show 1, '...', 8 pages centered around current, '...', lastPage
   const start = currentPage - 4;
   return [1, "...", ...Array.from({ length: 8 }, (_, i) => start + i), "...", totalPages];
 }
@@ -103,7 +114,7 @@ function AdminProductsContent() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
-  // Sync state when URL params change (e.g. back/forward button or redirect from edit)
+  // Sync state when URL params change
   useEffect(() => {
     const p = Number(searchParams.get("page")) || 1;
     const cat = searchParams.get("category") || "";
@@ -154,14 +165,14 @@ function AdminProductsContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  // CSV import wizard state.
+  // CSV import wizard state
   const [importOpen, setImportOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
-  const [wizardVendorId, setWizardVendorId] = useState<string>("");
   const [wizardVendors, setWizardVendors] = useState<{ id: number; shop_name: string }[]>([]);
+  const [wizardVendorId, setWizardVendorId] = useState<string>("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: number;
@@ -169,72 +180,75 @@ function AdminProductsContent() {
     total: number;
   } | null>(null);
 
-  useEffect(() => {
-    api.get<{ data: Category[] }>("/admin/categories").then((r) => setCategories(r.data.data)).catch(() => {});
-    api.get<PaginatedResponse<Brand>>("/admin/brands?per_page=100").then((r) => setBrands(r.data.data)).catch(() => {});
-  }, []);
-
   const load = useCallback(() => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), per_page: "15" });
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("per_page", "20");
     if (categoryFilter) params.set("category", categoryFilter);
     if (statusFilter) params.set("status", statusFilter);
     if (brandFilter) params.set("brand_id", brandFilter);
     if (searchQuery) params.set("search", searchQuery);
+
     api
       .get<PaginatedResponse<Product>>(`/admin/products?${params.toString()}`)
-      .then((r) => setData(r.data))
-      .catch(() => toast.error("Failed to load products"))
+      .then((r) => {
+        setData(r.data);
+      })
+      .catch(() => toast.error("পণ্য তালিকা লোড করা যায়নি"))
       .finally(() => setLoading(false));
   }, [page, categoryFilter, statusFilter, brandFilter, searchQuery]);
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const params = new URLSearchParams({ per_page: "5000" });
-      if (categoryFilter) params.set("category", categoryFilter);
-      if (statusFilter) params.set("status", statusFilter);
-      if (brandFilter) params.set("brand_id", brandFilter);
-      if (searchQuery) params.set("search", searchQuery);
-      const r = await api.get<PaginatedResponse<Product>>(`/admin/products?${params.toString()}`);
-      const rows = r.data.data.map((p) => ({
-        ID: p.id,
-        Name: p.name,
-        SKU: p.sku ?? "",
-        Category: (p as unknown as { category?: { name?: string } }).category?.name ?? "",
-        Brand: p.brand?.name ?? "",
-        Price: p.price,
-        "Cost Price": p.cost_price ?? "",
-        "Sale Price": p.sale_price ?? "",
-        Stock: p.stock_quantity,
-        Status: p.status,
-      }));
-      const csv = [
-        Object.keys(rows[0] ?? {}).join(","),
-        ...rows.map((row) =>
-          Object.values(row)
-            .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-            .join(",")
-        ),
-      ].join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `products-export-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${rows.length}টি প্রোডাক্ট Export হয়েছে`);
-    } catch {
-      toast.error("Export failed");
-    } finally {
-      setExporting(false);
-    }
-  };
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    api
+      .get<{ data: Category[] }>("/admin/categories")
+      .then((r) => setCategories(r.data.data))
+      .catch(() => {});
+    api
+      .get<PaginatedResponse<Brand>>("/admin/brands?per_page=100")
+      .then((r) => setBrands(r.data.data))
+      .catch(() => {});
+  }, []);
+
+  const handleToggleStatus = async (product: Product) => {
+    const nextStatus = product.status === "published" ? "draft" : "published";
+    try {
+      await api.patch(`/admin/products/${product.id}/status`, { status: nextStatus });
+      toast.success(nextStatus === "published" ? "পণ্যটি প্রকাশিত হয়েছে" : "পণ্যটি ড্রাফট করা হয়েছে");
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          data: prev.data.map((p) => (p.id === product.id ? { ...p, status: nextStatus } : p)),
+        };
+      });
+    } catch {
+      toast.error("স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে");
+    }
+  };
+
+  const handleDelete = (product: Product) => {
+    setDeleteTarget(product);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/admin/products/${deleteTarget.id}`);
+      toast.success("পণ্যটি সফলভাবে মুছে ফেলা হয়েছে");
+      setDeleteTarget(null);
+      load();
+    } catch {
+      toast.error("মুছে ফেলা যায়নি");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const toggleBulkMode = () => {
     setBulkMode((prev) => !prev);
@@ -242,8 +256,7 @@ function AdminProductsContent() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (!data) return;
-    if (checked) {
+    if (checked && data) {
       setSelectedIds(data.data.map((p) => p.id));
     } else {
       setSelectedIds([]);
@@ -254,92 +267,93 @@ function AdminProductsContent() {
     if (checked) {
       setSelectedIds((prev) => [...prev, id]);
     } else {
-      setSelectedIds((prev) => prev.filter((i) => i !== id));
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
     }
   };
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setIsDeleting(true);
-    try {
-      await api.delete(`/admin/products/${deleteTarget.id}`);
-      toast.success("Product deleted");
-      setDeleteTarget(null);
-      load();
-    } catch {
-      toast.error("Delete failed");
-    } finally {
-      setIsDeleting(false);
+  const handleBulkAction = (action: "delete" | "activate" | "deactivate") => {
+    if (selectedIds.length === 0) return;
+    if (action === "delete") {
+      setShowBulkDeleteConfirm(true);
+    } else {
+      executeBulkAction(action);
     }
-  };
-
-  const handleDelete = (product: Product) => {
-    setDeleteTarget(product);
   };
 
   const executeBulkAction = async (action: "delete" | "activate" | "deactivate") => {
     setIsBulkActionLoading(true);
     try {
-      await api.post("/admin/products/bulk-action", {
-        ids: selectedIds,
-        action,
-      });
-      toast.success(
-        action === "delete"
-          ? `${selectedIds.length}টি পণ্য মুছে ফেলা হয়েছে`
-          : `${selectedIds.length}টি পণ্য আপডেট হয়েছে`
+      const res = await api.post<{ success: boolean; updated?: number; deleted?: number }>(
+        "/admin/products/bulk-action",
+        {
+          ids: selectedIds,
+          action,
+        }
       );
-      setSelectedIds([]);
-      setBulkMode(false);
-      if (action === "delete") setShowBulkDeleteConfirm(false);
-      load();
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err?.response?.data?.message ?? "Bulk action failed");
+      if (res.data.success) {
+        if (action === "delete") {
+          toast.success(`${res.data.deleted ?? selectedIds.length}টি পণ্য মুছে ফেলা হয়েছে`);
+          setShowBulkDeleteConfirm(false);
+        } else if (action === "activate") {
+          toast.success(`${res.data.updated ?? selectedIds.length}টি পণ্য একটিভ করা হয়েছে`);
+        } else if (action === "deactivate") {
+          toast.success(`${res.data.updated ?? selectedIds.length}টি পণ্য ইনএকটিভ করা হয়েছে`);
+        }
+        setSelectedIds([]);
+        load();
+      }
+    } catch {
+      toast.error("বাল্ক অ্যাকশন সম্পন্ন করা যায়নি");
     } finally {
       setIsBulkActionLoading(false);
     }
   };
 
-  const handleBulkAction = async (action: "delete" | "activate" | "deactivate") => {
-    if (action === "delete") {
-      setShowBulkDeleteConfirm(true);
-      return;
-    }
-    executeBulkAction(action);
-  };
-
-  const handleToggleStatus = async (product: Product) => {
-    if (product.status === "out_of_stock") return;
-
-    const prevStatus = product.status;
-    const nextStatus = prevStatus === "published" ? "draft" : "published";
-
-    setData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        data: prev.data.map((p) =>
-          p.id === product.id ? { ...p, status: nextStatus } : p
-        ),
-      };
-    });
-
+  const handleExport = async () => {
+    setExporting(true);
     try {
-      await api.patch(`/admin/products/${product.id}/toggle-status`);
-      toast.success("স্ট্যাটাস আপডেট হয়েছে");
-    } catch (e: unknown) {
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          data: prev.data.map((p) =>
-            p.id === product.id ? { ...p, status: prevStatus } : p
-          ),
-        };
+      const res = await api.get<{ data: Product[] }>("/admin/products/export", {
+        params: {
+          category: categoryFilter || undefined,
+          status: statusFilter || undefined,
+          brand_id: brandFilter || undefined,
+          search: searchQuery || undefined,
+        },
       });
-      const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err?.response?.data?.message ?? "Status update failed");
+      const exportList = res.data.data;
+      if (!exportList || exportList.length === 0) {
+        toast.info("এক্সপোর্ট করার মতো কোনো পণ্য পাওয়া যায়নি");
+        return;
+      }
+
+      const csvData = exportList.map((p, idx) => ({
+        "SL": idx + 1,
+        "Product Name": p.name,
+        "Category": p.category?.name ?? "",
+        "Brand": p.brand?.name ?? "",
+        "Vendor": p.vendor?.shop_name ?? "",
+        "Selling Price": p.price,
+        "Sale Price": p.sale_price ?? "",
+        "Cost Price": p.cost_price ?? "",
+        "Profit": Number(p.sale_price ?? p.price) - Number(p.cost_price ?? 0),
+        "Stock Quantity": p.stock_quantity,
+        "Status": p.status,
+      }));
+
+      const csvString = Papa.unparse(csvData);
+      const blob = new Blob(["\uFEFF" + csvString], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `FutureShop_Products_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(`${exportList.length}টি পণ্যের CSV ডাউনলোড সম্পন্ন হয়েছে`);
+    } catch {
+      toast.error("CSV এক্সপোর্ট ব্যর্থ হয়েছে");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -383,7 +397,7 @@ function AdminProductsContent() {
 
   const runImport = async () => {
     if (!wizardVendorId) {
-      toast.error("Vendor select করুন");
+      toast.error("অনুগ্রহ করে Vendor নির্বাচন করুন");
       return;
     }
     setImporting(true);
@@ -402,7 +416,7 @@ function AdminProductsContent() {
       load();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err?.response?.data?.message ?? "Import failed");
+      toast.error(err?.response?.data?.message ?? "ইমপোর্ট ব্যর্থ হয়েছে");
     } finally {
       setImporting(false);
     }
@@ -415,57 +429,74 @@ function AdminProductsContent() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-2xl font-bold">Products</h1>
-          {data && (
-            <span className="text-sm font-medium text-muted-foreground" lang="bn">
-              মোট {data.total} টি পণ্য
-            </span>
-          )}
+    <div className="space-y-6">
+      
+      {/* Header & Quick Action Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-gray-200">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight" lang="bn">
+              পণ্য ব্যবস্থাপনা (Product Catalog)
+            </h1>
+            {data && (
+              <Badge className="bg-orange-50 text-[#f47920] border-orange-200 font-bold text-xs">
+                মোট {data.total}টি পণ্য
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5" lang="bn">
+            ওয়েবসাইটের সকল পণ্য নিয়ন্ত্রণ, স্টক আপডেট, মূল্য ও বাল্ক আপলোড
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={bulkMode ? "default" : "outline"}
-            className="h-11"
+            className={`h-10 px-3.5 rounded-xl text-xs font-bold ${
+              bulkMode ? "bg-[#f47920] hover:bg-[#d46212] text-white shadow-xs" : "border-gray-200 text-gray-700"
+            }`}
             onClick={toggleBulkMode}
           >
-            Bulk Mode
+            {bulkMode ? "✓ বাল্ক মোড চালু" : "বাল্ক মোড"}
           </Button>
+
           <Button
             variant="outline"
-            className="h-11"
+            className="h-10 px-3.5 rounded-xl border-gray-200 text-xs font-bold text-gray-700 hover:text-[#f47920]"
             onClick={handleExport}
             disabled={exporting}
           >
-            <Download className="mr-2 h-4 w-4" />
-            {exporting ? "Exporting..." : "Export CSV"}
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            <span>{exporting ? "এক্সপোর্ট হচ্ছে..." : "এক্সেল / CSV এক্সপোর্ট"}</span>
           </Button>
+
           <Button
             variant="outline"
-            className="h-11"
+            className="h-10 px-3.5 rounded-xl border-gray-200 text-xs font-bold text-gray-700 hover:text-[#f47920]"
             onClick={openWizard}
           >
-            <Upload className="mr-2 h-4 w-4" /> Import CSV
+            <Upload className="mr-1.5 h-3.5 w-3.5" />
+            <span>CSV ইমপোর্ট</span>
           </Button>
+
           {(() => {
             const qs = getReturnParams();
             return (
               <Button
                 nativeButton={false}
                 render={<Link href={qs ? `/admin/products/new?${qs}` : "/admin/products/new"} />}
-                className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+                className="h-10 px-4 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
               >
-                <Plus className="mr-2 h-4 w-4" /> Add Product
+                <Plus className="h-4 w-4" />
+                <span>নতুন পণ্য যোগ করুন</span>
               </Button>
             );
           })()}
         </div>
       </div>
 
-      {/* Search + Filters */}
-      <div className="flex flex-wrap gap-3">
+      {/* Search Bar & Filters */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200 shadow-xs flex flex-wrap items-center gap-3">
         {/* Search */}
         <form
           onSubmit={(e) => {
@@ -475,10 +506,10 @@ function AdminProductsContent() {
             setSearchQuery(q);
             updateUrl(1, categoryFilter, statusFilter, brandFilter, q);
           }}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1.5 flex-1 min-w-[240px]"
         >
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <input
               type="text"
               value={searchInput}
@@ -490,18 +521,19 @@ function AdminProductsContent() {
                   updateUrl(1, categoryFilter, statusFilter, brandFilter, "");
                 }
               }}
-              placeholder="Search products..."
-              className="h-9 w-52 rounded-md border border-input bg-transparent pl-8 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#f47920]"
+              placeholder="পণ্যের নাম বা SKU দিয়ে খুঁজুন..."
+              className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-10 pr-3 text-xs outline-none focus:border-[#f47920] focus:bg-white focus:ring-2 focus:ring-[#f47920]/20 transition-all"
             />
           </div>
-          <button
+          <Button
             type="submit"
-            className="h-9 rounded-md bg-[#f47920] px-3 text-sm font-medium text-white hover:bg-[#e56910] transition-colors"
+            className="h-10 px-4 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-2xs"
           >
-            Search
-          </button>
+            খুঁজুন
+          </Button>
         </form>
 
+        {/* Category Dropdown */}
         <select
           value={categoryFilter}
           onChange={(e) => {
@@ -510,13 +542,15 @@ function AdminProductsContent() {
             setCategoryFilter(cat);
             updateUrl(1, cat, statusFilter, brandFilter, searchQuery);
           }}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+          className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#f47920]"
         >
-          <option value="">All categories</option>
+          <option value="">সকল ক্যাটাগরি</option>
           {categories.map((c) => (
             <option key={c.id} value={c.slug}>{c.name}</option>
           ))}
         </select>
+
+        {/* Status Dropdown */}
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -525,13 +559,15 @@ function AdminProductsContent() {
             setStatusFilter(stat);
             updateUrl(1, categoryFilter, stat, brandFilter, searchQuery);
           }}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+          className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#f47920]"
         >
-          <option value="">All statuses</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="out_of_stock">Out of stock</option>
+          <option value="">সকল স্ট্যাটাস</option>
+          <option value="published">প্রকাশিত (Published)</option>
+          <option value="draft">ড্রাফট (Draft)</option>
+          <option value="out_of_stock">স্টক নেই (Out of stock)</option>
         </select>
+
+        {/* Brand Dropdown */}
         <select
           value={brandFilter}
           onChange={(e) => {
@@ -540,108 +576,123 @@ function AdminProductsContent() {
             setBrandFilter(br);
             updateUrl(1, categoryFilter, statusFilter, br, searchQuery);
           }}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+          className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#f47920]"
         >
-          <option value="">All Brands</option>
+          <option value="">সকল ব্র্যান্ড</option>
           {brands.map((b) => (
             <option key={b.id} value={String(b.id)}>{b.name}</option>
           ))}
         </select>
       </div>
 
+      {/* Bulk Action Controls Bar */}
       {bulkMode && selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
-          <span className="text-sm font-medium">
-            {selectedIds.length}টি নির্বাচিত
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-3.5 shadow-xs">
+          <span className="text-xs font-bold text-orange-950">
+            {selectedIds.length}টি পণ্য নির্বাচিত হয়েছে
           </span>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              className="h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              size="sm"
+              className="h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold"
               onClick={() => handleBulkAction("delete")}
               disabled={isBulkActionLoading}
             >
-              মুছুন
+              মুছে ফেলুন ({selectedIds.length})
             </Button>
             <Button
               variant="outline"
-              className="h-11 text-green-700 hover:bg-green-50"
+              size="sm"
+              className="h-9 px-3 rounded-xl border-green-200 text-green-700 hover:bg-green-50 text-xs font-bold"
               onClick={() => handleBulkAction("activate")}
               disabled={isBulkActionLoading}
             >
-              Active করুন
+              Active / Publish করুন
             </Button>
             <Button
               variant="outline"
-              className="h-11 text-muted-foreground hover:bg-muted/80"
+              size="sm"
+              className="h-9 px-3 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-100 text-xs font-bold"
               onClick={() => handleBulkAction("deactivate")}
               disabled={isBulkActionLoading}
             >
-              Inactive করুন
+              Draft করুন
             </Button>
           </div>
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
+      {/* Products Table Card */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-3">
             <LoadingSpinner />
-          ) : !data || data.data.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">No products found.</p>
-          ) : (
+            <p className="text-xs text-muted-foreground font-semibold" lang="bn">পণ্য তালিকা লোড হচ্ছে...</p>
+          </div>
+        ) : !data || data.data.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <Package className="w-12 h-12 text-gray-300 mx-auto" />
+            <h3 className="text-sm font-bold text-gray-800" lang="bn">কোনো পণ্য পাওয়া যায়নি</h3>
+            <p className="text-xs text-muted-foreground" lang="bn">অনুগ্রহ করে ফিল্টার পরিবর্তন করুন বা নতুন পণ্য যোগ করুন।</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-gray-50/80">
                 <TableRow>
                   {bulkMode && (
-                    <TableHead className="w-[50px]">
-                      <div className="flex h-11 w-11 items-center justify-center">
-                        <input
-                          type="checkbox"
-                          className="h-5 w-5 cursor-pointer rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
-                          checked={data.data.length > 0 && selectedIds.length === data.data.length}
-                          onChange={(e) => handleSelectAll(e.target.checked)}
-                          aria-label="Select all"
-                        />
-                      </div>
+                    <TableHead className="w-10 text-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
+                        checked={data.data.length > 0 && selectedIds.length === data.data.length}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        aria-label="Select all"
+                      />
                     </TableHead>
                   )}
-                  <TableHead className="w-[50px]">#</TableHead>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Brand</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Cost Price</TableHead>
-                  <TableHead>Profit</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-12 font-bold text-xs">#</TableHead>
+                  <TableHead className="w-14 font-bold text-xs">ছবি</TableHead>
+                  <TableHead className="font-bold text-xs min-w-[200px]">পণ্যের নাম ও ক্যাটাগরি</TableHead>
+                  <TableHead className="font-bold text-xs">ব্র্যান্ড</TableHead>
+                  <TableHead className="font-bold text-xs">ভেন্ডর</TableHead>
+                  <TableHead className="font-bold text-xs">বিক্রয় মূল্য</TableHead>
+                  <TableHead className="font-bold text-xs">ক্রয় মূল্য</TableHead>
+                  <TableHead className="font-bold text-xs">লাভ (Profit)</TableHead>
+                  <TableHead className="font-bold text-xs text-center">স্টক</TableHead>
+                  <TableHead className="font-bold text-xs text-center">স্ট্যাটাস</TableHead>
+                  <TableHead className="text-right font-bold text-xs">অ্যাকশন</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+
+              <TableBody className="divide-y divide-gray-100 text-xs">
                 {data.data.map((product, index) => {
                   const img = product.images?.[0]?.url ?? null;
+                  const profit = profitFor(product);
+                  const isOutOfStock = product.stock_quantity <= 0;
+                  const isLowStock = product.stock_quantity > 0 && product.stock_quantity <= 5;
+
                   return (
-                    <TableRow key={product.id}>
+                    <TableRow key={product.id} className="hover:bg-orange-50/20 transition-colors">
                       {bulkMode && (
-                        <TableCell>
-                          <div className="flex h-11 w-11 items-center justify-center">
-                            <input
-                              type="checkbox"
-                              className="h-5 w-5 cursor-pointer rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
-                              checked={selectedIds.includes(product.id)}
-                              onChange={(e) => handleSelectOne(product.id, e.target.checked)}
-                              aria-label={`Select ${product.name}`}
-                            />
-                          </div>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
+                            checked={selectedIds.includes(product.id)}
+                            onChange={(e) => handleSelectOne(product.id, e.target.checked)}
+                            aria-label={`Select ${product.name}`}
+                          />
                         </TableCell>
                       )}
-                      <TableCell className="font-medium text-muted-foreground">
+
+                      <TableCell className="font-mono text-gray-500 font-semibold">
                         {(data.from ?? 1) + index}
                       </TableCell>
+
                       <TableCell>
-                        <div className="relative h-10 w-10 overflow-hidden rounded bg-muted">
+                        <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-gray-50 border border-gray-100 shrink-0">
                           {img ? (
                             <Image src={img} alt={product.name} fill sizes="40px" className="object-cover" />
                           ) : (
@@ -651,45 +702,70 @@ function AdminProductsContent() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate font-medium">{product.name}</TableCell>
-                      <TableCell className="text-sm">
+
+                      <TableCell>
+                        <div className="space-y-0.5 min-w-0 max-w-[240px]">
+                          <p className="font-bold text-gray-900 truncate">{product.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            {product.category?.name ?? "ক্যাটাগরি নেই"}
+                          </p>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-gray-600">
                         {product.brand?.name ?? <span className="text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell>{product.vendor?.shop_name ?? "—"}</TableCell>
-                      <TableCell>{TK}{Number(product.sale_price ?? product.price).toLocaleString("en-US")}</TableCell>
-                      <TableCell>{TK}{Number(product.cost_price ?? 0).toLocaleString("en-US")}</TableCell>
-                      <TableCell>
-                        {(() => {
-                          const p = profitFor(product);
-                          return (
-                            <span className={p >= 0 ? "font-medium text-green-700" : "font-medium text-red-600"}>
-                              {TK}{p.toLocaleString("en-US")}
-                            </span>
-                          );
-                        })()}
+
+                      <TableCell className="text-gray-600">
+                        {product.vendor?.shop_name ?? "—"}
                       </TableCell>
-                      <TableCell>{product.stock_quantity}</TableCell>
+
+                      <TableCell className="font-bold text-gray-900">
+                        {formatTaka(Number(product.sale_price ?? product.price))}
+                      </TableCell>
+
+                      <TableCell className="text-muted-foreground">
+                        {product.cost_price ? formatTaka(Number(product.cost_price)) : "—"}
+                      </TableCell>
+
                       <TableCell>
-                        {product.status === "out_of_stock" ? (
-                          <div className="flex h-11 w-max items-center justify-center rounded-full bg-muted px-4 text-xs font-medium text-muted-foreground opacity-80 cursor-not-allowed">
-                            স্টক নেই
-                          </div>
+                        <span className={`font-bold ${profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                          {profit >= 0 ? "+" : ""}{formatTaka(profit)}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        {isOutOfStock ? (
+                          <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold">
+                            স্টক শেষ
+                          </Badge>
+                        ) : isLowStock ? (
+                          <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-bold">
+                            {product.stock_quantity}টি (কম)
+                          </Badge>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(product)}
-                            className={`flex h-11 w-max min-w-[80px] items-center justify-center rounded-full px-4 text-xs font-medium transition-colors ${
-                              product.status === "published"
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            }`}
-                          >
-                            {product.status === "published" ? "Active" : "Inactive"}
-                          </button>
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
+                            {product.stock_quantity}টি
+                          </Badge>
                         )}
                       </TableCell>
+
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(product)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${
+                            product.status === "published"
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {product.status === "published" ? "প্রকাশিত ✓" : "ড্রাফট"}
+                        </button>
+                      </TableCell>
+
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
                           {(() => {
                             const qs = getReturnParams();
                             const editUrl = `/admin/products/new?id=${product.id}${qs ? `&${qs}` : ""}`;
@@ -697,23 +773,24 @@ function AdminProductsContent() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-11 w-11"
+                                className="h-8 w-8 rounded-lg text-gray-600 hover:text-[#f47920] hover:bg-orange-50"
                                 nativeButton={false}
                                 render={<Link href={editUrl} />}
-                                aria-label="Edit"
+                                title="এডিট করুন"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
                               </Button>
                             );
                           })()}
+
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-11 w-11 text-red-600"
+                            className="h-8 w-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
                             onClick={() => handleDelete(product)}
-                            aria-label="Delete"
+                            title="মুছে ফেলুন"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -722,21 +799,22 @@ function AdminProductsContent() {
                 })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
+      {/* Pagination */}
       {data && data.last_page > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-4 py-2">
-          <span className="text-sm text-muted-foreground">
-            Showing {(data.from ?? 1)} to {(data.to ?? data.data.length)} of {data.total} products (Page {data.current_page} of {data.last_page})
+          <span className="text-xs text-muted-foreground font-semibold" lang="bn">
+            দেখানো হচ্ছে {(data.from ?? 1)} থেকে {(data.to ?? data.data.length)} (মোট {data.total}টি পণ্য)
           </span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Previous Button */}
+
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
-              className="h-9 px-3 gap-1"
+              className="h-9 px-3 rounded-xl text-xs font-bold"
               disabled={page <= 1}
               onClick={() => {
                 const newPage = page - 1;
@@ -744,15 +822,14 @@ function AdminProductsContent() {
                 updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
               }}
             >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Prev</span>
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+              <span>আগের পৃষ্ঠা</span>
             </Button>
 
-            {/* Page Number Buttons */}
             {getPageNumbers(data.current_page, data.last_page).map((item, idx) => {
               if (item === "...") {
                 return (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground select-none">
+                  <span key={`ellipsis-${idx}`} className="px-2 text-xs text-muted-foreground select-none">
                     ...
                   </span>
                 );
@@ -763,10 +840,10 @@ function AdminProductsContent() {
                   key={item}
                   variant={isCurrent ? "default" : "outline"}
                   size="sm"
-                  className={`h-9 min-w-[36px] px-2.5 text-sm font-medium transition-all ${
+                  className={`h-9 min-w-[36px] px-2.5 rounded-xl text-xs font-bold transition-all ${
                     isCurrent
-                      ? "bg-[#f47920] text-white hover:bg-[#e56910] font-bold shadow-sm"
-                      : "text-foreground hover:bg-muted hover:text-[#f47920]"
+                      ? "bg-[#f47920] text-white hover:bg-[#d46212] shadow-xs"
+                      : "text-gray-700 hover:text-[#f47920]"
                   }`}
                   onClick={() => {
                     if (item !== page) {
@@ -780,11 +857,10 @@ function AdminProductsContent() {
               );
             })}
 
-            {/* Next Button */}
             <Button
               variant="outline"
               size="sm"
-              className="h-9 px-3 gap-1"
+              className="h-9 px-3 rounded-xl text-xs font-bold"
               disabled={page >= data.last_page}
               onClick={() => {
                 const newPage = page + 1;
@@ -792,14 +868,14 @@ function AdminProductsContent() {
                 updateUrl(newPage, categoryFilter, statusFilter, brandFilter, searchQuery);
               }}
             >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="h-4 w-4" />
+              <span>পরের পৃষ্ঠা</span>
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* CSV Import Wizard */}
+      {/* CSV Import Wizard Dialog */}
       <Dialog
         open={importOpen}
         onOpenChange={(open) => {
@@ -809,12 +885,12 @@ function AdminProductsContent() {
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>
-              {wizardStep === 1 && "Step 1 — CSV ফাইল আপলোড করুন"}
-              {wizardStep === 2 && "Step 2 — কলাম ম্যাপিং ও Vendor"}
-              {wizardStep === 3 && "Step 3 — Import ফলাফল"}
+            <DialogTitle className="text-base font-extrabold text-gray-900" lang="bn">
+              {wizardStep === 1 && "ধাপ ১ — এক্সেল বা CSV ফাইল আপলোড করুন"}
+              {wizardStep === 2 && "ধাপ ২ — কলাম ম্যাপিং ও ভেন্ডর নির্ধারণ"}
+              {wizardStep === 3 && "ধাপ ৩ — ইমপোর্ট ফলাফল"}
             </DialogTitle>
           </DialogHeader>
 
@@ -824,29 +900,28 @@ function AdminProductsContent() {
               <div
                 key={s}
                 className={`h-2 flex-1 rounded-full transition-colors ${
-                  s <= wizardStep ? "bg-[#f47920]" : "bg-muted"
+                  s <= wizardStep ? "bg-[#f47920]" : "bg-gray-100"
                 }`}
               />
             ))}
           </div>
 
-          {/* ── STEP 1: Upload ── */}
+          {/* STEP 1: Upload */}
           {wizardStep === 1 && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground" lang="bn">
-                যেকোনো ফরম্যাটের CSV আপলোড করুন। পরের ধাপে আপনি নির্ধারণ করবেন
-                কোন কলাম কোন ফিল্ডে যাবে।
+              <p className="text-xs text-muted-foreground" lang="bn">
+                যেকোনো ফরম্যাটের CSV আপলোড করুন। পরের ধাপে আপনি নির্ধারণ করবেন কোন কলাম কোন ফিল্ডে যাবে।
               </p>
               <div
-                className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-input p-10 text-center transition-colors hover:border-[#f47920]"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 p-10 text-center transition-colors hover:border-[#f47920] bg-gray-50/50"
                 onClick={() => document.getElementById("csv-wizard-input")?.click()}
               >
-                <Upload className="mb-3 h-10 w-10 text-muted-foreground" />
-                <p className="text-sm font-medium" lang="bn">
-                  CSV ফাইল ড্র্যাগ করুন বা ক্লিক করুন
+                <Upload className="mb-3 h-10 w-10 text-[#f47920]" />
+                <p className="text-xs font-bold text-gray-900" lang="bn">
+                  CSV ফাইল ড্র্যাগ করুন বা ক্লিক করে সিলেক্ট করুন
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground" lang="bn">
-                  .csv ফরম্যাট, যেকোনো হেডার
+                <p className="mt-1 text-[11px] text-muted-foreground" lang="bn">
+                  .csv ফাইল (সর্বোচ্চ ১০MB)
                 </p>
               </div>
               <input
@@ -859,19 +934,19 @@ function AdminProductsContent() {
             </div>
           )}
 
-          {/* ── STEP 2: Column Mapping ── */}
+          {/* STEP 2: Column Mapping */}
           {wizardStep === 2 && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium" lang="bn">
-                  Vendor নির্বাচন করুন *
+                <label className="text-xs font-bold text-gray-700" lang="bn">
+                  ভেন্ডর / সেলার নির্বাচন করুন *
                 </label>
                 <select
                   value={wizardVendorId}
                   onChange={(e) => setWizardVendorId(e.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700"
                 >
-                  <option value="" lang="bn">-- Vendor select করুন --</option>
+                  <option value="" lang="bn">-- ভেন্ডর সিলেক্ট করুন --</option>
                   {wizardVendors.map((v) => (
                     <option key={v.id} value={String(v.id)}>
                       {v.shop_name}
@@ -881,34 +956,25 @@ function AdminProductsContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium" lang="bn">
+                <label className="text-xs font-bold text-gray-700" lang="bn">
                   কলাম ম্যাপিং
                 </label>
-                <p className="mb-2 text-xs text-muted-foreground" lang="bn">
-                  CSV-এর প্রতিটি কলাম কোন ফিল্ডে যাবে তা নির্বাচন করুন। তারকা (*) চিহ্নিত
-                  ফিল্ড বাধ্যতামূলক।
+                <p className="mb-2 text-[11px] text-muted-foreground" lang="bn">
+                  CSV-এর প্রতিটি কলাম ডাটাবেজের কোন ফিল্ডে যাবে তা নির্ধারণ করুন।
                 </p>
-                <div className="overflow-hidden rounded-lg border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
+                <div className="overflow-hidden rounded-xl border border-gray-200">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium" lang="bn">
-                          CSV কলাম
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium" lang="bn">
-                          ম্যাপ করুন →
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground" lang="bn">
-                          নমুনা মান
-                        </th>
+                        <th className="px-3 py-2 text-left font-bold" lang="bn">CSV কলাম</th>
+                        <th className="px-3 py-2 text-left font-bold" lang="bn">ম্যাপ করুন →</th>
+                        <th className="px-3 py-2 text-left font-bold text-muted-foreground" lang="bn">নমুনা মান</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {csvHeaders.map((header) => (
-                        <tr key={header} className="border-t">
-                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                            {header}
-                          </td>
+                        <tr key={header}>
+                          <td className="px-3 py-2 font-mono text-[11px] text-gray-700">{header}</td>
                           <td className="px-3 py-2">
                             <select
                               value={columnMapping[header] ?? "ignore"}
@@ -916,9 +982,9 @@ function AdminProductsContent() {
                                 setColumnMapping((prev) => ({
                                   ...prev,
                                   [header]: e.target.value,
-                                }))
+                                }));
                               }
-                              className="h-8 w-full rounded border border-input bg-transparent px-2 text-xs"
+                              className="h-8 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs"
                             >
                               {FIELD_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>
@@ -927,7 +993,7 @@ function AdminProductsContent() {
                               ))}
                             </select>
                           </td>
-                          <td className="max-w-[120px] truncate px-3 py-2 text-xs text-muted-foreground">
+                          <td className="max-w-[120px] truncate px-3 py-2 text-[11px] text-muted-foreground">
                             {csvRows[0]?.[header] ?? "—"}
                           </td>
                         </tr>
@@ -937,74 +1003,42 @@ function AdminProductsContent() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground" lang="bn">
-                মোট {csvRows.length} টি পণ্য পাওয়া গেছে। Import হবে{" "}
-                <strong>draft</strong> হিসেবে — পরে Publish করতে পারবেন।
+              <p className="text-[11px] text-muted-foreground" lang="bn">
+                মোট {csvRows.length}টি পণ্য পাওয়া গেছে। পণ্যগুলো ড্রাফট হিসেবে ইমপোর্ট হবে।
               </p>
 
               <DialogFooter className="gap-2">
-                <Button variant="ghost" onClick={() => setWizardStep(1)} className="h-11">
+                <Button variant="ghost" onClick={() => setWizardStep(1)} className="h-10 rounded-xl text-xs">
                   <span lang="bn">← পেছনে</span>
                 </Button>
                 <Button
                   onClick={runImport}
                   disabled={importing || !wizardVendorId}
-                  className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+                  className="h-10 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-xs"
                 >
-                  {importing ? (
-                    <span lang="bn">Import হচ্ছে...</span>
-                  ) : (
-                    <span lang="bn">Import করুন ({csvRows.length} পণ্য)</span>
-                  )}
+                  {importing ? "ইমপোর্ট হচ্ছে..." : `ইমপোর্ট শুরু করুন (${csvRows.length}টি পণ্য)`}
                 </Button>
               </DialogFooter>
             </div>
           )}
 
-          {/* ── STEP 3: Result ── */}
+          {/* STEP 3: Result */}
           {wizardStep === 3 && importResult && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg bg-green-50 p-3 text-center">
-                  <p className="text-2xl font-bold text-green-700">{importResult.success}</p>
-                  <p className="mt-0.5 text-xs text-green-600" lang="bn">
-                    সফল
-                  </p>
+                <div className="rounded-2xl bg-emerald-50 p-4 text-center border border-emerald-100">
+                  <p className="text-2xl font-black text-emerald-700">{importResult.success}</p>
+                  <p className="mt-0.5 text-xs font-bold text-emerald-600" lang="bn">সফল</p>
                 </div>
-                <div className="rounded-lg bg-red-50 p-3 text-center">
-                  <p className="text-2xl font-bold text-red-700">{importResult.errors.length}</p>
-                  <p className="mt-0.5 text-xs text-red-600" lang="bn">
-                    ত্রুটি
-                  </p>
+                <div className="rounded-2xl bg-red-50 p-4 text-center border border-red-100">
+                  <p className="text-2xl font-black text-red-700">{importResult.errors.length}</p>
+                  <p className="mt-0.5 text-xs font-bold text-red-600" lang="bn">ত্রুটি</p>
                 </div>
-                <div className="rounded-lg bg-muted p-3 text-center">
-                  <p className="text-2xl font-bold">{importResult.total}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground" lang="bn">
-                    মোট
-                  </p>
+                <div className="rounded-2xl bg-gray-50 p-4 text-center border border-gray-100">
+                  <p className="text-2xl font-black text-gray-900">{importResult.total}</p>
+                  <p className="mt-0.5 text-xs font-bold text-muted-foreground" lang="bn">মোট</p>
                 </div>
               </div>
-
-              {importResult.errors.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-red-600" lang="bn">
-                    ত্রুটিপূর্ণ সারি:
-                  </p>
-                  <div className="max-h-48 overflow-y-auto rounded-lg border text-xs">
-                    {importResult.errors.map((err, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-2 border-b px-3 py-2 last:border-b-0"
-                      >
-                        <span className="flex-shrink-0 text-muted-foreground">
-                          Row {err.row}:
-                        </span>
-                        <span className="text-red-600">{err.error}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <DialogFooter>
                 <Button
@@ -1012,7 +1046,7 @@ function AdminProductsContent() {
                     setImportOpen(false);
                     setWizardStep(1);
                   }}
-                  className="h-11 bg-[#f47920] hover:bg-[#e56910]"
+                  className="h-10 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-xs"
                 >
                   <span lang="bn">সম্পন্ন</span>
                 </Button>
@@ -1022,21 +1056,21 @@ function AdminProductsContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Single Delete Confirm Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>Delete Product?</DialogTitle>
+            <DialogTitle className="text-base font-bold text-gray-900" lang="bn">পণ্যটি মুছে ফেলবেন?</DialogTitle>
           </DialogHeader>
-          <p className="py-2 text-sm text-muted-foreground">
-            Delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+          <p className="py-2 text-xs text-muted-foreground leading-relaxed" lang="bn">
+            আপনি কি নিশ্চিত যে <strong>{deleteTarget?.name}</strong> মুছে ফেলতে চান? এই অ্যাকশনটি ফিরিয়ে আনা যাবে না।
           </p>
           <DialogFooter className="gap-2">
-            <Button onClick={() => setDeleteTarget(null)} variant="ghost" className="h-11" disabled={isDeleting}>
-              Cancel
+            <Button onClick={() => setDeleteTarget(null)} variant="ghost" className="h-10 rounded-xl text-xs" disabled={isDeleting}>
+              বাতিল
             </Button>
-            <Button onClick={confirmDelete} className="h-11 bg-red-600 text-white hover:bg-red-700" disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
+            <Button onClick={confirmDelete} className="h-10 rounded-xl bg-red-600 text-white hover:bg-red-700 text-xs font-bold" disabled={isDeleting}>
+              {isDeleting ? "মুছে ফেলা হচ্ছে..." : "মুছে ফেলুন"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1044,30 +1078,31 @@ function AdminProductsContent() {
 
       {/* Bulk Delete Confirm Dialog */}
       <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>মুছে ফেলবেন?</DialogTitle>
+            <DialogTitle className="text-base font-bold text-gray-900" lang="bn">নির্বাচিত পণ্যগুলো মুছে ফেলবেন?</DialogTitle>
           </DialogHeader>
-          <p className="py-2 text-sm text-muted-foreground">
-            আপনি কি নিশ্চিত? <strong>{selectedIds.length}</strong>টি পণ্য মুছে যাবে।
+          <p className="py-2 text-xs text-muted-foreground leading-relaxed" lang="bn">
+            আপনি কি নিশ্চিত? নির্বাচিত <strong>{selectedIds.length}টি</strong> পণ্য স্থায়ীভাবে মুছে যাবে।
           </p>
           <DialogFooter className="gap-2">
-            <Button onClick={() => setShowBulkDeleteConfirm(false)} variant="ghost" className="h-11" disabled={isBulkActionLoading}>
+            <Button onClick={() => setShowBulkDeleteConfirm(false)} variant="ghost" className="h-10 rounded-xl text-xs" disabled={isBulkActionLoading}>
               বাতিল
             </Button>
-            <Button onClick={() => executeBulkAction("delete")} className="h-11 bg-red-600 text-white hover:bg-red-700" disabled={isBulkActionLoading}>
-              {isBulkActionLoading ? "মুছছে..." : "মুছুন"}
+            <Button onClick={() => executeBulkAction("delete")} className="h-10 rounded-xl bg-red-600 text-white hover:bg-red-700 text-xs font-bold" disabled={isBulkActionLoading}>
+              {isBulkActionLoading ? "মুছছে..." : "মুছে ফেলুন"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }
 
 export default function AdminProductsPage() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingSpinner fullHeight />}>
       <AdminProductsContent />
     </Suspense>
   );
