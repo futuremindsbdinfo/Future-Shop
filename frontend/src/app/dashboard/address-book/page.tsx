@@ -171,7 +171,7 @@ export default function AddressBookPage() {
     }
   };
 
-  const getLabelIcon = (label?: string) => {
+  const getLabelIcon = (label?: string | null) => {
     if (!label) return <MapPin className="w-4 h-4 text-[#f47920]" />;
     if (label.includes("অফিস") || label.toLowerCase().includes("office")) {
       return <Briefcase className="w-4 h-4 text-blue-600" />;
