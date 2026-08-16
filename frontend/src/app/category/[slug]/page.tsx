@@ -1,14 +1,57 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PackageOpen } from "lucide-react";
-import { ProductCard } from "@/components/shop/ProductCard";
+import { PackageOpen, Sparkles, Layers } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
+import { InfiniteProductGrid } from "@/components/shop/InfiniteProductGrid";
+import { ProductSortSelect } from "@/components/shop/ProductSortSelect";
+import { ProductFilterSidebar } from "@/components/shop/ProductFilterSidebar";
+import { ActiveFilterChips } from "@/components/shop/ActiveFilterChips";
+import { resolveCategoryIcon } from "@/components/shop/CategoryCard";
 import { apiFetchSafe } from "@/lib/server-api";
-import type { Category, PaginatedResponse, Product } from "@/types";
+import type { Category, Brand, PaginatedResponse, Product } from "@/types";
 
-// SSR — render per request.
 export const dynamic = "force-dynamic";
+
+interface RouteParams {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string; brand_id?: string; sort?: string; search?: string }>;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const categoryRes = await apiFetchSafe<{ data: Category } | null>(`/categories/${slug}`, null, {
+    cache: "no-store",
+  });
+
+  if (!categoryRes) {
+    return {
+      title: "ক্যাটাগরি পাওয়া যায়নি | Future Shop",
+      description: "অনুরোধকৃত ক্যাটাগরিটি খুঁজে পাওয়া যায়নি।",
+    };
+  }
+
+  const category = categoryRes.data;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://shop.fuminds.com";
+  const canonicalUrl = `${siteUrl}/category/${slug}`;
+
+  return {
+    title: `${category.name} | Future Shop — শেরপুর, বগুড়া`,
+    description: `${category.name} ক্যাটাগরির সেরা পণ্যসমূহ আকর্ষণীয় মূল্যে কিনুন Future Shop-এ। ক্যাশ অন ডেলিভারি এবং দ্রুততম হোম ডেলিভারি শেরপুর, বগুড়া।`,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `${category.name} | Future Shop`,
+      description: `${category.name} ক্যাটাগরির সব আসল পণ্য কিনুন সেরা মূল্যে।`,
+      url: canonicalUrl,
+      type: "website",
+    },
+  };
+}
 
 const EMPTY_PAGE: PaginatedResponse<Product> = {
   data: [],
@@ -25,94 +68,163 @@ const EMPTY_PAGE: PaginatedResponse<Product> = {
   path: "",
 };
 
-export default async function CategoryPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
-}) {
+export default async function CategoryPage({ params, searchParams }: RouteParams) {
   const { slug } = await params;
-  const { page } = await searchParams;
-  const pageNum = Math.max(1, Number(page) || 1);
+  const sp = await searchParams;
+  const pageNum = Math.max(1, Number(sp.page) || 1);
 
+  // 1. Fetch current category details
   const categoryRes = await apiFetchSafe<{ data: Category } | null>(
     `/categories/${slug}`,
     null,
-    { cache: "no-store" },
+    { cache: "no-store" }
   );
+
   if (!categoryRes) notFound();
   const category = categoryRes.data;
 
-  const products = await apiFetchSafe<PaginatedResponse<Product>>(
-    `/products?category=${encodeURIComponent(slug)}&page=${pageNum}`,
-    EMPTY_PAGE,
-    { cache: "no-store" },
-  );
+  // 2. Build product query
+  const query = new URLSearchParams({
+    category: slug,
+    page: String(pageNum),
+  });
+  if (sp.brand_id && /^\d+$/.test(sp.brand_id)) query.set("brand_id", sp.brand_id);
+  if (sp.sort) query.set("sort", sp.sort);
+  if (sp.search) query.set("search", sp.search);
+
+  // 3. Fetch products, all categories, and brands in parallel
+  const [productsRes, allCategoriesRes, brandsRes] = await Promise.all([
+    apiFetchSafe<PaginatedResponse<Product>>(
+      `/products?${query.toString()}`,
+      EMPTY_PAGE,
+      { cache: "no-store" }
+    ),
+    apiFetchSafe<{ data: Category[] }>("/categories", { data: [] }, { next: { revalidate: 60 } }),
+    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=50", { data: [] } as any, {
+      next: { revalidate: 60 },
+    }),
+  ]);
+
+  const products = productsRes;
+  const allCategories = allCategoriesRes.data ?? [];
+  const brands = brandsRes.data ?? [];
+
+  // Active query parameters passed to client infinite grid
+  const queryParams: Record<string, string> = { category: slug };
+  if (sp.brand_id) queryParams.brand_id = sp.brand_id;
+  if (sp.sort) queryParams.sort = sp.sort;
+  if (sp.search) queryParams.search = sp.search;
+
+  const icon = resolveCategoryIcon(category);
+  const subcategories = category.children ?? [];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{category.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {products.total} {products.total === 1 ? "product" : "products"}
-        </p>
-      </div>
-
-      {products.data.length === 0 ? (
-        <EmptyState
-          icon={<PackageOpen className="h-7 w-7" />}
-          title="No products in this category"
-          description="Check back soon — sellers are adding products."
-          action={
-            <Button nativeButton={false} render={<Link href="/" />} className="h-11 bg-[#f47920] hover:bg-[#e56910]">
-              Back to Home
-            </Button>
-          }
+    <main className="min-h-screen bg-[#f8fafc] py-6 md:py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
+        
+        {/* Breadcrumb Navigation */}
+        <Breadcrumbs
+          items={[
+            { label: "সকল ক্যাটাগরি", url: "/categories" },
+            { label: category.name },
+          ]}
         />
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {products.data.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+
+        {/* Category Header Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-white via-orange-50/40 to-white border border-gray-100 p-6 md:p-8 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 md:h-20 md:w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f47920] to-[#d46212] text-white shadow-md">
+                <FontAwesomeIcon icon={icon} className="text-2xl md:text-3xl" />
+              </div>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#f47920]/10 text-[#f47920] text-xs font-bold">
+                  <Sparkles className="h-3 w-3" />
+                  <span>ক্যাটাগরি শপ</span>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight" lang="bn">
+                  {category.name}
+                </h1>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground" lang="bn">
+                  এই ক্যাটাগরিতে মোট <span className="text-gray-900 font-bold">{products.total}</span>টি পণ্য পাওয়া গেছে
+                </p>
+              </div>
+            </div>
+
+            {/* Sort selector */}
+            <div className="self-start md:self-center">
+              <ProductSortSelect />
+            </div>
           </div>
 
-          {products.last_page > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                className="h-11"
-                nativeButton={false}
-                disabled={pageNum <= 1}
-                render={
-                  pageNum > 1 ? (
-                    <Link href={`/category/${slug}?page=${pageNum - 1}`} />
-                  ) : undefined
-                }
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {products.current_page} of {products.last_page}
-              </span>
-              <Button
-                variant="outline"
-                className="h-11"
-                nativeButton={false}
-                disabled={pageNum >= products.last_page}
-                render={
-                  pageNum < products.last_page ? (
-                    <Link href={`/category/${slug}?page=${pageNum + 1}`} />
-                  ) : undefined
-                }
-              >
-                Next
-              </Button>
+          {/* Subcategories Strip (if any children exist) */}
+          {subcategories.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-gray-100/80">
+              <div className="flex items-center gap-2 mb-3 text-xs font-bold text-gray-700" lang="bn">
+                <Layers className="w-3.5 h-3.5 text-[#f47920]" />
+                <span>সাব-ক্যাটাগরি সমূহ:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {subcategories.map((sub) => (
+                  <Link
+                    key={sub.id}
+                    href={`/category/${sub.slug}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-700 hover:border-[#f47920] hover:text-[#f47920] hover:bg-orange-50/50 shadow-2xs transition-all"
+                  >
+                    <span>{sub.name}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
-        </>
-      )}
-    </div>
+        </div>
+
+        {/* Active Filter Badges */}
+        <ActiveFilterChips categories={allCategories} brands={brands} />
+
+        {/* Layout: Sidebar + Product Grid */}
+        <div className="flex items-start gap-6 lg:gap-8">
+          {/* Desktop Filter Sidebar & Mobile Drawer Trigger */}
+          <ProductFilterSidebar categories={allCategories} brands={brands} />
+
+          {/* Product Grid Area */}
+          <div className="flex-1 w-full min-w-0">
+            {products.data.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 sm:p-12 border border-gray-100 shadow-sm text-center">
+                <EmptyState
+                  icon={<PackageOpen className="h-10 w-10 text-[#f47920]" />}
+                  title="এই ক্যাটাগরিতে কোনো পণ্য পাওয়া যায়নি"
+                  description="শীঘ্রই বিক্রেতারা এই ক্যাটাগরিতে নতুন পণ্য যুক্ত করবেন। অনুগ্রহ করে অন্যান্য ক্যাটাগরি ব্রাউজ করুন।"
+                  action={
+                    <div className="flex items-center justify-center gap-3 mt-4">
+                      <Button
+                        nativeButton={false}
+                        render={<Link href="/categories" />}
+                        variant="outline"
+                        className="h-10"
+                      >
+                        অন্যান্য ক্যাটাগরি
+                      </Button>
+                      <Button
+                        nativeButton={false}
+                        render={<Link href="/products" />}
+                        className="h-10 bg-[#f47920] hover:bg-[#e56910] text-white"
+                      >
+                        সকল পণ্য দেখুন
+                      </Button>
+                    </div>
+                  }
+                />
+              </div>
+            ) : (
+              <InfiniteProductGrid
+                initialData={products}
+                queryParams={queryParams}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

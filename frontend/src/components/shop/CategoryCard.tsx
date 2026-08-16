@@ -109,7 +109,7 @@ const SLUG_ICON_MAP: Record<string, IconDefinition> = {
   "gadgets": faMobileScreen,
 };
 
-function resolveCategoryIcon(category: Category): IconDefinition {
+export function resolveCategoryIcon(category: Category): IconDefinition {
   // 1. Direct DB icon match
   if (category.icon && ICON_MAP[category.icon]) {
     return ICON_MAP[category.icon];
