@@ -188,7 +188,7 @@ export function HorizontalProductScroll({
                       aria-label="কার্টে যোগ করুন"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>কার্ট</span>
+                      <span>Cart</span>
                     </button>
                   )}
                 </div>

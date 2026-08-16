@@ -211,7 +211,7 @@ export default function CheckoutPage() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 space-y-6">
         
         {/* Breadcrumb Navigation */}
-        <Breadcrumbs items={[{ label: "শপিং কার্ট", url: "/cart" }, { label: "চেকআউট" }]} />
+        <Breadcrumbs items={[{ label: "Cart", url: "/cart" }, { label: "চেকআউট" }]} />
 
         {/* Header */}
         <div className="pb-4 border-b border-gray-200">
@@ -228,19 +228,18 @@ export default function CheckoutPage() {
             <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto text-[#f47920]">
               <ShoppingBag className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900" lang="bn">
-              আপনার ব্যাগে কোনো পণ্য নেই
+            <h2 className="text-xl font-bold text-gray-900">
+              Your Cart is Empty
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground" lang="bn">
-              চেকআউট করতে প্রথমে আপনার পছন্দের পণ্য কার্টে যোগ করুন।
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              To proceed to checkout, please add your desired products to the cart first.
             </p>
             <Button
               nativeButton={false}
               render={<Link href="/products" />}
               className="h-11 px-6 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white font-bold text-xs"
-              lang="bn"
             >
-              কেনাকাটা শুরু করুন
+              Start Shopping
             </Button>
           </div>
         ) : (

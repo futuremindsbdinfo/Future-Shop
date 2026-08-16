@@ -92,15 +92,15 @@ export default function StandaloneCartPage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         
         {/* Breadcrumb Navigation */}
-        <Breadcrumbs items={[{ label: "শপিং কার্ট" }]} />
+        <Breadcrumbs items={[{ label: "Cart" }]} />
 
         <div className="flex items-center justify-between pb-4 border-b border-gray-200">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight" lang="bn">
-              আপনার শপিং কার্ট (Shopping Bag)
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Shopping Cart
             </h1>
-            <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-0.5" lang="bn">
-              কার্টে মোট <span className="text-gray-900 font-bold">{totalItems}</span>টি পণ্য রয়েছে
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-0.5">
+              <span className="text-gray-900 font-bold">{totalItems}</span> items in your Cart
             </p>
           </div>
 
@@ -109,10 +109,9 @@ export default function StandaloneCartPage() {
               type="button"
               onClick={clearCart}
               className="text-xs font-semibold text-red-500 hover:text-red-700 flex items-center gap-1.5 transition-colors"
-              lang="bn"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>কার্ট খালি করুন</span>
+              <span>Clear Cart</span>
             </button>
           )}
         </div>
@@ -123,21 +122,20 @@ export default function StandaloneCartPage() {
               <ShoppingCart className="w-10 h-10" />
             </div>
             <div className="space-y-1.5">
-              <h2 className="text-xl font-bold text-gray-900" lang="bn">
-                আপনার শপিং ব্যাগ খালি
+              <h2 className="text-xl font-bold text-gray-900">
+                Your Cart is Empty
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground" lang="bn">
-                আপনার ব্যাগে কোনো পণ্য যুক্ত করা হয়নি। আমাদের সেরা অফারের পণ্যগুলো ব্রাউজ করুন।
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Your shopping cart is currently empty. Explore our top offers and fresh products.
               </p>
             </div>
             <Button
               nativeButton={false}
               render={<Link href="/products" />}
               className="h-12 px-8 rounded-full bg-[#f47920] hover:bg-[#d46212] text-white font-bold text-sm shadow-md"
-              lang="bn"
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
-              <span>কেনাকাটা শুরু করুন</span>
+              <span>Start Shopping</span>
             </Button>
           </div>
         ) : (

@@ -157,7 +157,7 @@ export function ProductDetail({ product }: { product: Product }) {
     if (redirect) {
       router.push("/cart");
     } else {
-      toast.success(`${product.name} কার্টে যোগ হয়েছে!`);
+      toast.success(`${product.name} - Added to Cart!`);
     }
   };
 
@@ -570,10 +570,9 @@ export function ProductDetail({ product }: { product: Product }) {
                 onClick={() => handleAddToCart(false)}
                 disabled={outOfStock}
                 className="w-full h-11 rounded-xl bg-orange-100 hover:bg-orange-200 text-[#f47920] font-bold text-sm shadow-xs transition-colors border border-orange-200"
-                lang="bn"
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                <span>কার্টে যোগ করুন</span>
+                <span>Add to Cart</span>
               </Button>
 
               <Button

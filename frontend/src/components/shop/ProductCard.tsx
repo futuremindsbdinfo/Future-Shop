@@ -61,7 +61,7 @@ export function ProductCard({ product }: Props) {
       image: imageUrl ?? undefined,
       stock: stock_quantity,
     });
-    toast.success("কার্টে যোগ হয়েছে");
+    toast.success("Added to Cart");
   };
 
   const handleWishlist = async (e: React.MouseEvent) => {
