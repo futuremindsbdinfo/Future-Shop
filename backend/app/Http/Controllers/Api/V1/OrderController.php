@@ -408,6 +408,34 @@ class OrderController extends Controller
     }
 
     /**
+     * Public Order Tracking by order_number and phone.
+     */
+    public function track(Request $request): JsonResponse
+    {
+        $request->validate([
+            'order_number' => ['required', 'string'],
+            'phone' => ['required', 'string'],
+        ]);
+
+        $order = Order::where('order_number', trim($request->input('order_number')))
+            ->where(function ($q) use ($request) {
+                $phone = trim($request->input('phone'));
+                $q->where('shipping_phone', $phone)
+                  ->orWhere('shipping_phone', 'like', '%'.$phone);
+            })
+            ->with(['items.product:id,name,images', 'deliveryZone:id,name'])
+            ->first();
+
+        if (! $order) {
+            return response()->json([
+                'message' => 'প্রদত্ত অর্ডার নম্বর অথবা মোবাইল নম্বরের সাথে কোনো অর্ডার মিল পাওয়া যায়নি।',
+            ], 404);
+        }
+
+        return response()->json(['data' => $order]);
+    }
+
+    /**
      * Admin: update an order's status (order_status and delivery_user_id).
      */
     public function updateStatus(Request $request, Order $order): JsonResponse

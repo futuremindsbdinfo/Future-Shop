@@ -87,6 +87,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::post('payments/sslcommerz/success', [PaymentController::class, 'webhookSuccess'])->name('payments.success');
     Route::post('payments/sslcommerz/fail', [PaymentController::class, 'webhookFail'])->name('payments.fail');
 
+    // Public Order Tracking
+    Route::get('orders/track', [OrderController::class, 'track'])->name('orders.track');
+
     /*
     | Authenticated endpoints (any logged-in user).
     */
