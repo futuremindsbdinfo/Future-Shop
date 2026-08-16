@@ -16,7 +16,7 @@ import {
   Percent,
   Gift,
   Star,
-  MessageSquareHelp,
+  HelpCircle,
   Truck,
   MapPin,
   FileSpreadsheet,
@@ -99,7 +99,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/coupons", label: "ডিসকাউন্ট কুপন (Coupons)", icon: Percent },
       { href: "/admin/promotions", label: "প্রমোশন অফার (Promotions)", icon: Gift },
       { href: "/admin/reviews", label: "গ্রাহক রিভিউ (Reviews)", icon: Star, adminOnly: true },
-      { href: "/admin/qa", label: "প্রশ্ন ও উত্তর (Q&A)", icon: MessageSquareHelp, adminOnly: true },
+      { href: "/admin/qa", label: "প্রশ্ন ও উত্তর (Q&A)", icon: HelpCircle, adminOnly: true },
     ],
   },
   {
