@@ -32,7 +32,7 @@ export default function StandaloneCartPage() {
   const totalItems = useCartStore((s) => s.totalItems);
   const updateQty = useCartStore((s) => s.updateQty);
   const removeItem = useCartStore((s) => s.removeItem);
-  const clearCart = useCartStore((s) => s.clear);
+  const clearCart = useCartStore((s) => s.clearCart);
 
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
