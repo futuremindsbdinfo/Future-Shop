@@ -67,7 +67,7 @@ export default function CheckoutPage() {
         .then((res) => {
           const defaultAddr = res.data.data.find((a) => a.is_default) || res.data.data[0];
           if (defaultAddr) {
-            if (defaultAddr.name && !name) setName(defaultAddr.name);
+            if (defaultAddr.recipient_name && !name) setName(defaultAddr.recipient_name);
             if (defaultAddr.phone && !phone) setPhone(defaultAddr.phone);
             if (defaultAddr.address && !address) setAddress(defaultAddr.address);
           }
