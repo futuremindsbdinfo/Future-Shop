@@ -978,12 +978,13 @@ function AdminProductsContent() {
                           <td className="px-3 py-2">
                             <select
                               value={columnMapping[header] ?? "ignore"}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const val = e.target.value;
                                 setColumnMapping((prev) => ({
                                   ...prev,
-                                  [header]: e.target.value,
+                                  [header]: val,
                                 }));
-                              }
+                              }}
                               className="h-8 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs"
                             >
                               {FIELD_OPTIONS.map((opt) => (
