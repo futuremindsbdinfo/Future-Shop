@@ -15,18 +15,11 @@ import {
   Trash2,
   Upload,
   Package,
-  Layers,
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  FileSpreadsheet,
 } from "lucide-react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -46,8 +39,6 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
 import { formatTaka } from "@/lib/utils";
 import type { Brand, Category, PaginatedResponse, Product } from "@/types";
-
-const TK = "৳";
 
 const FIELD_OPTIONS = [
   { value: "ignore", label: "বাদ দিন (Skip)" },
@@ -215,19 +206,24 @@ function AdminProductsContent() {
   }, []);
 
   const handleToggleStatus = async (product: Product) => {
-    const nextStatus = product.status === "published" ? "draft" : "published";
     try {
-      await api.patch(`/admin/products/${product.id}/status`, { status: nextStatus });
-      toast.success(nextStatus === "published" ? "পণ্যটি প্রকাশিত হয়েছে" : "পণ্যটি ড্রাফট করা হয়েছে");
+      const res = await api.patch<{ data: Product }>(`/admin/products/${product.id}/toggle-status`);
+      const updatedProduct = res.data.data;
+      toast.success(
+        updatedProduct.status === "published"
+          ? "পণ্যটি ওয়েবসাইটে প্রকাশিত হয়েছে"
+          : "পণ্যটি ড্রাফট করা হয়েছে"
+      );
       setData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          data: prev.data.map((p) => (p.id === product.id ? { ...p, status: nextStatus } : p)),
+          data: prev.data.map((p) => (p.id === product.id ? updatedProduct : p)),
         };
       });
-    } catch {
-      toast.error("স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message ?? "স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে");
     }
   };
 
@@ -283,27 +279,23 @@ function AdminProductsContent() {
   const executeBulkAction = async (action: "delete" | "activate" | "deactivate") => {
     setIsBulkActionLoading(true);
     try {
-      const res = await api.post<{ success: boolean; updated?: number; deleted?: number }>(
-        "/admin/products/bulk-action",
-        {
-          ids: selectedIds,
-          action,
-        }
-      );
-      if (res.data.success) {
-        if (action === "delete") {
-          toast.success(`${res.data.deleted ?? selectedIds.length}টি পণ্য মুছে ফেলা হয়েছে`);
-          setShowBulkDeleteConfirm(false);
-        } else if (action === "activate") {
-          toast.success(`${res.data.updated ?? selectedIds.length}টি পণ্য একটিভ করা হয়েছে`);
-        } else if (action === "deactivate") {
-          toast.success(`${res.data.updated ?? selectedIds.length}টি পণ্য ইনএকটিভ করা হয়েছে`);
-        }
-        setSelectedIds([]);
-        load();
+      await api.post("/admin/products/bulk-action", {
+        ids: selectedIds,
+        action,
+      });
+      if (action === "delete") {
+        toast.success(`${selectedIds.length}টি পণ্য মুছে ফেলা হয়েছে`);
+        setShowBulkDeleteConfirm(false);
+      } else if (action === "activate") {
+        toast.success(`${selectedIds.length}টি পণ্য সক্রিয় (Published) করা হয়েছে`);
+      } else if (action === "deactivate") {
+        toast.success(`${selectedIds.length}টি পণ্য ড্রাফট করা হয়েছে`);
       }
-    } catch {
-      toast.error("বাল্ক অ্যাকশন সম্পন্ন করা যায়নি");
+      setSelectedIds([]);
+      load();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message ?? "বাল্ক অ্যাকশন সম্পন্ন করা যায়নি");
     } finally {
       setIsBulkActionLoading(false);
     }
@@ -312,14 +304,14 @@ function AdminProductsContent() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await api.get<{ data: Product[] }>("/admin/products/export", {
-        params: {
-          category: categoryFilter || undefined,
-          status: statusFilter || undefined,
-          brand_id: brandFilter || undefined,
-          search: searchQuery || undefined,
-        },
-      });
+      const params = new URLSearchParams();
+      params.set("per_page", "5000");
+      if (categoryFilter) params.set("category", categoryFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      if (brandFilter) params.set("brand_id", brandFilter);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await api.get<PaginatedResponse<Product>>(`/admin/products?${params.toString()}`);
       const exportList = res.data.data;
       if (!exportList || exportList.length === 0) {
         toast.info("এক্সপোর্ট করার মতো কোনো পণ্য পাওয়া যায়নি");
@@ -757,10 +749,16 @@ function AdminProductsContent() {
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${
                             product.status === "published"
                               ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : product.status === "out_of_stock"
+                              ? "bg-red-100 text-red-800 hover:bg-red-200"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           }`}
                         >
-                          {product.status === "published" ? "প্রকাশিত ✓" : "ড্রাফট"}
+                          {product.status === "published"
+                            ? "প্রকাশিত ✓"
+                            : product.status === "out_of_stock"
+                            ? "স্টক শেষ 🛑"
+                            : "ড্রাফট"}
                         </button>
                       </TableCell>
 

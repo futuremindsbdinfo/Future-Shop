@@ -11,13 +11,12 @@ import {
   Image as ImageIcon,
   Layers,
   Sparkles,
-  Info,
   DollarSign,
   Package,
   CheckCircle2,
   FolderTree,
   Tag,
-  Store,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,11 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
-    const resp = (error as { response?: { data?: { message?: string } } }).response;
+    const resp = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response;
+    const errors = resp?.data?.errors;
+    if (errors) {
+      return Object.values(errors).flat().join(" ");
+    }
     return resp?.data?.message ?? fallback;
   }
   return fallback;
@@ -57,6 +60,8 @@ function AdminProductFormContent() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [sku, setSku] = useState("");
+  const [weight, setWeight] = useState("");
   const [price, setPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
@@ -64,6 +69,7 @@ function AdminProductFormContent() {
   const [categoryId, setCategoryId] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [brandId, setBrandId] = useState("");
+  const [isFeatured, setIsFeatured] = useState(false);
   const [status, setStatus] = useState<"draft" | "published">("published");
   const [images, setImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
@@ -117,6 +123,8 @@ function AdminProductFormContent() {
           const p = r.data.data;
           setName(p.name);
           setDescription(p.description ?? "");
+          setSku(p.sku ?? "");
+          setWeight(p.weight ? String(p.weight) : "");
           setPrice(String(p.price));
           setSalePrice(p.sale_price ? String(p.sale_price) : "");
           setCostPrice(p.cost_price ? String(p.cost_price) : "");
@@ -124,6 +132,7 @@ function AdminProductFormContent() {
           setCategoryId(String(p.category_id));
           setVendorId(String(p.vendor_id));
           setBrandId(p.brand_id ? String(p.brand_id) : "");
+          setIsFeatured(Boolean(p.is_featured));
           setStatus(p.status === "published" ? "published" : "draft");
           setAttributes(p.attributes ?? []);
           setExistingImages(p.images ?? []);
@@ -244,15 +253,22 @@ function AdminProductFormContent() {
     }
 
     const form = new FormData();
-    form.append("name", name);
-    form.append("description", description);
+    form.append("name", name.trim());
+    form.append("description", description.trim());
+    if (sku.trim()) form.append("sku", sku.trim());
+    if (weight) form.append("weight", weight);
     form.append("price", price);
     if (salePrice) form.append("sale_price", salePrice);
     if (costPrice) form.append("cost_price", costPrice);
     form.append("stock_quantity", stock);
     form.append("category_id", categoryId);
     form.append("vendor_id", vendorId);
-    if (brandId) form.append("brand_id", brandId);
+    if (brandId) {
+      form.append("brand_id", brandId);
+    } else if (editId) {
+      form.append("brand_id", "");
+    }
+    form.append("is_featured", isFeatured ? "1" : "0");
     form.append("status", status);
     images.forEach((file) => form.append("images[]", file));
     
@@ -414,6 +430,37 @@ function AdminProductFormContent() {
               className="h-11 rounded-xl text-xs"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="sku" className="text-xs font-bold text-gray-700" lang="bn">
+                এসকেইউ কোড (SKU / বারকোড - ঐচ্ছিক)
+              </Label>
+              <Input
+                id="sku"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="যেমন: OIL-MUST-1L"
+                className="h-11 rounded-xl text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="weight" className="text-xs font-bold text-gray-700" lang="bn">
+                পণ্যের ওজন (ওজন কেজি হিসেবে - ঐচ্ছিক)
+              </Label>
+              <Input
+                id="weight"
+                type="number"
+                step="0.01"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="যেমন: 1.00"
+                className="h-11 rounded-xl text-xs font-mono"
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -796,33 +843,57 @@ function AdminProductFormContent() {
           </Button>
         </div>
 
-        {/* SECTION 6: Status & Submit */}
-        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              className="h-5 w-5 rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
-              checked={status === "published"}
-              onChange={(e) => setStatus(e.target.checked ? "published" : "draft")}
-            />
-            <div>
-              <span className="text-xs font-bold text-gray-900 block" lang="bn">
-                ওয়েবসাইটে অবিলম্বে প্রকাশিত করুন (Active / Published)
-              </span>
-              <span className="text-[11px] text-muted-foreground block" lang="bn">
-                টিক না দিলে পণ্যটি ড্রাফট (Draft) হিসেবে সেভ থাকবে
-              </span>
-            </div>
-          </label>
+        {/* SECTION 6: Featured & Status & Submit */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xs space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-gray-100">
+            
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-5 w-5 rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
+                checked={status === "published"}
+                onChange={(e) => setStatus(e.target.checked ? "published" : "draft")}
+              />
+              <div>
+                <span className="text-xs font-bold text-gray-900 block" lang="bn">
+                  ওয়েবসাইটে প্রকাশিত (Active / Published)
+                </span>
+                <span className="text-[11px] text-muted-foreground block" lang="bn">
+                  টিক তুলে দিলে পণ্যটি ড্রাফট (Draft) থাকবে
+                </span>
+              </div>
+            </label>
 
-          <Button
-            type="submit"
-            disabled={saving}
-            className="h-12 px-8 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 shrink-0"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{saving ? "সংরক্ষণ হচ্ছে..." : editId ? "পণ্য আপডেট করুন" : "পণ্য সংরক্ষণ করুন"}</span>
-          </Button>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-5 w-5 rounded border-gray-300 text-[#f47920] focus:ring-[#f47920]"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+              />
+              <div>
+                <span className="text-xs font-bold text-gray-900 block flex items-center gap-1" lang="bn">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                  ফিচার্ড পণ্য (Featured Product)
+                </span>
+                <span className="text-[11px] text-muted-foreground block" lang="bn">
+                  হোমপেজের ফিচার্ড সেকশনে অগ্রাধিকার পাবে
+                </span>
+              </div>
+            </label>
+
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="h-12 px-8 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 shrink-0"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{saving ? "সংরক্ষণ হচ্ছে..." : editId ? "পণ্য আপডেট করুন" : "পণ্য সংরক্ষণ করুন"}</span>
+            </Button>
+          </div>
         </div>
 
       </form>
