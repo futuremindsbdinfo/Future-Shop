@@ -2,12 +2,29 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import {
+  UserCog,
+  Pencil,
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert,
+  ShieldCheck,
+  Truck,
+  Users,
+  Store,
+  Phone,
+  Mail,
+  Lock,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -15,28 +32,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import type { AdminUserRow, PaginatedResponse, UserRole } from "@/types";
 
 type FilterRole = "all" | UserRole;
-const FILTER_TABS: { key: FilterRole; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "customer", label: "Customers" },
-  { key: "vendor", label: "Vendors" },
-  { key: "delivery", label: "Delivery" },
-  { key: "admin", label: "Admins" },
-  { key: "staff", label: "Staff" },
+
+const FILTER_TABS: { key: FilterRole; label: string; icon: typeof Users }[] = [
+  { key: "all", label: "সকল ইউজার", icon: Users },
+  { key: "customer", label: "গ্রাহক (Customers)", icon: Users },
+  { key: "vendor", label: "ভেন্ডর (Vendors)", icon: Store },
+  { key: "delivery", label: "রাইডার (Riders)", icon: Truck },
+  { key: "admin", label: "অ্যাডমিন (Admins)", icon: ShieldAlert },
+  { key: "staff", label: "স্টাফ (Staff)", icon: UserCog },
 ];
 const FILTER_ROLE_KEYS: FilterRole[] = FILTER_TABS.map((t) => t.key);
 
-const ROLE_BADGE: Record<UserRole, string> = {
-  admin: "bg-purple-100 text-purple-700",
-  vendor: "bg-blue-100 text-blue-700",
-  delivery: "bg-orange-100 text-orange-700",
-  customer: "bg-gray-100 text-gray-700",
-  staff: "bg-amber-100 text-amber-700",
+const ROLE_BADGE: Record<UserRole, { bg: string; label: string }> = {
+  admin: { bg: "bg-purple-50 text-purple-700 border-purple-200", label: "অ্যাডমিন (Admin)" },
+  vendor: { bg: "bg-blue-50 text-blue-700 border-blue-200", label: "ভেন্ডর (Vendor)" },
+  delivery: { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "ডেলিভারি রাইডার" },
+  customer: { bg: "bg-gray-100 text-gray-700 border-gray-200", label: "কাস্টমার" },
+  staff: { bg: "bg-amber-50 text-amber-700 border-amber-200", label: "স্টাফ (Staff)" },
 };
 
 function getErrorMessage(e: unknown, fallback: string): string {
@@ -45,6 +71,19 @@ function getErrorMessage(e: unknown, fallback: string): string {
     return r?.data?.message ?? fallback;
   }
   return fallback;
+}
+
+function getPageNumbers(currentPage: number, totalPages: number): (number | "...")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, "...", totalPages];
+  }
+  if (currentPage >= totalPages - 3) {
+    return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
 }
 
 function AdminUsersContent() {
@@ -63,7 +102,7 @@ function AdminUsersContent() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Create / Edit dialog (Batch E-2).
+  // Create / Edit dialog
   const currentUser = useAuthStore((s) => s.user);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
@@ -79,7 +118,6 @@ function AdminUsersContent() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Refresh tab counts whenever data changes by hitting the API per role once.
   const refreshCounts = useCallback(async () => {
     const roles: UserRole[] = ["customer", "vendor", "delivery", "admin", "staff"];
     const results = await Promise.all(
@@ -96,13 +134,13 @@ function AdminUsersContent() {
 
   const load = useCallback(() => {
     setLoading(true);
-    const sp = new URLSearchParams({ page: String(page), per_page: "15" });
+    const sp = new URLSearchParams({ page: String(page), per_page: "20" });
     if (filter !== "all") sp.set("role", filter);
-    if (searchDebounced) sp.set("search", searchDebounced);
+    if (searchDebounced.trim()) sp.set("search", searchDebounced.trim());
     api
       .get<PaginatedResponse<AdminUserRow>>(`/admin/users?${sp.toString()}`)
       .then((r) => setData(r.data))
-      .catch((e) => toast.error(getErrorMessage(e, "Failed to load users")))
+      .catch((e) => toast.error(getErrorMessage(e, "ইউজার তালিকা লোড করা যায়নি")))
       .finally(() => setLoading(false));
   }, [page, filter, searchDebounced]);
 
@@ -118,9 +156,9 @@ function AdminUsersContent() {
     try {
       const res = await api.patch<{ data: AdminUserRow }>(`/admin/users/${u.id}/toggle-status`);
       setData((prev) => prev ? { ...prev, data: prev.data.map((x) => x.id === u.id ? { ...x, is_active: res.data.data.is_active } : x) } : prev);
-      toast.success(res.data.data.is_active ? "User activated" : "User deactivated");
+      toast.success(res.data.data.is_active ? `"${u.name}" সক্রিয় করা হয়েছে` : `"${u.name}" নিষ্ক্রিয় করা হয়েছে`);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Failed to update status"));
+      toast.error(getErrorMessage(e, "স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে"));
     }
   };
 
@@ -128,10 +166,10 @@ function AdminUsersContent() {
     try {
       const res = await api.patch<{ data: AdminUserRow }>(`/admin/users/${u.id}/role`, { role });
       setData((prev) => prev ? { ...prev, data: prev.data.map((x) => x.id === u.id ? { ...x, role: res.data.data.role } : x) } : prev);
-      toast.success("Role updated");
+      toast.success(`"${u.name}" এর রোল পরিবর্তিত হয়েছে`);
       refreshCounts();
     } catch (e) {
-      toast.error(getErrorMessage(e, "Failed to update role"));
+      toast.error(getErrorMessage(e, "রোল আপডেট করা যায়নি"));
     }
   };
 
@@ -141,7 +179,7 @@ function AdminUsersContent() {
     setFPhone("");
     setFEmail("");
     setFPassword("");
-    setFRole("customer");
+    setFRole("staff");
     setDialogOpen(true);
   };
 
@@ -155,19 +193,17 @@ function AdminUsersContent() {
     setDialogOpen(true);
   };
 
-  const isEditingSelf = editingUser && currentUser && editingUser.id === currentUser.id;
-
   const save = async () => {
     if (!fName.trim()) {
-      toast.error("Name is required");
+      toast.error("অনুগ্রহ করে ইউজারের নাম লিখুন");
       return;
     }
     if (!fPhone.trim()) {
-      toast.error("Phone is required");
+      toast.error("মোবাইল নম্বর আবশ্যক");
       return;
     }
     if (!editingUser && !fPassword.trim()) {
-      toast.error("Password is required when creating a user");
+      toast.error("নতুন ইউজার তৈরির সময় পাসওয়ার্ড আবশ্যক");
       return;
     }
     setSaving(true);
@@ -182,313 +218,397 @@ function AdminUsersContent() {
 
       if (editingUser) {
         await api.patch(`/admin/users/${editingUser.id}`, body);
-        toast.success("User updated");
+        toast.success("ইউজার তথ্য আপডেট হয়েছে!");
       } else {
         await api.post("/admin/users", body);
-        toast.success("User created");
+        toast.success("নতুন ইউজার সফলভাবে তৈরি হয়েছে!");
       }
       setDialogOpen(false);
       load();
       refreshCounts();
     } catch (e) {
-      toast.error(getErrorMessage(e, "Save failed"));
+      toast.error(getErrorMessage(e, "সংরক্ষণ ব্যর্থ হয়েছে"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Users Management</h1>
+    <div className="space-y-6">
+      
+      {/* Header & Add Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-gray-200">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight" lang="bn">
+              ইউজার ও একাউন্ট ম্যানেজমেন্ট (Users & Roles)
+            </h1>
+            <Badge className="bg-orange-50 text-[#f47920] border-orange-200 font-bold text-xs">
+              মোট {counts.all} জন ইউজার
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5" lang="bn">
+            অ্যাডমিন, ম্যানেজার, স্টাফ, ডেলিভারি রাইডার ও গ্রাহক অ্যাকাউন্ট নিয়ন্ত্রণ
+          </p>
+        </div>
+
         <Button
           onClick={openCreate}
-          className="h-11 min-w-[44px] bg-[#f47920] hover:bg-[#e56910]"
+          className="h-10 px-4 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Create User
+          <Plus className="h-4 w-4" />
+          <span>নতুন স্টাফ/ইউজার তৈরি করুন</span>
         </Button>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
+      {/* Role Filter Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         {FILTER_TABS.map((tab) => {
           const active = filter === tab.key;
+          const Icon = tab.icon;
           return (
             <button
               key={tab.key}
               type="button"
               onClick={() => { setFilter(tab.key); setPage(1); }}
-              className={`flex h-11 items-center gap-2 rounded-md px-4 text-sm font-medium transition-colors ${
-                active ? "bg-[#f47920] text-white" : "border border-[#e5e7eb] text-[#374151] hover:bg-[#fff7ed]"
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${
+                active
+                  ? "bg-[#f47920] text-white shadow-xs"
+                  : "bg-white border border-gray-200 text-gray-700 hover:bg-orange-50"
               }`}
             >
-              {tab.label}
-              <Badge className={active ? "bg-white text-[#f47920]" : "bg-[#f3f4f6] text-[#6b7280]"}>
+              <Icon className="h-3.5 w-3.5" />
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.2 rounded-md font-mono text-[10px] ${active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
                 {counts[tab.key] ?? 0}
-              </Badge>
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Search */}
-      <Input
-        className="h-11 max-w-md"
-        placeholder="Search by name, phone, or email…"
-        value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-      />
+      {/* Quick Search */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200 shadow-xs flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="ইউজারের নাম, মোবাইল নম্বর বা ইমেইল দিয়ে খুঁজুন..."
+            className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-10 pr-3 text-xs outline-none focus:border-[#f47920] focus:bg-white focus:ring-2 focus:ring-[#f47920]/20 transition-all"
+          />
+        </div>
+      </div>
 
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardContent className="p-0">
-          {loading ? (
-            <LoadingSpinner />
-          ) : !data || data.data.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">No users found.</p>
-          ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden md:block">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[#f3f4f6] text-left text-[11px] uppercase tracking-wide text-[#9ca3af]">
-                        <th className="px-4 py-3 font-medium">User</th>
-                        <th className="px-4 py-3 font-medium">Phone</th>
-                        <th className="px-4 py-3 font-medium">Email</th>
-                        <th className="px-4 py-3 font-medium">Role</th>
-                        <th className="px-4 py-3 font-medium">Orders</th>
-                        <th className="px-4 py-3 font-medium">Status</th>
-                        <th className="px-4 py-3 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.data.map((u) => (
-                        <tr key={u.id} className="border-b border-[#f3f4f6] last:border-0">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
-                                {u.name.charAt(0).toUpperCase()}
-                              </span>
-                              <span className="font-medium">{u.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-[#374151]">{u.phone ?? "—"}</td>
-                          <td className="max-w-[180px] truncate px-4 py-3 text-[#6b7280]">{u.email ?? "—"}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${ROLE_BADGE[u.role]}`}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">{u.orders_count ?? 0}</td>
-                          <td className="px-4 py-3">
-                            <button
-                              type="button"
-                              onClick={() => toggleStatus(u)}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${u.is_active ? "bg-green-500" : "bg-gray-300"}`}
-                              aria-label={u.is_active ? "Deactivate" : "Activate"}
-                            >
-                              <span className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${u.is_active ? "translate-x-5" : "translate-x-0.5"}`} />
-                            </button>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={u.role}
-                                onChange={(e) => changeRole(u, e.target.value as UserRole)}
-                                className="h-9 rounded-md border border-[#e5e7eb] bg-transparent px-2 text-xs"
-                                aria-label="Change role"
-                              >
-                                <option value="customer">customer</option>
-                                <option value="vendor">vendor</option>
-                                <option value="delivery">delivery</option>
-                                <option value="admin">admin</option>
-                                <option value="staff">staff</option>
-                              </select>
-                              <Button
-                                onClick={() => openEdit(u)}
-                                variant="ghost"
-                                className="h-10 w-10 p-0"
-                                aria-label={`Edit ${u.name}`}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+      {/* Users Table Card */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-gray-50/80">
+              <TableRow>
+                <TableHead className="font-bold text-xs min-w-[180px]">ইউজার ও ইমেইল</TableHead>
+                <TableHead className="font-bold text-xs min-w-[140px]">মোবাইল নম্বর</TableHead>
+                <TableHead className="font-bold text-xs min-w-[140px]">বর্তমান রোল</TableHead>
+                <TableHead className="font-bold text-xs text-center">অর্ডার সংখ্যা</TableHead>
+                <TableHead className="font-bold text-xs text-center">স্ট্যাটাস</TableHead>
+                <TableHead className="font-bold text-xs">রোল পরিবর্তন</TableHead>
+                <TableHead className="text-right font-bold text-xs">অ্যাকশন</TableHead>
+              </TableRow>
+            </TableHeader>
 
-              {/* Mobile cards */}
-              <ul className="md:hidden divide-y divide-[#f3f4f6]">
-                {data.data.map((u) => (
-                  <li key={u.id} className="p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f47920] text-sm font-semibold text-white">
-                        {u.name.charAt(0).toUpperCase()}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{u.name}</p>
-                        <p className="truncate text-xs text-[#6b7280]">{u.phone ?? "—"} · {u.email ?? "—"}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${ROLE_BADGE[u.role]}`}>{u.role}</span>
-                          <span className="text-[11px] text-[#6b7280]">{u.orders_count ?? 0} orders</span>
+            <TableBody className="divide-y divide-gray-100 text-xs">
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-16 text-center">
+                    <LoadingSpinner />
+                  </TableCell>
+                </TableRow>
+              ) : !data || data.data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-12 text-center text-xs text-muted-foreground" lang="bn">
+                    কোনো ইউজার খুঁজে পাওয়া যায়নি।
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.data.map((u) => {
+                  const roleMeta = ROLE_BADGE[u.role] ?? { bg: "bg-gray-100 text-gray-700", label: u.role };
+                  const isSelf = currentUser && u.id === currentUser.id;
+
+                  return (
+                    <TableRow key={u.id} className="hover:bg-orange-50/20 transition-colors">
+                      
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#f47920] font-bold text-xs shadow-2xs">
+                            {u.name.charAt(0).toUpperCase()}
+                          </span>
+                          <div className="space-y-0.5 min-w-0">
+                            <p className="font-bold text-gray-900 flex items-center gap-1.5">
+                              <span>{u.name}</span>
+                              {isSelf && (
+                                <span className="bg-orange-50 text-[#f47920] border border-orange-200 text-[9px] font-extrabold px-1 rounded">
+                                  আপনি
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground truncate">{u.email || "ইমেইল নেই"}</p>
+                          </div>
                         </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleStatus(u)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${u.is_active ? "bg-green-500" : "bg-gray-300"}`}
-                        aria-label={u.is_active ? "Deactivate" : "Activate"}
-                      >
-                        <span className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${u.is_active ? "translate-x-5" : "translate-x-0.5"}`} />
-                      </button>
-                    </div>
-                    <select
-                      value={u.role}
-                      onChange={(e) => changeRole(u, e.target.value as UserRole)}
-                      className="mt-3 h-11 w-full rounded-md border border-[#e5e7eb] bg-transparent px-3 text-sm"
-                    >
-                      <option value="customer">customer</option>
-                      <option value="vendor">vendor</option>
-                      <option value="delivery">delivery</option>
-                      <option value="admin">admin</option>
-                      <option value="staff">staff</option>
-                    </select>
-                    <Button
-                      onClick={() => openEdit(u)}
-                      variant="outline"
-                      className="mt-2 h-11 w-full"
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                      </TableCell>
 
+                      <TableCell>
+                        {u.phone ? (
+                          <a
+                            href={`tel:${u.phone}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg hover:bg-emerald-100 transition-colors"
+                          >
+                            <Phone className="w-2.5 h-2.5" />
+                            <span>{u.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge className={`text-[10px] font-bold ${roleMeta.bg}`}>
+                          {roleMeta.label}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="text-center font-mono font-bold text-gray-700">
+                        {u.orders_count ?? 0}টি
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          disabled={isSelf}
+                          onClick={() => toggleStatus(u)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                            u.is_active ? "bg-emerald-500" : "bg-gray-300"
+                          } ${isSelf ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          title={isSelf ? "নিজের অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না" : u.is_active ? "নিষ্ক্রিয় করুন" : "সক্রিয় করুন"}
+                        >
+                          <span
+                            className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                              u.is_active ? "translate-x-4.5" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
+
+                      <TableCell>
+                        <select
+                          disabled={isSelf}
+                          value={u.role}
+                          onChange={(e) => changeRole(u, e.target.value as UserRole)}
+                          className={`h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 outline-none focus:border-[#f47920] ${
+                            isSelf ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          <option value="staff">Staff (স্টাফ)</option>
+                          <option value="delivery">Delivery (রাইডার)</option>
+                          <option value="vendor">Vendor (ভেন্ডর)</option>
+                          <option value="admin">Admin (অ্যাডমিন)</option>
+                          <option value="customer">Customer (গ্রাহক)</option>
+                        </select>
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={() => openEdit(u)}
+                          className="h-8 w-8 rounded-lg text-gray-600 hover:text-[#f47920] hover:bg-orange-50 p-0 ml-auto"
+                          variant="ghost"
+                          title="ইউজার তথ্য এডিট"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Pagination */}
       {data && data.last_page > 1 && (
-        <div className="flex items-center justify-center gap-4">
-          <Button variant="outline" className="h-11" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-          <span className="text-sm text-muted-foreground">Page {data.current_page} of {data.last_page}</span>
-          <Button variant="outline" className="h-11" disabled={page >= data.last_page} onClick={() => setPage((p) => p + 1)}>Next</Button>
+        <div className="flex flex-wrap items-center justify-between gap-4 py-2">
+          <span className="text-xs text-muted-foreground font-semibold" lang="bn">
+            দেখানো হচ্ছে {(data.from ?? 1)} থেকে {(data.to ?? data.data.length)} (মোট {data.total} জন ইউজার)
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 rounded-xl text-xs font-bold"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+              <span>আগের পৃষ্ঠা</span>
+            </Button>
+
+            {getPageNumbers(data.current_page, data.last_page).map((item, idx) => {
+              if (item === "...") {
+                return (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-xs text-muted-foreground select-none">
+                    ...
+                  </span>
+                );
+              }
+              const isCurrent = item === data.current_page;
+              return (
+                <Button
+                  key={item}
+                  variant={isCurrent ? "default" : "outline"}
+                  size="sm"
+                  className={`h-9 min-w-[36px] px-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isCurrent
+                      ? "bg-[#f47920] text-white hover:bg-[#d46212] shadow-xs"
+                      : "text-gray-700 hover:text-[#f47920]"
+                  }`}
+                  onClick={() => {
+                    if (item !== page) setPage(item as number);
+                  }}
+                >
+                  {item}
+                </Button>
+              );
+            })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 rounded-xl text-xs font-bold"
+              disabled={page >= data.last_page}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              <span>পরের পৃষ্ঠা</span>
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
 
+      {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>
-              {editingUser ? `Edit ${editingUser.name}` : "Create User"}
+            <DialogTitle className="text-base font-bold text-gray-900" lang="bn">
+              {editingUser ? "ইউজার তথ্য সম্পাদনা করুন" : "নতুন স্টাফ / ইউজার তৈরি করুন"}
             </DialogTitle>
           </DialogHeader>
 
-          {isEditingSelf && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              You cannot edit your own account. Use your profile settings.
-            </p>
-          )}
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Name <span className="text-red-500">*</span>
-              </label>
+          <div className="space-y-4 py-2 text-xs">
+            
+            {/* Name */}
+            <div className="space-y-1.5">
+              <Label className="font-bold text-gray-700" lang="bn">
+                পূর্ণ নাম <span className="text-red-500">*</span>
+              </Label>
               <Input
-                className="h-11"
                 value={fName}
                 onChange={(e) => setFName(e.target.value)}
-                disabled={!!isEditingSelf}
+                placeholder="যেমন: মোঃ জাহিদ হাসান"
+                className="h-10 rounded-xl text-xs"
+                required
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Phone <span className="text-red-500">*</span>
-              </label>
+
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <Label className="font-bold text-gray-700" lang="bn">
+                মোবাইল নম্বর <span className="text-red-500">*</span>
+              </Label>
               <Input
-                type="tel"
-                className="h-11"
                 value={fPhone}
                 onChange={(e) => setFPhone(e.target.value)}
-                disabled={!!isEditingSelf}
+                placeholder="যেমন: 017XXXXXXXX"
+                className="h-10 rounded-xl font-mono text-xs"
+                required
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Email</label>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label className="font-bold text-gray-700" lang="bn">ইমেইল ঠিকানা (ঐচ্ছিক)</Label>
               <Input
                 type="email"
-                className="h-11"
                 value={fEmail}
                 onChange={(e) => setFEmail(e.target.value)}
-                disabled={!!isEditingSelf}
+                placeholder="user@futureshop.com"
+                className="h-10 rounded-xl text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Password{!editingUser && <span className="text-red-500"> *</span>}
-              </label>
-              <Input
-                type="password"
-                className="h-11"
-                value={fPassword}
-                onChange={(e) => setFPassword(e.target.value)}
-                placeholder={editingUser ? "Leave blank to keep current" : "Min 8 characters"}
-                disabled={!!isEditingSelf}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Role <span className="text-red-500">*</span>
-              </label>
+
+            {/* Role Selector */}
+            <div className="space-y-1.5">
+              <Label className="font-bold text-gray-700" lang="bn">
+                ইউজারের রোল (Role) <span className="text-red-500">*</span>
+              </Label>
               <select
                 value={fRole}
                 onChange={(e) => setFRole(e.target.value as UserRole)}
-                disabled={!!isEditingSelf}
-                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs outline-none focus:border-[#f47920]"
               >
-                <option value="customer">customer</option>
-                <option value="vendor">vendor</option>
-                <option value="delivery">delivery</option>
-                <option value="admin">admin</option>
-                <option value="staff">staff</option>
+                <option value="staff">Staff — অর্ডার ও ক্যাটালগ ম্যানেজার</option>
+                <option value="delivery">Delivery — ডেলিভারি রাইডার</option>
+                <option value="vendor">Vendor — স্থানীয় মার্চেন্ট / সেলার</option>
+                <option value="admin">Admin — ফুল সুপার অ্যাডমিন অ্যাক্সেস</option>
+                <option value="customer">Customer — সাধারণ শপ ক্রেতা</option>
               </select>
             </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label className="font-bold text-gray-700" lang="bn">
+                পাসওয়ার্ড {editingUser ? "(পরিবর্তন করতে চাইলে লিখুন)" : <span className="text-red-500">*</span>}
+              </Label>
+              <Input
+                type="password"
+                value={fPassword}
+                onChange={(e) => setFPassword(e.target.value)}
+                placeholder={editingUser ? "অপরিবর্তিত রাখতে ফাঁকা রাখুন" : "কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড"}
+                className="h-10 rounded-xl font-mono text-xs"
+              />
+            </div>
+
           </div>
 
           <DialogFooter className="gap-2">
             <Button
               onClick={() => setDialogOpen(false)}
               variant="ghost"
-              className="h-11"
+              className="h-10 rounded-xl text-xs"
               disabled={saving}
             >
-              Cancel
+              বাতিল
             </Button>
             <Button
               onClick={save}
-              className="h-11 bg-[#f47920] hover:bg-[#e56910]"
-              disabled={saving || !!isEditingSelf}
+              className="h-10 rounded-xl bg-[#f47920] hover:bg-[#d46212] text-white text-xs font-bold shadow-xs"
+              disabled={saving}
             >
-              {saving ? "Saving..." : editingUser ? "Update User" : "Create User"}
+              {saving ? "সংরক্ষণ হচ্ছে..." : editingUser ? "আপডেট করুন" : "তৈরি করুন"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }
 
 export default function AdminUsersPage() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingSpinner fullHeight />}>
       <AdminUsersContent />
     </Suspense>
   );
