@@ -250,7 +250,7 @@ export default function AdminInvoiceDetailPage({
             )}
             <div className="flex justify-between border-t-2 border-gray-900 pt-2 text-sm font-black text-gray-900">
               <span lang="bn">সর্বমোট প্রদেয়:</span>
-              <span className="font-mono text-base text-[#f47920]">{formatTaka(data.totals.grand_total)}</span>
+              <span className="font-mono text-base text-[#f47920]">{formatTaka(data.totals.total)}</span>
             </div>
           </div>
         </div>
