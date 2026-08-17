@@ -333,7 +333,7 @@ function AdminUsersContent() {
               ) : (
                 data.data.map((u) => {
                   const roleMeta = ROLE_BADGE[u.role] ?? { bg: "bg-gray-100 text-gray-700", label: u.role };
-                  const isSelf = currentUser && u.id === currentUser.id;
+                  const isSelf = Boolean(currentUser && u.id === currentUser.id);
 
                   return (
                     <TableRow key={u.id} className="hover:bg-orange-50/20 transition-colors">
