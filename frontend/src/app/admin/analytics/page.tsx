@@ -1,15 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowDown,
-  faArrowUp,
-  faCartShopping,
-  faCircleDollarToSlot,
-  faShoppingBag,
-  faUsers,
-} from "@fortawesome/free-solid-svg-icons";
+  TrendingUp,
+  TrendingDown,
+  CircleDollarSign,
+  ShoppingBag,
+  ShoppingCart,
+  Users,
+  Calendar,
+  Sparkles,
+  Layers,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -25,65 +29,78 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { formatTaka } from "@/lib/utils";
 import type { AnalyticsData } from "@/types";
 
-const TK = "৳";
-const fmtNum = (n: number) => n.toLocaleString("en-US");
-
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#9ca3af",
+  pending: "#f59e0b",
   confirmed: "#3b82f6",
   processing: "#f97316",
   shipped: "#0ea5e9",
-  delivered: "#22c55e",
-  cancelled: "#dc2626",
+  delivered: "#10b981",
+  cancelled: "#ef4444",
 };
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Pending",
-  confirmed: "Confirmed",
-  processing: "Processing",
-  shipped: "Shipped",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
+
+const STATUS_LABEL_BN: Record<string, string> = {
+  pending: "পেন্ডিং (Pending)",
+  confirmed: "কনফার্মড (Confirmed)",
+  processing: "প্রসেসিং (Processing)",
+  shipped: "শিপড (Shipped)",
+  delivered: "ডেলিভার্ড (Delivered)",
+  cancelled: "বাতিল (Cancelled)",
 };
-const PIE_COLORS = ["#f47920", "#fb923c", "#3b82f6", "#22c55e", "#a855f7"];
+
+const PIE_COLORS = ["#f47920", "#3b82f6", "#10b981", "#8b5cf6", "#ec4899", "#6366f1"];
 
 type Range = "7" | "30" | "90";
 
 function MetricCard({
-  label, value, icon, iconBg, iconColor, growthPct,
+  label,
+  value,
+  icon: Icon,
+  iconBg,
+  iconColor,
+  growthPct,
+  subLabel,
 }: {
   label: string;
   value: string;
-  icon: typeof faShoppingBag;
+  icon: typeof CircleDollarSign;
   iconBg: string;
   iconColor: string;
-  growthPct: number | null;
+  growthPct?: number | null;
+  subLabel?: string;
 }) {
   const positive = (growthPct ?? 0) >= 0;
+
   return (
-    <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
+    <Card className="rounded-3xl border border-gray-200 shadow-xs bg-white">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12px] font-medium text-[#6b7280]">{label}</p>
-            <p className="mt-2 truncate text-[22px] font-bold">{value}</p>
-            {growthPct !== null && (
-              <span
-                className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  positive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                }`}
-              >
-                <FontAwesomeIcon icon={positive ? faArrowUp : faArrowDown} className="h-2.5 w-2.5" />
-                {Math.abs(growthPct).toFixed(1)}%
-              </span>
+            <p className="text-xs font-bold text-gray-500" lang="bn">{label}</p>
+            <p className="mt-1.5 truncate text-xl sm:text-2xl font-black text-gray-900 font-mono tracking-tight">{value}</p>
+            
+            {growthPct !== undefined && growthPct !== null && (
+              <div className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold font-mono" style={{
+                backgroundColor: positive ? "#ecfdf5" : "#fef2f2",
+                color: positive ? "#059669" : "#dc2626",
+              }}>
+                {positive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                <span>{Math.abs(growthPct).toFixed(1)}% বিগত সময়ের তুলনায়</span>
+              </div>
+            )}
+
+            {subLabel && (
+              <p className="mt-1 text-[11px] text-muted-foreground font-semibold">{subLabel}</p>
             )}
           </div>
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${iconBg}`}>
-            <FontAwesomeIcon icon={icon} className={`h-4 w-4 ${iconColor}`} />
+
+          <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconBg} shadow-2xs`}>
+            <Icon className={`h-6 w-6 ${iconColor}`} />
           </span>
         </div>
       </CardContent>
@@ -95,12 +112,14 @@ function AnalyticsSkeleton() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-3xl" />
+        ))}
       </div>
-      <Skeleton className="h-80 rounded-xl" />
+      <Skeleton className="h-80 rounded-3xl" />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Skeleton className="h-80 rounded-xl" />
-        <Skeleton className="h-80 rounded-xl" />
+        <Skeleton className="h-80 rounded-3xl" />
+        <Skeleton className="h-80 rounded-3xl" />
       </div>
     </div>
   );
@@ -125,124 +144,190 @@ export default function AdminAnalyticsPage() {
   }, [load]);
 
   if (loading) return <AnalyticsSkeleton />;
-  if (!data) return <p className="text-sm text-muted-foreground">No data.</p>;
+  if (!data) return <p className="text-xs text-muted-foreground py-12 text-center" lang="bn">কোনো অ্যানালিটিক্স ডেটা পাওয়া যায়নি।</p>;
 
-  // Recharts data shapes.
   const sales = data.sales_by_day.map((p) => ({
-    date: new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    date: new Date(p.date).toLocaleDateString("bn-BD", { month: "short", day: "numeric" }),
     revenue: p.revenue,
     orders: p.orders,
   }));
+
   const statusBars = Object.entries(data.orders_by_status).map(([key, value]) => ({
-    name: STATUS_LABEL[key] ?? key,
+    name: STATUS_LABEL_BN[key] ?? key,
     value,
     key,
   }));
+
   const pie = data.top_categories.map((c) => ({ name: c.name, value: c.sales }));
 
   return (
     <div className="space-y-6">
-      {/* Header + range selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <div className="flex items-center gap-2">
-          {(["7", "30", "90"] as const).map((r) => (
+      
+      {/* Header & Date Range Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-gray-200">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight" lang="bn">
+              বিজনেস অ্যানালিটিক্স (Business Analytics)
+            </h1>
+            <Badge className="bg-orange-50 text-[#f47920] border-orange-200 font-bold text-xs">
+              লাইভ ডেটা
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5" lang="bn">
+            বিক্রয় আয়, প্রবৃদ্ধি, অর্ডারের ট্রেন্ড ও ক্যাটাগরিভিত্তিক পারফরম্যান্স মেট্রিক্স
+          </p>
+        </div>
+
+        {/* Date Range Selector */}
+        <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-gray-50 p-1 self-start sm:self-auto">
+          {(
+            [
+              { id: "7", label: "গত ৭ দিন" },
+              { id: "30", label: "গত ৩০ দিন" },
+              { id: "90", label: "গত ৯০ দিন" },
+            ] as const
+          ).map((r) => (
             <button
-              key={r}
+              key={r.id}
               type="button"
-              onClick={() => setRange(r)}
-              className={`h-9 rounded-md px-3 text-xs font-medium transition-colors ${
-                range === r ? "bg-[#f47920] text-white" : "border border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"
+              onClick={() => setRange(r.id)}
+              className={`h-8 px-3 rounded-xl text-xs font-bold transition-all ${
+                range === r.id
+                  ? "bg-[#f47920] text-white shadow-2xs"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              Last {r} days
+              {r.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* 4 Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          label="Total Revenue"
+          label="সর্বমোট বিক্রয় রাজস্ব"
           value={formatTaka(data.revenue_total)}
-          icon={faCircleDollarToSlot}
-          iconBg="bg-orange-100"
+          icon={CircleDollarSign}
+          iconBg="bg-orange-50"
           iconColor="text-[#f47920]"
           growthPct={data.revenue_growth}
         />
         <MetricCard
-          label="Total Orders"
-          value={fmtNum(data.orders_total)}
-          icon={faShoppingBag}
-          iconBg="bg-blue-100"
+          label="মোট সম্পন্ন অর্ডার"
+          value={`${data.orders_total.toLocaleString("en-US")}টি`}
+          icon={ShoppingBag}
+          iconBg="bg-blue-50"
           iconColor="text-blue-600"
-          growthPct={null}
+          subLabel="সকল স্ট্যাটাস মিলিয়ে"
         />
         <MetricCard
-          label="Avg Order Value"
+          label="গড় অর্ডার মূল্য (AOV)"
           value={formatTaka(data.avg_order_value)}
-          icon={faCartShopping}
-          iconBg="bg-green-100"
-          iconColor="text-green-700"
-          growthPct={null}
+          icon={ShoppingCart}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          subLabel="প্রতি অর্ডারে গড় আয়"
         />
         <MetricCard
-          label="New Customers"
-          value={fmtNum(data.new_customers_count)}
-          icon={faUsers}
-          iconBg="bg-purple-100"
+          label="নতুন নিবন্ধিত গ্রাহক"
+          value={`${data.new_customers_count.toLocaleString("en-US")} জন`}
+          icon={Users}
+          iconBg="bg-purple-50"
           iconColor="text-purple-600"
-          growthPct={null}
+          subLabel="এই সময়সীমায় যুক্ত হয়েছেন"
         />
       </div>
 
-      {/* Sales trend */}
-      <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-        <CardContent className="p-6">
-          <h2 className="mb-4 text-base font-semibold">Sales Trend</h2>
+      {/* Sales Trend Chart */}
+      <Card className="rounded-3xl border border-gray-200 shadow-xs bg-white overflow-hidden">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-2" lang="bn">
+              <TrendingUp className="w-4 h-4 text-[#f47920]" />
+              <span>দৈনিক বিক্রয় ও রেভিনিউ ট্রেন্ড (Sales Curve)</span>
+            </h2>
+            <span className="text-[11px] text-muted-foreground font-semibold">
+              নির্বাচিত সময়সীমা: গত {range} দিন
+            </span>
+          </div>
+
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={sales} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+              <AreaChart data={sales} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f47920" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#f47920" stopOpacity={0} />
+                  <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f47920" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#f47920" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: "#6b7280", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval="preserveStartEnd"
+                />
                 <YAxis
                   tick={{ fill: "#6b7280", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(v) => `${TK}${Math.round(Number(v) / 1000)}k`}
-                  width={50}
+                  tickFormatter={(v) => `৳${Math.round(Number(v) / 1000)}k`}
+                  width={55}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #e5e7eb" }}
-                  formatter={(value) => formatTaka(value as number)}
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "16px",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+                    border: "1px solid #fed7aa",
+                    fontSize: "12px",
+                  }}
+                  formatter={(value) => [formatTaka(value as number), "মোট বিক্রয়"]}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#f47920" strokeWidth={2.5} fill="url(#salesFill)" />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#f47920"
+                  strokeWidth={3}
+                  fill="url(#salesGrad)"
+                  dot={{ r: 3, fill: "#f47920" }}
+                  activeDot={{ r: 6, stroke: "#ffffff", strokeWidth: 2 }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Orders by status (horizontal bars) */}
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-          <CardContent className="p-6">
-            <h2 className="mb-4 text-base font-semibold">Orders by Status</h2>
+      {/* Grid for Orders by Status & Top Categories */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* Orders by Status */}
+        <Card className="rounded-3xl border border-gray-200 shadow-xs bg-white">
+          <CardContent className="p-5 sm:p-6">
+            <h2 className="mb-4 text-sm font-extrabold text-gray-900 flex items-center gap-2" lang="bn">
+              <ShoppingBag className="w-4 h-4 text-blue-600" />
+              <span>স্ট্যাটাস অনুযায়ী অর্ডার বণ্টন</span>
+            </h2>
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart layout="vertical" data={statusBars} margin={{ top: 8, right: 16, left: 16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                <BarChart layout="vertical" data={statusBars} margin={{ top: 8, right: 16, left: 24, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
                   <XAxis type="number" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
-                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  <YAxis dataKey="name" type="category" tick={{ fill: "#374151", fontSize: 11, fontWeight: "600" }} axisLine={false} tickLine={false} width={130} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb",
+                      fontSize: "12px",
+                    }}
+                    formatter={(v) => [`${v}টি অর্ডার`, "সংখ্যা"]}
+                  />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                     {statusBars.map((entry, i) => (
                       <Cell key={i} fill={STATUS_COLORS[entry.key] ?? "#9ca3af"} />
                     ))}
@@ -253,39 +338,62 @@ export default function AdminAnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Top categories donut */}
-        <Card className="rounded-xl border border-[#f1f5f9] shadow-sm">
-          <CardContent className="p-6">
-            <h2 className="mb-4 text-base font-semibold">Top Categories</h2>
+        {/* Top Categories */}
+        <Card className="rounded-3xl border border-gray-200 shadow-xs bg-white">
+          <CardContent className="p-5 sm:p-6">
+            <h2 className="mb-4 text-sm font-extrabold text-gray-900 flex items-center gap-2" lang="bn">
+              <Layers className="w-4 h-4 text-emerald-600" />
+              <span>শীর্ষ বিক্রিত ক্যাটাগরি (Top Categories)</span>
+            </h2>
             {pie.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No paid sales yet — categories appear after first paid order.</p>
+              <p className="text-xs text-muted-foreground py-16 text-center" lang="bn">
+                পরিশোধিত কোনো ক্যাটাগরি বিক্রয় তথ্য পাওয়া যায়নি।
+              </p>
             ) : (
               <>
-                <div className="h-56 w-full">
+                <div className="h-52 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={88} paddingAngle={2} stroke="none">
-                        {pie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                      <Pie
+                        data={pie}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        stroke="none"
+                      >
+                        {pie.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v) => formatTaka(v as number)} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: "12px", fontSize: "12px", border: "1px solid #e5e7eb" }}
+                        formatter={(v) => formatTaka(v as number)}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <ul className="mt-4 space-y-2 text-xs">
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                   {data.top_categories.map((c, i) => (
-                    <li key={c.name} className="flex items-center gap-2">
+                    <div key={c.name} className="flex items-center gap-2 p-2 rounded-xl bg-gray-50 border border-gray-100">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                      <span className="flex-1 truncate">{c.name}</span>
-                      <span className="font-medium">{formatTaka(c.sales)}</span>
-                      <span className="text-[#9ca3af]">({c.count})</span>
-                    </li>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-gray-900 text-[11px]">{c.name}</p>
+                        <p className="font-mono text-[10px] text-[#f47920] font-bold">{formatTaka(c.sales)} ({c.count}টি)</p>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </>
             )}
           </CardContent>
         </Card>
+
       </div>
+
     </div>
   );
 }
