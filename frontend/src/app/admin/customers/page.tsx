@@ -109,12 +109,7 @@ export default function AdminCustomersPage() {
   };
 
   const totalCustomers = data?.total ?? 0;
-  const now = Date.now();
-  const activeThisMonth = (data?.data ?? []).filter((c) => {
-    if (!c.last_order_date) return false;
-    const last = new Date(c.last_order_date).getTime();
-    return now - last <= 30 * 86_400_000;
-  }).length;
+  const activeThisMonth = (data?.data ?? []).filter((c) => Boolean(c.last_order_date)).length;
   const totalSpending = (data?.data ?? []).reduce((s, c) => s + Number(c.total_spent ?? 0), 0);
 
   return (

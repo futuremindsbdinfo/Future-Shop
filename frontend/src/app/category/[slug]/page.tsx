@@ -100,7 +100,7 @@ export default async function CategoryPage({ params, searchParams }: RouteParams
       { cache: "no-store" }
     ),
     apiFetchSafe<{ data: Category[] }>("/categories", { data: [] }, { next: { revalidate: 60 } }),
-    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=50", { data: [] } as any, {
+    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=50", EMPTY_PAGE, {
       next: { revalidate: 60 },
     }),
   ]);
