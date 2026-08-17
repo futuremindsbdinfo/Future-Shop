@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -342,13 +343,13 @@ function AdminOrdersContent() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-gray-900">{order.user?.name ?? order.shipping_name ?? "গেস্ট গ্রাহক"}</p>
-                              {(order.shipping_phone || order.user?.phone) && (
+                              {(order.shipping_phone || (order.user as any)?.phone) && (
                                 <a
-                                  href={`tel:${order.shipping_phone || order.user?.phone}`}
+                                  href={`tel:${order.shipping_phone || (order.user as any)?.phone}`}
                                   className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded hover:bg-emerald-100"
                                 >
                                   <Phone className="w-2.5 h-2.5" />
-                                  <span>{order.shipping_phone || order.user?.phone}</span>
+                                  <span>{order.shipping_phone || (order.user as any)?.phone}</span>
                                 </a>
                               )}
                             </div>
