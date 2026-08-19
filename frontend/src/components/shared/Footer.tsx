@@ -6,8 +6,6 @@ import type { SiteSettings } from "@/types";
 export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettings }) {
   const siteName = settings.site_name ?? "Future Shop";
   const tagline = settings.site_tagline ?? FALLBACK_SETTINGS.site_tagline;
-  const hasContact =
-    settings.contact_phone || settings.contact_email || settings.contact_address;
 
   return (
     <footer className="mt-16 border-t bg-muted/40">
@@ -29,22 +27,22 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
           </h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
-              <Link href="/products" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/products" lang="bn" className="hover:text-[#f47920] transition-colors">
                 পণ্য সমূহ
               </Link>
             </li>
             <li>
-              <Link href="/brands" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/brands" lang="bn" className="hover:text-[#f47920] transition-colors">
                 ব্র্যান্ড
               </Link>
             </li>
             <li>
-              <Link href="/orders" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/track-order" lang="bn" className="hover:text-[#f47920] transition-colors">
                 অর্ডার ট্র্যাক
               </Link>
             </li>
             <li>
-              <Link href="/dashboard" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/dashboard" lang="bn" className="hover:text-[#f47920] transition-colors">
                 আমার অ্যাকাউন্ট
               </Link>
             </li>
@@ -58,27 +56,27 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
           </h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
-              <Link href="/about" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/about" lang="bn" className="hover:text-[#f47920] transition-colors">
                 আমাদের সম্পর্কে
               </Link>
             </li>
             <li>
-              <Link href="/contact" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/contact" lang="bn" className="hover:text-[#f47920] transition-colors">
                 যোগাযোগ
               </Link>
             </li>
             <li>
-              <Link href="/privacy" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/privacy" lang="bn" className="hover:text-[#f47920] transition-colors">
                 গোপনীয়তা নীতি
               </Link>
             </li>
             <li>
-              <Link href="/terms" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/terms" lang="bn" className="hover:text-[#f47920] transition-colors">
                 শর্তাবলী
               </Link>
             </li>
             <li>
-              <Link href="/returns" lang="bn" className="hover:text-[#f47920]">
+              <Link href="/returns" lang="bn" className="hover:text-[#f47920] transition-colors">
                 রিটার্ন পলিসি
               </Link>
             </li>
@@ -125,10 +123,25 @@ export function Footer({ settings = FALLBACK_SETTINGS }: { settings?: SiteSettin
         </div>
       </div>
 
+      {/* Bottom Bar: Copyright + English Legal & Sitemap Links */}
       <div className="border-t py-4">
-        <p className="text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {siteName}. All rights reserved.
-        </p>
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row text-xs text-muted-foreground">
+          <p>© {new Date().getFullYear()} {siteName}. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <Link href="/privacy" className="hover:text-[#f47920] transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-[#f47920] transition-colors">
+              Terms & Conditions
+            </Link>
+            <Link href="/returns" className="hover:text-[#f47920] transition-colors">
+              Return Policy
+            </Link>
+            <Link href="/sitemap.xml" target="_blank" className="hover:text-[#f47920] transition-colors">
+              Sitemap
+            </Link>
+          </div>
+        </div>
       </div>
     </footer>
   );
