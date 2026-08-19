@@ -75,6 +75,21 @@ const EMPTY_PAGE: PaginatedResponse<Product> = {
   path: "",
 };
 
+const EMPTY_BRANDS_PAGE: PaginatedResponse<Brand> = {
+  data: [],
+  current_page: 1,
+  last_page: 1,
+  per_page: 50,
+  total: 0,
+  from: null,
+  to: null,
+  first_page_url: "",
+  last_page_url: "",
+  next_page_url: null,
+  prev_page_url: null,
+  path: "",
+};
+
 export default async function SingleBrandPage({ params, searchParams }: RouteParams) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -107,7 +122,7 @@ export default async function SingleBrandPage({ params, searchParams }: RoutePar
       { cache: "no-store" }
     ),
     apiFetchSafe<{ data: Category[] }>("/categories", { data: [] }, { next: { revalidate: 60 } }),
-    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=50", EMPTY_PAGE, {
+    apiFetchSafe<PaginatedResponse<Brand>>("/brands?per_page=50", EMPTY_BRANDS_PAGE, {
       next: { revalidate: 60 },
     }),
   ]);
